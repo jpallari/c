@@ -1,0 +1,6 @@
+-x
+c
+-Wall
+-Wfatal-errors
+-g
+-std=c11
