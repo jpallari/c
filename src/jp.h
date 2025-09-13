@@ -24,11 +24,15 @@ typedef s32      b32;
  * Basically memcpy
  */
 static inline void jp_bytes_copy(void *dst, void *src, u64 count) {
+#ifdef JP_ENABLE_MEMCPY
+    memcpy(dst, src, count);
+#else
     u8 *d = (u8 *)dst;
     u8 *s = (u8 *)src;
     for (u64 i = 0; i < count; i += 1) {
         d[i] = s[i];
     }
+#endif
 }
 
 ////////////////////////
