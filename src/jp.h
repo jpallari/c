@@ -163,4 +163,29 @@ void *jp_dynarr_push_ut(void *array, void *item, size_t item_size) {
 #define jp_dynarr_push(array, item) \
     ((array) = jp_dynarr_push_ut((array), &(item), sizeof(item)))
 
+/**
+ * Remove an element by index from given array.
+ */
+void jp_dynarr_remove_ut(void *array, u64 index, size_t item_size) {
+    if (!array) {
+        return;
+    }
+    jp_dynarr_header *header = jp_dynarr_get_header(array);
+    if (header->count < index) {
+        return;
+    }
+    u8 *data = (u8*)array;
+    u8 *data_dst = data + index * item_size;
+    u8 *data_src = data_dst + item_size;
+    u64 bytes = (header->count - index - 1) * item_size;
+    jp_bytes_copy(data_dst, data_src, bytes);
+    header->count -= 1;
+}
+
+/**
+ * Remove an element by index from given array.
+ */
+#define jp_dynarr_remove(array, index) \
+    (jp_dynarr_remove_ut((array), (index), sizeof(*(array))))
+
 #endif

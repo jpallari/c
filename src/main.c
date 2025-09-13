@@ -10,6 +10,9 @@ int main(void) {
         jp_dynarr_push(data, v);
     }
 
+    jp_dynarr_remove(data, 9);
+    jp_dynarr_remove(data, 12);
+
     for (i = 0; i < jp_dynarr_get_count(data); i += 1) {
         printf("data %d: %f\n", i, data[i]);
     }
