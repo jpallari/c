@@ -3,6 +3,11 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <assert.h>
 
 typedef uint8_t  u8;
 typedef uint16_t u16;
@@ -233,5 +238,114 @@ void jp_dynarr_remove_ut(void *array, u64 index, size_t item_size) {
  */
 #define jp_dynarr_remove(array, index) \
     (jp_dynarr_remove_ut((array), (index), sizeof(*(array))))
+
+////////////////////////
+// File I/O (blocking)
+////////////////////////
+
+typedef struct {
+    void *data;
+    u64 size;
+    s32 err_code;
+} jp_file_result;
+
+jp_file_result jp_read_file(const char *filename) {
+    int fd = 0, io_res = 0;
+    ssize_t read_res = 0;
+    u8 *data = NULL, *cursor = NULL;
+    jp_file_result result = {0};
+    struct stat file_stat = {0};
+    size_t bs_remaining = 0, chunk_size = 0;
+
+    fd = open(filename, O_RDONLY);
+    if (fd < 0) {
+        result.err_code = errno;
+        return result;
+    }
+
+    io_res = fstat(fd, &file_stat);
+    if (io_res < 0) {
+        result.err_code = errno;
+        goto end;
+    }
+    if (file_stat.st_size == 0) {
+        goto end;
+    }
+    if (file_stat.st_size < 0) {
+        result.err_code = -3;
+        goto end;
+    }
+
+    data = malloc(file_stat.st_size);
+    if (!data) {
+        result.err_code = -2;
+        goto end;
+    }
+    result.data = data;
+
+    for (
+        bs_remaining = (size_t)file_stat.st_size, cursor = data;
+        bs_remaining > 0;
+        bs_remaining -= read_res, cursor += read_res, result.size += (u64)read_res
+    ) {
+        chunk_size = (bs_remaining < file_stat.st_blksize)
+            ? bs_remaining
+            : file_stat.st_blksize;
+        read_res = read(fd, cursor, chunk_size);
+        if (read_res == 0) { // EOF
+            goto end;
+        }
+        if (read_res < 0) {
+            result.err_code = errno;
+            goto end;
+        }
+    }
+
+end:
+    io_res = close(fd);
+    if (!result.err_code && io_res < 0) {
+        result.err_code = errno;
+    }
+
+    return result;
+}
+
+s64 jp_write_file(char *filename, void *data, u64 size) {
+    int fd = 0, io_res = 0, close_res = 0;
+    u8 *cursor = data;
+    struct stat file_stat = {0};
+    size_t bs_remaining = 0, chunk_size = 0;
+    ssize_t write_res = 0;
+
+    fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    if (fd < 0) {
+        return errno;
+    }
+    io_res = fstat(fd, &file_stat);
+    if (io_res < 0) {
+        goto end;
+    }
+
+    for (
+        bs_remaining = size;
+        bs_remaining > 0;
+        bs_remaining -= write_res, cursor += write_res
+    ) {
+        chunk_size = (bs_remaining < file_stat.st_blksize)
+            ? bs_remaining
+            : file_stat.st_blksize;
+        write_res = write(fd, cursor, chunk_size);
+        if (write_res <= 0) {
+            goto end;
+        }
+    }
+
+end:
+    close_res = close(fd);
+    if (write_res < 0) {
+        return write_res;
+    }
+    return io_res || close_res || 0;
+}
 
 #endif
