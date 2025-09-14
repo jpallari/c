@@ -112,6 +112,42 @@ void *jp_dynarr_new_sized(u64 capacity, size_t item_size) {
     (array ? free(((jp_dynarr_header *)(array)) - 1) : NULL)
 
 /**
+ * Clone a given array with new capacity.
+ */
+void *jp_dynarr_clone_ut(void *array, u64 capacity, size_t item_size) {
+    if (!array) {
+        return NULL;
+    }
+    jp_dynarr_header *header = jp_dynarr_get_header(array);
+    if (!header) {
+        return NULL;
+    }
+
+    void *new_array = jp_dynarr_new_sized(capacity, item_size);
+    if (!new_array) {
+        return NULL;
+    }
+
+    jp_dynarr_header *new_header = jp_dynarr_get_header(new_array);
+    new_header->count = header->count;
+    new_header->capacity = capacity;
+
+    jp_bytes_copy(
+        new_array,
+        array,
+        new_header->count*item_size
+    );
+
+    return new_array;
+}
+
+/**
+ * Clone a given array with new capacity.
+ */
+#define jp_dynarr_clone(array, capacity, t) \
+    ((t *)(jp_dynarr_clone_ut((array), (capacity), sizeof(*(array)))))
+
+/**
  * Push item to given array. Returns the array with the item.
  */
 void *jp_dynarr_push_ut(void *array, void *item, size_t item_size) {
@@ -126,23 +162,11 @@ void *jp_dynarr_push_ut(void *array, void *item, size_t item_size) {
 
     if (header->count >= header->capacity) {
         u64 new_capacity = jp_dynarr_grow_count(header->capacity);
-        void *new_array_data = malloc(jp_dynarr_count_to_bytes(
-            new_capacity,
-            item_size
-        ));
-        if (!new_array_data) {
+        void *new_array = jp_dynarr_clone_ut(array, new_capacity, item_size);
+        if (!new_array) {
             return NULL;
         }
-
-        void *new_array = new_array_data + sizeof(jp_dynarr_header);
-        jp_dynarr_header *new_header = (jp_dynarr_header *)new_array_data;
-        new_header->count = header->count;
-        new_header->capacity = new_capacity;
-        jp_bytes_copy(
-            new_array,
-            array,
-            new_header->count*item_size
-        );
+        jp_dynarr_header *new_header = jp_dynarr_get_header(new_array);
         jp_dynarr_free(array);
         array = new_array;
         header = new_header;
