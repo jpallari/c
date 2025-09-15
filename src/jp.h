@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <assert.h>
+#include <string.h>
 
 typedef uint8_t  u8;
 typedef uint16_t u16;
@@ -28,17 +29,12 @@ typedef s32      b32;
 /**
  * Basically memcpy
  */
-static inline void jp_bytes_copy(void *dst, void *src, u64 count) {
-#ifdef JP_ENABLE_MEMCPY
-    memcpy(dst, src, count);
-#else
-    u8 *d = (u8 *)dst;
-    u8 *s = (u8 *)src;
-    for (u64 i = 0; i < count; i += 1) {
-        d[i] = s[i];
-    }
-#endif
-}
+#define jp_bytes_copy memcpy
+
+/**
+ * Basically memmove
+ */
+#define jp_bytes_move memmove
 
 ////////////////////////
 // Dynamic array
@@ -229,7 +225,7 @@ void jp_dynarr_remove_ut(void *array, u64 index, size_t item_size) {
     u8 *data_dst = data + index * item_size;
     u8 *data_src = data_dst + item_size;
     u64 bytes = (header->count - index - 1) * item_size;
-    jp_bytes_copy(data_dst, data_src, bytes);
+    jp_bytes_move(data_dst, data_src, bytes);
     header->count -= 1;
 }
 
