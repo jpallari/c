@@ -2,11 +2,11 @@ CC = gcc
 LANG_STD = c11
 SAN_FLAGS = -fsanitize=address,leak,undefined
 
-CFLAGS = -Wall -Wfatal-errors -std=$(LANG_STD) -MMD -MP -fno-omit-frame-pointer
+CFLAGS = -Wall -Wfatal-errors -std=$(LANG_STD) -MMD -MP -fno-omit-frame-pointer -flto
 DEBUG_CFLAGS = -g $(SAN_FLAGS)
 RELEASE_CFLAGS = -O2
 
-LDFLAGS =
+LDFLAGS = -flto
 DEBUG_LDFLAGS = $(SAN_FLAGS)
 RELEASE_LDFLAGS =
 
