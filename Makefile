@@ -10,6 +10,7 @@ LDFLAGS = -flto
 DEBUG_LDFLAGS = $(SAN_FLAGS)
 RELEASE_LDFLAGS =
 
+HEADER_FILES = $(wildcard src/*.h)
 SRC_FILES = $(wildcard src/*.c)
 DEBUG_OBJ_FILES = $(SRC_FILES:src/%.c=build/debug/%.o)
 RELEASE_OBJ_FILES = $(SRC_FILES:src/%.c=build/release/%.o)
@@ -49,6 +50,10 @@ clean-release:
 clean:
 	rm -rf build
 
+lint: $(SRC_FILES) $(HEADER_FILES)
+	cppcheck $^
+
 .PHONY: debug release
 .PHONY: run-debug run-release
 .PHONY: clean-debug clean-release clean
+.PHONY: lint

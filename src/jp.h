@@ -323,6 +323,7 @@ void *jp_dynarr_push_ut(void *array, void *item, size_t item_size) {
         );
     }
     jp_dynarr_header *header = jp_dynarr_get_header(array);
+    assert(header && "Header must not be null");
 
     if (header->count >= header->capacity) {
         u64 new_capacity = jp_dynarr_grow_count(header->capacity);
@@ -331,6 +332,7 @@ void *jp_dynarr_push_ut(void *array, void *item, size_t item_size) {
             return NULL;
         }
         jp_dynarr_header *new_header = jp_dynarr_get_header(new_array);
+        assert(new_header && "New header must not be null");
         jp_dynarr_free(array);
         array = new_array;
         header = new_header;
