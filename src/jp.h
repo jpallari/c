@@ -37,6 +37,102 @@ typedef s32 b32;
 #define jp_bytes_move memmove
 
 ////////////////////////
+// Allocator
+////////////////////////
+
+typedef struct {
+    void *(*malloc)(size_t, void *ctx);
+    void (*free)(void *, void *ctx);
+    void *ctx;
+} jp_allocator;
+
+static void *jp_std_malloc(size_t size, void *ctx) {
+    (void)ctx;
+    return malloc(size);
+}
+
+static void jp_std_free(void *ptr, void *ctx) {
+    (void)ctx;
+    free(ptr);
+}
+
+static jp_allocator jp_std_allocator = {jp_std_malloc, jp_std_free, NULL};
+
+#define jp_malloc(size, allocator) \
+    ((allocator)->malloc((size), (allocator)->ctx))
+
+#define jp_free(ptr, allocator) \
+    ((allocator)->free((ptr, (allocator)->ctx))
+
+////////////////////////
+// Arena allocator
+////////////////////////
+
+typedef struct {
+    void *base;
+    u64 size;
+    u64 used;
+} jp_arena;
+
+#define jp_empty_arena {.base = NULL, .size = 0, .used = 0}
+
+jp_arena jp_arena_new(u64 size) {
+    void *base = malloc(size);
+    if (!base) {
+        jp_arena arena = jp_empty_arena;
+        return arena;
+    }
+    jp_arena arena = {.base = base, .size = size, .used = 0};
+    return arena;
+}
+
+#define jp_arena_aligned_used(used, alignment) \
+    ((used) + (alignment) - 1) & ~((alignment) - 1)
+
+jp_arena
+jp_arena_sub_bytes(jp_arena *arena, u64 size, u64 alignment, b32 is_temp) {
+    u64 aligned_used = jp_arena_aligned_used(arena->used, alignment);
+    if (arena->size < size + aligned_used) {
+        jp_arena sub = jp_empty_arena;
+        return sub;
+    }
+    if (!is_temp) {
+        arena->used = aligned_used + size;
+    }
+    jp_arena sub = {
+        .base = ((u8 *)arena->base) + aligned_used, .size = size, .used = 0
+    };
+    return sub;
+}
+
+#define jp_arena_sub(arena, t, count, is_temp) \
+    ((t *)jp_arena_sub((arena), sizeof(t) * (count), _Alignof(t), (is_temp)))
+
+void *jp_arena_alloc_bytes(jp_arena *arena, u64 size, u64 alignment) {
+    u64 aligned_used = jp_arena_aligned_used(arena->used, alignment);
+    if (arena->size < size + aligned_used) {
+        return NULL;
+    }
+    void *p = ((u8 *)arena->base) + aligned_used;
+    arena->used = aligned_used + size;
+    return p;
+}
+
+#define jp_arena_alloc(arena, t, count) \
+    ((t *)jp_arena_alloc_bytes((arena), sizeof(t) * (count), _Alignof(t)))
+
+void jp_arena_clear(jp_arena *arena) {
+    arena->used = 0;
+}
+
+void jp_arena_free(jp_arena *arena) {
+    free(arena->base);
+    arena->base = NULL;
+    arena->size = 0;
+    arena->used = 0;
+}
+
+////////////////////////
 // Dynamic array
 ////////////////////////
 
@@ -53,6 +149,11 @@ typedef struct {
      * Number of items the array can hold
      */
     u64 capacity;
+
+    /**
+     * Memory allocator used for growing
+     */
+    jp_allocator *allocator;
 } jp_dynarr_header;
 
 /**
@@ -69,8 +170,10 @@ typedef struct {
 /**
  * Create a new dynamic array
  */
-void *jp_dynarr_new_sized(u64 capacity, size_t item_size) {
-    void *data = malloc(jp_dynarr_count_to_bytes(capacity, item_size));
+void *
+jp_dynarr_new_sized(u64 capacity, size_t item_size, jp_allocator *allocator) {
+    void *data =
+        jp_malloc(jp_dynarr_count_to_bytes(capacity, item_size), allocator);
     if (!data) {
         return NULL;
     }
@@ -78,6 +181,7 @@ void *jp_dynarr_new_sized(u64 capacity, size_t item_size) {
     jp_dynarr_header *header = (jp_dynarr_header *)data;
     header->count = 0;
     header->capacity = capacity;
+    header->allocator = allocator;
 
     return (data + sizeof(jp_dynarr_header));
 }
@@ -85,8 +189,8 @@ void *jp_dynarr_new_sized(u64 capacity, size_t item_size) {
 /**
  * Create a new dynamic array
  */
-#define jp_dynarr_new(capacity, t) \
-    ((t *)jp_dynarr_new_sized(capacity, sizeof(t)))
+#define jp_dynarr_new(capacity, t, allocator) \
+    ((t *)jp_dynarr_new_sized((capacity), sizeof(t), (allocator)))
 
 /**
  * Get the header for given array
@@ -124,7 +228,8 @@ void *jp_dynarr_clone_ut(void *array, u64 capacity, size_t item_size) {
         return NULL;
     }
 
-    void *new_array = jp_dynarr_new_sized(capacity, item_size);
+    void *new_array =
+        jp_dynarr_new_sized(capacity, item_size, header->allocator);
     if (!new_array) {
         return NULL;
     }
@@ -141,17 +246,22 @@ void *jp_dynarr_clone_ut(void *array, u64 capacity, size_t item_size) {
 /**
  * Clone a given array with new capacity.
  */
-#define jp_dynarr_clone(array, capacity, t) \
-    ((t *)(jp_dynarr_clone_ut((array), (capacity), sizeof(*(array)))))
+#define jp_dynarr_clone(array, capacity, t, allocator) \
+    ((t *)(jp_dynarr_clone_ut( \
+        (array), (capacity), sizeof(*(array)), (allocator) \
+    )))
 
 /**
  * Push item to given array. Returns the array with the item.
  */
 void *jp_dynarr_push_ut(void *array, void *item, size_t item_size) {
     if (!array) {
-        array = jp_dynarr_new_sized(jp_dynarr_grow_count(8), item_size);
+        // Array does not exist? Create a new one from scratch.
+        // Use standard allocator since previous allocator is unknown.
+        array = jp_dynarr_new_sized(
+            jp_dynarr_grow_count(8), item_size, &jp_std_allocator
+        );
     }
-
     jp_dynarr_header *header = jp_dynarr_get_header(array);
 
     if (header->count >= header->capacity) {
@@ -236,7 +346,7 @@ typedef struct {
     s32 err_code;
 } jp_file_result;
 
-jp_file_result jp_read_file(const char *filename) {
+jp_file_result jp_read_file(const char *filename, jp_allocator *allocator) {
     int fd = 0, io_res = 0;
     ssize_t read_res = 0;
     u8 *data = NULL, *cursor = NULL;
@@ -263,7 +373,7 @@ jp_file_result jp_read_file(const char *filename) {
         goto end;
     }
 
-    data = malloc(file_stat.st_size);
+    data = jp_malloc(file_stat.st_size, allocator);
     if (!data) {
         result.err_code = -2;
         goto end;

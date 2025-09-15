@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 int array_demo() {
-    float *data = jp_dynarr_new(10, float);
+    float *data = jp_dynarr_new(10, float, &jp_std_allocator);
     float last = 0.0;
 
     int i;
@@ -29,7 +29,7 @@ int array_demo() {
 int file_demo(int argc, char **argv) {
     assert(argc > 1 && "expected at least one cli param");
 
-    jp_file_result result = jp_read_file(argv[1]);
+    jp_file_result result = jp_read_file(argv[1], &jp_std_allocator);
     if (result.err_code) {
         return result.err_code;
     }
