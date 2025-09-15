@@ -1,26 +1,26 @@
 #ifndef JP_H
 #define JP_H
 
-#include <stdlib.h>
-#include <stdint.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <unistd.h>
-#include <sys/stat.h>
 #include <assert.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
-typedef uint8_t  u8;
+typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
-typedef int8_t   s8;
-typedef int16_t  s16;
-typedef int32_t  s32;
-typedef int64_t  s64;
-typedef float    f32;
-typedef double   f64;
-typedef s32      b32;
+typedef int8_t s8;
+typedef int16_t s16;
+typedef int32_t s32;
+typedef int64_t s64;
+typedef float f32;
+typedef double f64;
+typedef s32 b32;
 
 ////////////////////////
 // Bytes
@@ -58,7 +58,7 @@ typedef struct {
 /**
  * Calculate array size to grow to after given size
  */
-#define jp_dynarr_grow_count(n) (2*(n) + 8)
+#define jp_dynarr_grow_count(n) (2 * (n) + 8)
 
 /**
  * Convert item count and size to byte size (incl. header)
@@ -70,7 +70,7 @@ typedef struct {
  * Create a new dynamic array
  */
 void *jp_dynarr_new_sized(u64 capacity, size_t item_size) {
-    void* data = malloc(jp_dynarr_count_to_bytes(capacity, item_size));
+    void *data = malloc(jp_dynarr_count_to_bytes(capacity, item_size));
     if (!data) {
         return NULL;
     }
@@ -133,11 +133,7 @@ void *jp_dynarr_clone_ut(void *array, u64 capacity, size_t item_size) {
     new_header->count = header->count;
     new_header->capacity = capacity;
 
-    jp_bytes_copy(
-        new_array,
-        array,
-        new_header->count*item_size
-    );
+    jp_bytes_copy(new_array, array, new_header->count * item_size);
 
     return new_array;
 }
@@ -153,10 +149,7 @@ void *jp_dynarr_clone_ut(void *array, u64 capacity, size_t item_size) {
  */
 void *jp_dynarr_push_ut(void *array, void *item, size_t item_size) {
     if (!array) {
-        array = jp_dynarr_new_sized(
-            jp_dynarr_grow_count(8),
-            item_size
-        );
+        array = jp_dynarr_new_sized(jp_dynarr_grow_count(8), item_size);
     }
 
     jp_dynarr_header *header = jp_dynarr_get_header(array);
@@ -174,9 +167,7 @@ void *jp_dynarr_push_ut(void *array, void *item, size_t item_size) {
     }
 
     jp_bytes_copy(
-        ((u8 *)array) + header->count * item_size,
-        (void *)item,
-        item_size
+        ((u8 *)array) + header->count * item_size, (void *)item, item_size
     );
     header->count += 1;
     return array;
@@ -221,7 +212,7 @@ void jp_dynarr_remove_ut(void *array, u64 index, size_t item_size) {
     if (header->count < index) {
         return;
     }
-    u8 *data = (u8*)array;
+    u8 *data = (u8 *)array;
     u8 *data_dst = data + index * item_size;
     u8 *data_src = data_dst + item_size;
     u64 bytes = (header->count - index - 1) * item_size;
@@ -279,11 +270,11 @@ jp_file_result jp_read_file(const char *filename) {
     }
     result.data = data;
 
-    for (
-        bs_remaining = (size_t)file_stat.st_size, cursor = data;
-        bs_remaining > 0;
-        bs_remaining -= read_res, cursor += read_res, result.size += (u64)read_res
-    ) {
+    for (bs_remaining = (size_t)file_stat.st_size, cursor = data;
+         bs_remaining > 0;
+         bs_remaining -= read_res,
+        cursor += read_res,
+        result.size += (u64)read_res) {
         chunk_size = (bs_remaining < file_stat.st_blksize)
             ? bs_remaining
             : file_stat.st_blksize;
@@ -313,7 +304,11 @@ s64 jp_write_file(char *filename, void *data, u64 size) {
     size_t bs_remaining = 0, chunk_size = 0;
     ssize_t write_res = 0;
 
-    fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    fd = open(
+        filename,
+        O_WRONLY | O_CREAT | O_TRUNC,
+        S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH
+    );
     if (fd < 0) {
         return errno;
     }
@@ -322,11 +317,8 @@ s64 jp_write_file(char *filename, void *data, u64 size) {
         goto end;
     }
 
-    for (
-        bs_remaining = size;
-        bs_remaining > 0;
-        bs_remaining -= write_res, cursor += write_res
-    ) {
+    for (bs_remaining = size; bs_remaining > 0;
+         bs_remaining -= write_res, cursor += write_res) {
         chunk_size = (bs_remaining < file_stat.st_blksize)
             ? bs_remaining
             : file_stat.st_blksize;

@@ -1,13 +1,13 @@
-#include <stdio.h>
 #include "jp.h"
+#include <stdio.h>
 
 int array_demo() {
-    float* data = jp_dynarr_new(10, float);
+    float *data = jp_dynarr_new(10, float);
     float last = 0.0;
 
     int i;
     for (i = 0; i < 20; i += 1) {
-        float v = ((float)i)/10;
+        float v = ((float)i) / 10;
         jp_dynarr_push(data, v);
     }
 
@@ -19,12 +19,7 @@ int array_demo() {
         printf("data %d: %f\n", i, data[i]);
     }
 
-    printf(
-        "2: %f, 15: %f, last: %f\n",
-        data[2],
-        data[15],
-        last
-    );
+    printf("2: %f, 15: %f, last: %f\n", data[2], data[15], last);
 
     jp_dynarr_free(data);
 
@@ -59,4 +54,3 @@ int main(int argc, char **argv) {
     }
     return array_demo();
 }
-
