@@ -1,27 +1,54 @@
 CC = gcc
 LANG_STD = c11
-CFLAGS = -Wall -Wfatal-errors -g -std=$(LANG_STD) -MMD -MP
-LDFLAGS = 
+SAN_FLAGS = -fsanitize=address,leak,undefined
+
+CFLAGS = -Wall -Wfatal-errors -std=$(LANG_STD) -MMD -MP -fno-omit-frame-pointer
+DEBUG_CFLAGS = -g $(SAN_FLAGS)
+RELEASE_CFLAGS = -O2
+
+LDFLAGS =
+DEBUG_LDFLAGS = $(SAN_FLAGS)
+RELEASE_LDFLAGS =
+
 SRC_FILES = $(wildcard src/*.c)
-OBJ_FILES = $(SRC_FILES:src/%.c=build/%.o)
+DEBUG_OBJ_FILES = $(SRC_FILES:src/%.c=build/debug/%.o)
+RELEASE_OBJ_FILES = $(SRC_FILES:src/%.c=build/release/%.o)
 
-all: main
+debug: build/debug/main
+release: build/release/main
 
--include $(OBJ_FILES:.o=.d)
--include $(LIBS_OBJ_FILES:.o=.d)
+-include $(DEBUG_OBJ_FILES:.o=.d)
+-include $(RELEASE_OBJ_FILES:.o=.d)
 
-main: $(OBJ_FILES) $(LIBS_OBJ_FILES)
-	$(CC) $(LDFLAGS) $^ -o $@
+build/debug/main: $(DEBUG_OBJ_FILES)
+	$(CC) $(LDFLAGS) $(DEBUG_LDFLAGS) $^ -o $@
 
-$(OBJ_FILES): build/%.o: src/%.c
+build/release/main: $(RELEASE_OBJ_FILES)
+	$(CC) $(LDFLAGS) $(RELEASE_LDFLAGS) $^ -o $@ 
+
+$(DEBUG_OBJ_FILES): build/debug/%.o: src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
 
-run:
-	./main
+$(RELEASE_OBJ_FILES): build/release/%.o: src/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) -c $< -o $@
+
+run-debug: build/debug/main
+	$<
+
+run-release: build/release/main
+	$<
+
+clean-debug:
+	rm -rf build/debug/
+
+clean-release:
+	rm -rf build/release/
 
 clean:
-	rm -rf main
 	rm -rf build
 
-.PHONY: clean run
+.PHONY: debug release
+.PHONY: run-debug run-release
+.PHONY: clean-debug clean-release clean
