@@ -2,7 +2,11 @@
 #include <stdio.h>
 
 int array_demo() {
-    float *data = jp_dynarr_new(10, float, &jp_std_allocator);
+    u8 *buffer = jp_malloc(1024 * 1024, &jp_std_allocator);
+    jp_arena arena = jp_arena_new(buffer, 1024 * 1024);
+    jp_allocator allocator = jp_arena_allocator_new(&arena);
+
+    float *data = jp_dynarr_new(10, float, &allocator);
     float last = 0.0;
 
     int i;
@@ -22,6 +26,8 @@ int array_demo() {
     printf("2: %f, 15: %f, last: %f\n", data[2], data[15], last);
 
     jp_dynarr_free(data);
+    jp_arena_clear(&arena);
+    jp_free(buffer, &jp_std_allocator);
 
     return 0;
 }

@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,96 +41,150 @@ typedef s32 b32;
 // Allocator
 ////////////////////////
 
+/**
+ * Interface for memory allocation
+ */
 typedef struct {
+    /**
+     * Function for allocating memory.
+     */
     void *(*malloc)(size_t, void *ctx);
+
+    /**
+     * Function for freeing memory.
+     */
     void (*free)(void *, void *ctx);
+
+    /**
+     * Custom context for the allocator.
+     */
     void *ctx;
 } jp_allocator;
 
+/**
+ * Standard memory allocation (stdlib malloc) compatible with the custom memory
+ * allocation interface.
+ */
 static void *jp_std_malloc(size_t size, void *ctx) {
     (void)ctx;
     return malloc(size);
 }
 
+/**
+ * Standard memory allocation (stdlib free) compatible with the custom memory
+ * allocation interface.
+ */
 static void jp_std_free(void *ptr, void *ctx) {
     (void)ctx;
     free(ptr);
 }
 
+/**
+ * Standard memory allocation compatible with the custom memory
+ * allocation interface.
+ */
 static jp_allocator jp_std_allocator = {jp_std_malloc, jp_std_free, NULL};
 
+/**
+ * Call malloc on a custom memory allocation interface.
+ */
 #define jp_malloc(size, allocator) \
     ((allocator)->malloc((size), (allocator)->ctx))
 
-#define jp_free(ptr, allocator) \
-    ((allocator)->free((ptr, (allocator)->ctx))
+/**
+ * Call free on a custom memory allocation interface.
+ */
+#define jp_free(ptr, allocator) ((allocator)->free((ptr), (allocator)->ctx))
 
 ////////////////////////
 // Arena allocator
 ////////////////////////
 
+/**
+ * Linear memory arena.
+ */
 typedef struct {
-    void *base;
+    /**
+     * Buffer to back the arena.
+     */
+    u8 *buffer;
+
+    /**
+     * Current size of the arena.
+     */
     u64 size;
+
+    /**
+     * Amount of memory used in the arena.
+     */
     u64 used;
 } jp_arena;
 
-#define jp_empty_arena {.base = NULL, .size = 0, .used = 0}
-
-jp_arena jp_arena_new(u64 size) {
-    void *base = malloc(size);
-    if (!base) {
-        jp_arena arena = jp_empty_arena;
-        return arena;
-    }
-    jp_arena arena = {.base = base, .size = size, .used = 0};
+/**
+ * Create a new arena for a backing buffer.
+ */
+jp_arena jp_arena_new(u8 *buffer, u64 size) {
+    jp_arena arena = {.buffer = buffer, .size = size, .used = 0};
     return arena;
 }
 
+/**
+ * Calculate used bytes based on desired usage and alignment.
+ */
 #define jp_arena_aligned_used(used, alignment) \
     ((used) + (alignment) - 1) & ~((alignment) - 1)
 
-jp_arena
-jp_arena_sub_bytes(jp_arena *arena, u64 size, u64 alignment, b32 is_temp) {
-    u64 aligned_used = jp_arena_aligned_used(arena->used, alignment);
-    if (arena->size < size + aligned_used) {
-        jp_arena sub = jp_empty_arena;
-        return sub;
-    }
-    if (!is_temp) {
-        arena->used = aligned_used + size;
-    }
-    jp_arena sub = {
-        .base = ((u8 *)arena->base) + aligned_used, .size = size, .used = 0
-    };
-    return sub;
-}
-
-#define jp_arena_sub(arena, t, count, is_temp) \
-    ((t *)jp_arena_sub((arena), sizeof(t) * (count), _Alignof(t), (is_temp)))
-
+/**
+ * Allocate bytes from the given arena.
+ */
 void *jp_arena_alloc_bytes(jp_arena *arena, u64 size, u64 alignment) {
     u64 aligned_used = jp_arena_aligned_used(arena->used, alignment);
     if (arena->size < size + aligned_used) {
+        assert("Arena ran out of memory");
         return NULL;
     }
-    void *p = ((u8 *)arena->base) + aligned_used;
+    void *p = ((u8 *)arena->buffer) + aligned_used;
     arena->used = aligned_used + size;
     return p;
 }
 
+/**
+ * Allocate a number of items of type t from the given arena.
+ */
 #define jp_arena_alloc(arena, t, count) \
     ((t *)jp_arena_alloc_bytes((arena), sizeof(t) * (count), _Alignof(t)))
 
+/**
+ * Clear the arena usage.
+ */
 void jp_arena_clear(jp_arena *arena) {
     arena->used = 0;
 }
 
-void jp_arena_free(jp_arena *arena) {
-    free(arena->base);
-    arena->base = NULL;
-    arena->size = 0;
-    arena->used = 0;
+/**
+ * Custom allocator malloc function for the arena
+ */
+void *jp_arena_malloc(size_t size, void *ctx) {
+    jp_arena *arena = ctx;
+    return jp_arena_alloc_bytes(arena, size, _Alignof(max_align_t));
+}
+
+/**
+ * Custom allocator free function for the arena
+ */
+void jp_arena_free(void *ptr, void *ctx) {
+    (void)ctx;
+    (void)ptr;
+}
+
+/**
+ * Custom allocator for a memory arena
+ */
+jp_allocator jp_arena_allocator_new(jp_arena *arena) {
+    jp_allocator a = {
+        .ctx = arena, .malloc = jp_arena_malloc, .free = jp_arena_free
+    };
+    return a;
 }
 
 ////////////////////////
@@ -213,8 +268,13 @@ jp_dynarr_new_sized(u64 capacity, size_t item_size, jp_allocator *allocator) {
 /**
  * Free the given array
  */
-#define jp_dynarr_free(array) \
-    (array ? free(((jp_dynarr_header *)(array)) - 1) : NULL)
+void jp_dynarr_free(void *array) {
+    jp_dynarr_header *header = jp_dynarr_get_header(array);
+    if (!array) {
+        return;
+    }
+    jp_free(header, header->allocator);
+}
 
 /**
  * Clone a given array with new capacity.
