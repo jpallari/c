@@ -1,7 +1,6 @@
 #ifndef JP_H
 #define JP_H
 
-#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stddef.h>
@@ -11,6 +10,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+////////////////////////
+// Scalar types
+////////////////////////
+
 typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
@@ -19,9 +22,35 @@ typedef int8_t s8;
 typedef int16_t s16;
 typedef int32_t s32;
 typedef int64_t s64;
-typedef float f32;
-typedef double f64;
 typedef s32 b32;
+
+////////////////////////
+// Debugging
+////////////////////////
+
+/**
+ * Assert: fail when condition does not hold
+ */
+#ifdef JP_DEBUG
+#define assert(c) \
+    while (!(c)) __builtin_unreachable()
+#else
+#define assert(c)
+#endif
+
+////////////////////////
+// Arrays
+////////////////////////
+
+/**
+ * Count number of items in an array or a static string
+ */
+#define jp_countof(x) (sizeof(x) / sizeof(*(x)))
+
+/**
+ * Length of an array or a static string
+ */
+#define jp_lengthof(x) (jp_countof(x) - 1)
 
 ////////////////////////
 // Bytes
