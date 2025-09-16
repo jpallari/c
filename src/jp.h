@@ -77,7 +77,7 @@ typedef struct {
     /**
      * Function for allocating memory.
      */
-    void *(*malloc)(size_t, void *ctx);
+    void *(*malloc)(size_t, size_t, void *ctx);
 
     /**
      * Function for freeing memory.
@@ -94,8 +94,9 @@ typedef struct {
  * Standard memory allocation (stdlib malloc) compatible with the custom memory
  * allocation interface.
  */
-static void *jp_std_malloc(size_t size, void *ctx) {
+static void *jp_std_malloc(size_t size, size_t alignment, void *ctx) {
     (void)ctx;
+    (void)alignment;
     return malloc(size);
 }
 
@@ -115,15 +116,81 @@ static void jp_std_free(void *ptr, void *ctx) {
 static jp_allocator jp_std_allocator = {jp_std_malloc, jp_std_free, NULL};
 
 /**
+ * Create given amount of new items of given type using an allocator.
+ */
+#define jp_new(t, n, allocator) \
+    (t *)jp_malloc(sizeof(t) * (n), _Alignof(t), allocator)
+
+/**
  * Call malloc on a custom memory allocation interface.
  */
-#define jp_malloc(size, allocator) \
-    ((allocator)->malloc((size), (allocator)->ctx))
+#define jp_malloc(size, alignment, allocator) \
+    ((allocator)->malloc((size), (alignment), (allocator)->ctx))
 
 /**
  * Call free on a custom memory allocation interface.
  */
 #define jp_free(ptr, allocator) ((allocator)->free((ptr), (allocator)->ctx))
+
+////////////////////////
+// Slices
+////////////////////////
+
+/**
+ * Slice (aka fat pointer aka string)
+ */
+typedef struct {
+    u8 *buffer;
+    size_t size;
+} jp_slice;
+
+/**
+ * Create a slice to an array or a static string
+ */
+#define jp_slice_from(x) \
+    (jp_slice) { \
+        (u8 *)(x), jp_lengthof(x) \
+    }
+
+/**
+ * Create a slice from a span between two pointers
+ */
+jp_slice jp_slice_span(u8 *start, u8 *end) {
+    u8 *temp;
+    if ((uintptr_t)start > (uintptr_t)end) {
+        temp = start;
+        start = end;
+        end = temp;
+    }
+
+    jp_slice s = {0};
+    s.buffer = start;
+    s.size = end - start;
+    return s;
+}
+
+/**
+ * Check if two slices are equal
+ */
+s32 jp_slice_equal(jp_slice a, jp_slice b) {
+    if (a.size != b.size) {
+        return 0;
+    }
+    for (size_t i = 0; i < a.size; i += 1) {
+        if (a.buffer[i] != b.buffer[i]) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/**
+ * Copy slice contents to another slice.
+ */
+void jp_slice_copy(jp_slice dest, jp_slice src) {
+    size_t amount = src.size > dest.size ? dest.size : src.size;
+    jp_bytes_move(dest.buffer, src.buffer, amount);
+}
 
 ////////////////////////
 // Arena allocator
@@ -193,9 +260,9 @@ void jp_arena_clear(jp_arena *arena) {
 /**
  * Custom allocator malloc function for the arena
  */
-void *jp_arena_malloc(size_t size, void *ctx) {
+void *jp_arena_malloc(size_t size, size_t alignment, void *ctx) {
     jp_arena *arena = ctx;
-    return jp_arena_alloc_bytes(arena, size, _Alignof(max_align_t));
+    return jp_arena_alloc_bytes(arena, size, alignment);
 }
 
 /**
@@ -254,10 +321,12 @@ typedef struct {
 /**
  * Create a new dynamic array
  */
-void *
-jp_dynarr_new_sized(u64 capacity, size_t item_size, jp_allocator *allocator) {
-    void *data =
-        jp_malloc(jp_dynarr_count_to_bytes(capacity, item_size), allocator);
+void *jp_dynarr_new_sized(
+    u64 capacity, size_t item_size, size_t alignment, jp_allocator *allocator
+) {
+    u8 *data = jp_malloc(
+        jp_dynarr_count_to_bytes(capacity, item_size), alignment, allocator
+    );
     if (!data) {
         return NULL;
     }
@@ -274,7 +343,7 @@ jp_dynarr_new_sized(u64 capacity, size_t item_size, jp_allocator *allocator) {
  * Create a new dynamic array
  */
 #define jp_dynarr_new(capacity, t, allocator) \
-    ((t *)jp_dynarr_new_sized((capacity), sizeof(t), (allocator)))
+    ((t *)jp_dynarr_new_sized((capacity), sizeof(t), _Alignof(t), (allocator)))
 
 /**
  * Get the header for given array
@@ -308,7 +377,9 @@ void jp_dynarr_free(void *array) {
 /**
  * Clone a given array with new capacity.
  */
-void *jp_dynarr_clone_ut(void *array, u64 capacity, size_t item_size) {
+void *jp_dynarr_clone_ut(
+    void *array, u64 capacity, size_t item_size, size_t alignment
+) {
     if (!array) {
         return NULL;
     }
@@ -318,7 +389,7 @@ void *jp_dynarr_clone_ut(void *array, u64 capacity, size_t item_size) {
     }
 
     void *new_array =
-        jp_dynarr_new_sized(capacity, item_size, header->allocator);
+        jp_dynarr_new_sized(capacity, item_size, alignment, header->allocator);
     if (!new_array) {
         return NULL;
     }
@@ -337,18 +408,19 @@ void *jp_dynarr_clone_ut(void *array, u64 capacity, size_t item_size) {
  */
 #define jp_dynarr_clone(array, capacity, t, allocator) \
     ((t *)(jp_dynarr_clone_ut( \
-        (array), (capacity), sizeof(*(array)), (allocator) \
+        (array), (capacity), sizeof(*(array)), _Alignof(t), (allocator) \
     )))
 
 /**
  * Push item to given array. Returns the array with the item.
  */
-void *jp_dynarr_push_ut(void *array, void *item, size_t item_size) {
+void *
+jp_dynarr_push_ut(void *array, void *item, size_t item_size, size_t alignment) {
     if (!array) {
         // Array does not exist? Create a new one from scratch.
         // Use standard allocator since previous allocator is unknown.
         array = jp_dynarr_new_sized(
-            jp_dynarr_grow_count(8), item_size, &jp_std_allocator
+            jp_dynarr_grow_count(8), item_size, alignment, &jp_std_allocator
         );
     }
     jp_dynarr_header *header = jp_dynarr_get_header(array);
@@ -356,7 +428,8 @@ void *jp_dynarr_push_ut(void *array, void *item, size_t item_size) {
 
     if (header->count >= header->capacity) {
         u64 new_capacity = jp_dynarr_grow_count(header->capacity);
-        void *new_array = jp_dynarr_clone_ut(array, new_capacity, item_size);
+        void *new_array =
+            jp_dynarr_clone_ut(array, new_capacity, item_size, alignment);
         if (!new_array) {
             return NULL;
         }
@@ -378,7 +451,8 @@ void *jp_dynarr_push_ut(void *array, void *item, size_t item_size) {
  * Push item to given array and assign it back to the array.
  */
 #define jp_dynarr_push(array, item) \
-    ((array) = jp_dynarr_push_ut((array), &(item), sizeof(item)))
+    ((array) = \
+         jp_dynarr_push_ut((array), &(item), sizeof(item), _Alignof(item)))
 
 /**
  * Pop an element from the tail of the array
@@ -432,7 +506,7 @@ void jp_dynarr_remove_ut(void *array, u64 index, size_t item_size) {
 ////////////////////////
 
 typedef struct {
-    void *data;
+    u8 *data;
     u64 size;
     s32 err_code;
 } jp_file_result;
@@ -464,7 +538,7 @@ jp_file_result jp_read_file(const char *filename, jp_allocator *allocator) {
         goto end;
     }
 
-    data = jp_malloc(file_stat.st_size, allocator);
+    data = jp_new(u8, file_stat.st_size, allocator);
     if (!data) {
         result.err_code = -2;
         goto end;

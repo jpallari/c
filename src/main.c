@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 int array_demo() {
-    u8 *buffer = jp_malloc(1024 * 1024, &jp_std_allocator);
+    u8 *buffer = jp_new(u8, 1024 * 1024, &jp_std_allocator);
     jp_arena arena = jp_arena_new(buffer, 1024 * 1024);
     jp_allocator allocator = jp_arena_allocator_new(&arena);
 
