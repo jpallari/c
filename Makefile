@@ -2,13 +2,13 @@ CC = gcc
 LANG_STD = c11
 SAN_FLAGS = -fsanitize=address,leak,undefined
 
-CFLAGS = -Wall -Wfatal-errors -std=$(LANG_STD) -MMD -MP -fno-omit-frame-pointer -flto
-DEBUG_CFLAGS = -g $(SAN_FLAGS)
-RELEASE_CFLAGS = -O2
+CFLAGS = -Wall -Wfatal-errors -std=$(LANG_STD) -MMD -MP -fno-omit-frame-pointer
+DEBUG_CFLAGS = -g $(SAN_FLAGS) -DJP_DEBUG
+RELEASE_CFLAGS = -O2 -flto
 
-LDFLAGS = -flto
+LDFLAGS =
 DEBUG_LDFLAGS = $(SAN_FLAGS)
-RELEASE_LDFLAGS =
+RELEASE_LDFLAGS = -flto
 
 HEADER_FILES = $(wildcard src/*.h)
 SRC_FILES = $(wildcard src/*.c)
