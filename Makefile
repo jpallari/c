@@ -2,7 +2,15 @@ CC = gcc
 LANG_STD = c11
 SAN_FLAGS = -fsanitize=address,leak,undefined
 
-CFLAGS = -Wall -Wfatal-errors -std=$(LANG_STD) -MMD -MP -fno-omit-frame-pointer
+CFLAGS = \
+		-Wall \
+		-Wfatal-errors \
+		-std=$(LANG_STD) \
+		-MMD -MP \
+		-fno-omit-frame-pointer \
+		-fno-math-errno \
+		-ffinite-math-only
+CFLAGS += $(EXTRA_CFLAGS)
 DEBUG_CFLAGS = -g $(SAN_FLAGS) -DJP_DEBUG
 RELEASE_CFLAGS = -O2 -flto
 
@@ -14,6 +22,8 @@ HEADER_FILES = $(wildcard src/*.h)
 SRC_FILES = $(wildcard src/*.c)
 DEBUG_OBJ_FILES = $(SRC_FILES:src/%.c=build/debug/%.o)
 RELEASE_OBJ_FILES = $(SRC_FILES:src/%.c=build/release/%.o)
+
+-include config.mk
 
 debug: build/debug/main
 release: build/release/main
