@@ -6,9 +6,12 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#ifdef JP_USE_STRING_H
+#include <string.h>
+#endif
 
 ////////////////////////
 // Scalar types
@@ -56,6 +59,7 @@ typedef s32 b32;
 // Bytes
 ////////////////////////
 
+#ifdef JP_USE_STRING_H
 /**
  * Basically memcpy
  */
@@ -65,6 +69,44 @@ typedef s32 b32;
  * Basically memmove
  */
 #define jp_bytes_move memmove
+#else
+/**
+ * Basically memcpy. This will most likely be replaced with memcpy during
+ * compilation anyway.
+ */
+static inline void *
+jp_bytes_copy(void *restrict dest, const void *restrict src, size_t n) {
+    char *d = dest;
+    const char *s = src;
+    for (size_t i = 0; i < n; i += 1) { d[i] = s[i]; }
+    return d;
+}
+
+/**
+ * Basically memmove. Assumes that overlapping can be avoided by comparing
+ * pointer ordering, which is OK for targets where this code is used.
+ */
+static inline void *jp_bytes_move(void *dest, const void *src, size_t n) {
+    if (dest == src) {
+        return dest;
+    }
+    uintptr_t diff = dest < src ? (uintptr_t)src - (uintptr_t)dest
+                                : (uintptr_t)dest - (uintptr_t)src;
+    if ((size_t)diff > n) {
+        jp_bytes_copy(dest, src, n);
+    }
+
+    char *d = dest;
+    const char *s = src;
+
+    if (dest < src) {
+        for (size_t i = 0; i < n; i += 1) { d[i] = s[i]; }
+    } else {
+        for (size_t i = n; i > 0; i -= 1) { d[i] = s[i]; }
+    }
+    return d;
+}
+#endif
 
 ////////////////////////
 // Allocator
