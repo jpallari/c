@@ -454,15 +454,49 @@ void *jp_dynarr_clone_ut(
     )))
 
 /**
- * Push item to given array. Returns the array with the item.
+ * Push item to given array. Returns true when the operation succeeded (i.e.
+ * there's capacity).
  */
-void *
-jp_dynarr_push_ut(void *array, void *item, size_t item_size, size_t alignment) {
+b32 jp_dynarr_push_ut(
+    void *array, void *item, size_t item_size, size_t aligment
+) {
+    if (!array) {
+        return 0;
+    }
+    jp_dynarr_header *header = jp_dynarr_get_header(array);
+    assert(header && "Header must not be null");
+
+    if (header->count >= header->capacity) {
+        // out of capacity
+        return 0;
+    }
+
+    jp_bytes_copy(
+        ((u8 *)array) + header->count * item_size, (u8 *)item, item_size
+    );
+    header->count += 1;
+    return 1;
+}
+
+/**
+ * Push item to given array. Returns true when the operation succeeded (i.e.
+ * there's capacity).
+ */
+#define jp_dynarr_push(array, item) \
+    jp_dynarr_push_ut((array), &(item), sizeof(item), _Alignof(item))
+
+/**
+ * Push item to given array and grow the array automatically. Returns the array
+ * with the item.
+ */
+void *jp_dynarr_push_grow_ut(
+    void *array, void *item, size_t item_size, size_t alignment
+) {
     if (!array) {
         // Array does not exist? Create a new one from scratch.
         // Use standard allocator since previous allocator is unknown.
         array = jp_dynarr_new_sized(
-            jp_dynarr_grow_count(8), item_size, alignment, &jp_std_allocator
+            jp_dynarr_grow_count(0), item_size, alignment, &jp_std_allocator
         );
     }
     jp_dynarr_header *header = jp_dynarr_get_header(array);
@@ -483,7 +517,7 @@ jp_dynarr_push_ut(void *array, void *item, size_t item_size, size_t alignment) {
     }
 
     jp_bytes_copy(
-        ((u8 *)array) + header->count * item_size, (void *)item, item_size
+        ((u8 *)array) + header->count * item_size, (u8 *)item, item_size
     );
     header->count += 1;
     return array;
@@ -492,9 +526,10 @@ jp_dynarr_push_ut(void *array, void *item, size_t item_size, size_t alignment) {
 /**
  * Push item to given array and assign it back to the array.
  */
-#define jp_dynarr_push(array, item) \
-    ((array) = \
-         jp_dynarr_push_ut((array), &(item), sizeof(item), _Alignof(item)))
+#define jp_dynarr_push_grow(array, item) \
+    ((array) = jp_dynarr_push_grow_ut( \
+         (array), &(item), sizeof(item), _Alignof(item) \
+     ))
 
 /**
  * Pop an element from the tail of the array

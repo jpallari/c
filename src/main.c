@@ -12,7 +12,7 @@ int array_demo() {
     int i;
     for (i = 0; i < 20; i += 1) {
         float v = ((float)i) / 10;
-        jp_dynarr_push(data, v);
+        jp_dynarr_push_grow(data, v);
     }
 
     jp_dynarr_remove(data, 9);
