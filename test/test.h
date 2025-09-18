@@ -26,7 +26,7 @@ void log_no_loc(enum log_status status, const char *msg) {
 
     switch (status) {
     case log_status_test: status_str = "TEST"; break;
-    case log_status_ok: status_str = " OK "; break;
+    case log_status_ok: status_str = "OK  "; break;
     case log_status_warn: status_str = "WARN"; break;
     case log_status_fail: status_str = "FAIL"; break;
     }
@@ -56,7 +56,7 @@ void log_with_loc(
 
     switch (status) {
     case log_status_test: status_str = "TEST"; break;
-    case log_status_ok: status_str = " OK "; break;
+    case log_status_ok: status_str = "OK  "; break;
     case log_status_warn: status_str = "WARN"; break;
     case log_status_fail: status_str = "FAIL"; break;
     }
@@ -115,19 +115,19 @@ void log_with_loc(
     } while (0)
 
 #define assert_true(c, msg) assert_false(!(c), msg)
-#define assert_eq(a, b, msg) assert_false((a) == (b), msg)
-#define assert_ne(a, b, msg) assert_false((a) != (b), msg)
-#define assert_lt(a, b, msg) assert_false((a) < (b), msg)
-#define assert_le(a, b, msg) assert_false((a) <= (b), msg)
-#define assert_gt(a, b, msg) assert_false((a) > (b), msg)
-#define assert_ge(a, b, msg) assert_false((a) >= (b), msg)
+#define assert_eq(a, b, msg) assert_true((a) == (b), msg)
+#define assert_ne(a, b, msg) assert_true((a) != (b), msg)
+#define assert_lt(a, b, msg) assert_true((a) < (b), msg)
+#define assert_le(a, b, msg) assert_true((a) <= (b), msg)
+#define assert_gt(a, b, msg) assert_true((a) > (b), msg)
+#define assert_ge(a, b, msg) assert_true((a) >= (b), msg)
 #define assert_true_inc(c, msg) assert_false_inc(!(c), msg)
-#define assert_eq_inc(a, b, msg) assert_false_inc((a) == (b), msg)
-#define assert_ne_inc(a, b, msg) assert_false_inc((a) != (b), msg)
-#define assert_lt_inc(a, b, msg) assert_false_inc((a) < (b), msg)
-#define assert_le_inc(a, b, msg) assert_false_inc((a) <= (b), msg)
-#define assert_gt_inc(a, b, msg) assert_false_inc((a) > (b), msg)
-#define assert_ge_inc(a, b, msg) assert_false_inc((a) >= (b), msg)
+#define assert_eq_inc(a, b, msg) assert_true_inc((a) == (b), msg)
+#define assert_ne_inc(a, b, msg) assert_true_inc((a) != (b), msg)
+#define assert_lt_inc(a, b, msg) assert_true_inc((a) < (b), msg)
+#define assert_le_inc(a, b, msg) assert_true_inc((a) <= (b), msg)
+#define assert_gt_inc(a, b, msg) assert_true_inc((a) > (b), msg)
+#define assert_ge_inc(a, b, msg) assert_true_inc((a) >= (b), msg)
 
 ////////////////////////
 // Test runner
@@ -208,6 +208,7 @@ int test_main(
         final_status = log_status_ok;
         snprintf(buf, sizeof(buf), "all tests pass");
     }
+    fprintf(stderr, "----------------------------------------\n");
     log_no_loc(final_status, buf);
     return failed_test_cases;
 }
