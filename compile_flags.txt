@@ -4,3 +4,7 @@ c
 -Wfatal-errors
 -g
 -std=c11
+-fno-omit-frame-pointer
+-fno-math-errno
+-ffinite-math-only
+-DJP_DEBUG
