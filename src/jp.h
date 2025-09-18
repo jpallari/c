@@ -86,6 +86,9 @@ typedef s32 b32;
  */
 static inline void *
 jp_bytes_copy(void *restrict dest, const void *restrict src, size_t n) {
+    assert(dest && "dest must not be null");
+    assert(src && "src must not be null");
+
     char *d = dest;
     const char *s = src;
     for (size_t i = 0; i < n; i += 1) { d[i] = s[i]; }
@@ -102,6 +105,9 @@ jp_bytes_copy(void *restrict dest, const void *restrict src, size_t n) {
  * @returns pointer to area of memory where bytes were copied to
  */
 static inline void *jp_bytes_move(void *dest, const void *src, size_t n) {
+    assert(dest && "dest must not be null");
+    assert(src && "src must not be null");
+
     if (dest == src) {
         return dest;
     }
@@ -257,6 +263,9 @@ typedef struct {
  * @returns slice of data between the given pointers
  */
 jp_slice jp_slice_span(u8 *start, u8 *end) {
+    assert(start && "start must not be null");
+    assert(end && "end must not be null");
+
     u8 *temp;
     if ((uintptr_t)start > (uintptr_t)end) {
         temp = start;
@@ -600,19 +609,25 @@ void *jp_dynarr_push_grow_ut(
      ))
 
 /**
- * Pop an element from the tail of the array
+ * Pop an element from the tail of the array.
+ *
+ * @param[in] array array to pop the value from
+ * @param[out] out pointer to write the popped value to
+ * @param[in] item_size size of an array item
+ * @returns true when an item was popped and false otherwise
  */
-void jp_dynarr_pop_ut(void *array, void *out, size_t item_size) {
+b32 jp_dynarr_pop_ut(void *array, void *out, size_t item_size) {
     if (!array) {
-        return;
+        return 0;
     }
     jp_dynarr_header *header = jp_dynarr_get_header(array);
     if (header->count == 0) {
-        return;
+        return 0;
     }
     u8 *item = ((u8 *)array) + (header->count - 1) * item_size;
     jp_bytes_copy((u8 *)out, item, item_size);
     header->count -= 1;
+    return 1;
 }
 
 /**
@@ -623,14 +638,18 @@ void jp_dynarr_pop_ut(void *array, void *out, size_t item_size) {
 
 /**
  * Remove an element by index from given array.
+ *
+ * @param array array to pop the value from
+ * @param item_size size of an array item
+ * @returns true when an item was removed and false otherwise
  */
-void jp_dynarr_remove_ut(void *array, u64 index, size_t item_size) {
+b32 jp_dynarr_remove_ut(void *array, u64 index, size_t item_size) {
     if (!array) {
-        return;
+        return 0;
     }
     jp_dynarr_header *header = jp_dynarr_get_header(array);
     if (header->count < index) {
-        return;
+        return 0;
     }
     u8 *data = (u8 *)array;
     u8 *data_dst = data + index * item_size;
@@ -638,6 +657,7 @@ void jp_dynarr_remove_ut(void *array, u64 index, size_t item_size) {
     u64 bytes = (header->count - index - 1) * item_size;
     jp_bytes_move(data_dst, data_src, bytes);
     header->count -= 1;
+    return 1;
 }
 
 /**

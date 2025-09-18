@@ -98,6 +98,7 @@ $(CMD_RELEASE_BIN_FILES): $(RELEASE_DIR)/%: $(RELEASE_CMD_OBJ_DIR)/%.o $(RELEASE
 #
 # Build and run tests
 #
+
 .PHONY: lint test
 
 test: $(TEST_TARGETS)
