@@ -3,10 +3,11 @@
 
 #include <stdarg.h>
 #include <stddef.h>
+#include <stdio.h>
 
 #define log_fail(msg) \
     fprintf( \
-        stderr, "[FAIL] %s:%s (%s): %s", __FILE__, __LINE__, __func__, (msg) \
+        stderr, "[FAIL] %s:%d (%s): %s\n", __FILE__, __LINE__, __func__, (msg) \
     )
 
 #define assert_false(c, msg) \
@@ -31,29 +32,45 @@
 
 #define assert_ge(a, b, msg) assert_false((a) >= (b), msg)
 
+typedef int (*test_case_fun)(void);
+
 typedef struct {
-    void (*before_all)();
-    void (*before)();
-    void (*after)();
-    void (*after_all)();
+    void (*before_all)(void);
+    void (*before)(void);
+    void (*after)(void);
+    void (*after_all)(void);
 } test_setup;
 
+typedef struct {
+    char *name;
+    test_case_fun test_code;
+} test_case;
+
 int test_main(
-    int argc, char **argv, test_setup *setup, size_t test_count, ...
+    int argc,
+    char **argv,
+    test_setup *setup,
+    size_t test_count,
+    test_case *test_cases
 ) {
+    if (!test_cases) {
+        log_fail("No test cases defined");
+        return 1;
+    }
+
     int failed_tests = 0;
-    int (*test_func)();
-    va_list ap;
-    va_start(ap, test_count);
+    test_case test_case;
+
     if (setup && setup->before_all) {
         setup->before_all();
     }
     for (size_t i = 0; i < test_count; i += 1) {
-        test_func = va_arg(ap, int (*)());
+        test_case = test_cases[i];
+        fprintf(stderr, "[TEST] %s\n", test_case.name);
         if (setup && setup->before) {
             setup->before();
         }
-        if (!test_func()) {
+        if (!test_case.test_code()) {
             failed_tests += 1;
         }
         if (setup && setup->after) {
@@ -63,17 +80,15 @@ int test_main(
     if (setup && setup->after_all) {
         setup->after_all();
     }
-    va_end(ap);
+
+    fprintf(stderr, "Total failed: %d/%ld\n", failed_tests, test_count);
     return failed_tests;
 }
 
-#define run_tests(setup, ...) \
+#define setup_tests(setup, tests) \
     int main(int argc, char **argv) { \
-        test_main( \
-            argc, \
-            argv, \
-            sizeof((int[]) {__VA_ARGS__}) / sizeof(int), \
-            __VA_ARGS__ \
+        return test_main( \
+            argc, argv, &(setup), sizeof(tests) / sizeof(*tests), (tests) \
         ); \
     }
 
