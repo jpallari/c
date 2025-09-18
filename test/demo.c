@@ -2,12 +2,19 @@
 
 int success() {
     assert_true(1, "jee");
-    return 1;
+    return 0;
 }
 
 int fail() {
     assert_true(0, "nah");
-    return 1;
+    return 0;
+}
+
+int fail_2() {
+    int fails = 0;
+    assert_false_inc(1, "nah2");
+    assert_false_inc(1, "nah3");
+    return fails;
 }
 
 void before(void) {
@@ -26,8 +33,6 @@ void after_all(void) {
     printf("Executing after_all\n");
 }
 
-static test_setup setup = {before_all, before, after, after_all};
+static test_case tests[] = {{"Success", success}, {"Fail", fail}, {"Fail 2", fail_2}};
 
-static test_case tests[] = {{"Success", success}, {"Fail", fail}};
-
-setup_tests(setup, tests)
+setup_tests(NULL, tests)
