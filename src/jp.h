@@ -596,9 +596,9 @@ void *jp_dynarr_push_grow_ut(
 /**
  * Push item to given array and assign it back to the array.
  */
-#define jp_dynarr_push_grow(array, item) \
+#define jp_dynarr_push_grow(array, item, type) \
     ((array) = jp_dynarr_push_grow_ut( \
-         (array), &(item), sizeof(item), _Alignof(item) \
+         (array), &(item), sizeof(type), _Alignof(type) \
      ))
 
 /**
