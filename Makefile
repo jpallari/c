@@ -2,6 +2,7 @@ CC = gcc
 LANG_STD = c11
 SAN_FLAGS = -fsanitize=address,leak,undefined
 
+# C flags
 CFLAGS = \
 		-Wall \
 		-Wfatal-errors \
@@ -14,20 +15,24 @@ CFLAGS += $(EXTRA_CFLAGS)
 DEBUG_CFLAGS = -g $(SAN_FLAGS) -DJP_DEBUG
 RELEASE_CFLAGS = -O2 -flto
 
+# Linker flags
 LDFLAGS =
 DEBUG_LDFLAGS = $(SAN_FLAGS)
 RELEASE_LDFLAGS = -flto
 
+# Files
 HEADER_FILES = $(wildcard src/*.h)
 SRC_FILES = $(wildcard src/*.c)
 DEBUG_OBJ_FILES = $(SRC_FILES:src/%.c=build/debug/%.o)
 RELEASE_OBJ_FILES = $(SRC_FILES:src/%.c=build/release/%.o)
 
+# Local configuration
 -include config.mk
 
 debug: build/debug/main
 release: build/release/main
 
+# Dependencies generated using -MMD -MP
 -include $(DEBUG_OBJ_FILES:.o=.d)
 -include $(RELEASE_OBJ_FILES:.o=.d)
 
@@ -61,7 +66,7 @@ clean:
 	rm -rf build
 
 lint: $(SRC_FILES) $(HEADER_FILES)
-	cppcheck $^
+	cppcheck -DJP_USE_ASSERT_H --check-level=exhaustive $^
 
 .PHONY: debug release
 .PHONY: run-debug run-release
