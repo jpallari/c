@@ -31,15 +31,19 @@ typedef s32 b32;
 // Debugging
 ////////////////////////
 
+#ifdef JP_USE_ASSERT_H
+#include <assert.h>
+#elif JP_DEBUG
+
 /**
  * Assert: fail when condition does not hold
  */
-#ifdef JP_DEBUG
 #define assert(c) \
     while (!(c)) __builtin_unreachable()
+
 #else
 #define assert(c)
-#endif
+#endif // JP_USE_ASSERT_H
 
 ////////////////////////
 // Arrays
