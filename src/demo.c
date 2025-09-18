@@ -1,7 +1,7 @@
 #include "jp.h"
 #include <stdio.h>
 
-int array_demo() {
+int array_demo(void) {
     u8 *buffer = jp_new(u8, 1024 * 1024, &jp_std_allocator);
     jp_arena arena = jp_arena_new(buffer, 1024 * 1024);
     jp_allocator allocator = jp_arena_allocator_new(&arena);
@@ -12,7 +12,7 @@ int array_demo() {
     int i;
     for (i = 0; i < 20; i += 1) {
         float v = ((float)i) / 10;
-        jp_dynarr_push_grow(data, v);
+        jp_dynarr_push_grow(data, v, float);
     }
 
     jp_dynarr_remove(data, 9);
@@ -54,9 +54,4 @@ int file_demo(int argc, char **argv) {
     return 0;
 }
 
-int main(int argc, char **argv) {
-    if (argc > 1) {
-        return file_demo(argc, argv);
-    }
-    return array_demo();
-}
+

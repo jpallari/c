@@ -13,6 +13,7 @@ CFLAGS = \
 		-ffinite-math-only
 CFLAGS += $(EXTRA_CFLAGS)
 DEBUG_CFLAGS = -g $(SAN_FLAGS) -DJP_DEBUG
+TEST_CFLAGS = --coverage
 RELEASE_CFLAGS = -O2 -flto
 
 # Linker flags
@@ -20,63 +21,112 @@ LDFLAGS =
 DEBUG_LDFLAGS = $(SAN_FLAGS)
 RELEASE_LDFLAGS = -flto
 
-# Files
-HEADER_FILES = $(wildcard src/*.h)
-SRC_FILES = $(wildcard src/*.c)
-DEBUG_OBJ_FILES = $(SRC_FILES:src/%.c=build/debug/%.o)
-RELEASE_OBJ_FILES = $(SRC_FILES:src/%.c=build/release/%.o)
-TEST_FILES = $(wildcard test/*.c)
-TEST_CMD_FILES = $(TEST_FILES:test/%.c=build/test/%.out)
+# Directories
+BUILD_DIR = build
+SRC_DIR = src
+CMD_DIR = cmd
+TEST_DIR = test
+DEBUG_DIR = $(BUILD_DIR)/debug
+DEBUG_OBJ_DIR = $(BUILD_DIR)/debug/obj
+DEBUG_CMD_OBJ_DIR = $(BUILD_DIR)/debug/obj/cmd
+RELEASE_DIR = $(BUILD_DIR)/release
+RELEASE_OBJ_DIR = $(BUILD_DIR)/release/obj
+RELEASE_CMD_OBJ_DIR = $(BUILD_DIR)/release/obj/cmd
+TEST_BIN_DIR = $(BUILD_DIR)/test
 
 # Local configuration
 -include config.mk
 
-debug: build/debug/main
-release: build/release/main
-test: $(TEST_CMD_FILES)
+# Files
+HEADER_FILES = $(wildcard $(SRC_DIR)/*.h)
+SRC_FILES = $(wildcard $(SRC_DIR)/*.c)
+CMD_FILES = $(wildcard $(CMD_DIR)/*.c)
+TEST_FILES = $(wildcard $(TEST_DIR)/*.c)
+DEBUG_OBJ_FILES = $(SRC_FILES:$(SRC_DIR)/%.c=$(DEBUG_OBJ_DIR)/%.o)
+DEBUG_CMD_OBJ_FILES = $(CMD_FILES:$(CMD_DIR)/%.c=$(DEBUG_CMD_OBJ_DIR)/%.o)
+CMD_DEBUG_BIN_FILES = $(CMD_FILES:$(CMD_DIR)/%.c=$(DEBUG_DIR)/%)
+RELEASE_OBJ_FILES = $(SRC_FILES:$(SRC_DIR)/%.c=$(RELEASE_OBJ_DIR)/%.o)
+RELEASE_CMD_OBJ_FILES = $(CMD_FILES:$(CMD_DIR)/%.c=$(RELEASE_CMD_OBJ_DIR)/%.o)
+CMD_RELEASE_BIN_FILES = $(CMD_FILES:$(CMD_DIR)/%.c=$(RELEASE_DIR)/%)
+TEST_BIN_FILES = $(TEST_FILES:$(TEST_DIR)/%.c=$(TEST_BIN_DIR)/%)
+
+# Testing
+TEST_TARGET_PREFIX = test-
+TEST_TARGETS = $(TEST_FILES:$(TEST_DIR)/%.c=$(TEST_TARGET_PREFIX)%)
+
+# Main targets
+.PHONY: debug release
+debug: $(CMD_DEBUG_BIN_FILES)
+release: $(CMD_RELEASE_BIN_FILES)
 
 # Dependencies generated using -MMD -MP
 -include $(DEBUG_OBJ_FILES:.o=.d)
 -include $(RELEASE_OBJ_FILES:.o=.d)
 
-build/debug/main: $(DEBUG_OBJ_FILES)
-	$(CC) $(LDFLAGS) $(DEBUG_LDFLAGS) $^ -o $@
+#
+# Build C files to objects
+#
 
-build/release/main: $(RELEASE_OBJ_FILES)
-	$(CC) $(LDFLAGS) $(RELEASE_LDFLAGS) $^ -o $@ 
-
-$(DEBUG_OBJ_FILES): build/debug/%.o: src/%.c
+$(DEBUG_OBJ_FILES): $(DEBUG_OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
 
-$(RELEASE_OBJ_FILES): build/release/%.o: src/%.c
+$(RELEASE_OBJ_FILES): $(RELEASE_OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) -c $< -o $@
 
-$(TEST_CMD_FILES): build/test/%.out: test/%.c
+$(DEBUG_CMD_OBJ_FILES): $(DEBUG_CMD_OBJ_DIR)/%.o: $(CMD_DIR)/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(LDFLAGS) $(DEBUG_LDFLAGS) $< -o $@
-	$@
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $^ -o $@
 
-run-debug: build/debug/main
-	$<
+$(RELEASE_CMD_OBJ_FILES): $(RELEASE_CMD_OBJ_DIR)/%.o: $(CMD_DIR)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) -c $^ -o $@
 
-run-release: build/release/main
-	$<
+#
+# Link C objects to binaries
+#
 
-clean-debug:
-	rm -rf build/debug/
+$(CMD_DEBUG_BIN_FILES): $(DEBUG_DIR)/%: $(DEBUG_CMD_OBJ_DIR)/%.o $(DEBUG_OBJ_FILES)
+	@mkdir -p $(dir $@)
+	$(CC) $(LDFLAGS) $(DEBUG_LDFLAGS) $^ -o $@
 
-clean-release:
-	rm -rf build/release/
+$(CMD_RELEASE_BIN_FILES): $(RELEASE_DIR)/%: $(RELEASE_CMD_OBJ_DIR)/%.o $(RELEASE_OBJ_FILES)
+	@mkdir -p $(dir $@)
+	$(CC) $(LDFLAGS) $(RELEASE_LDFLAGS) $^ -o $@
 
-clean:
-	rm -rf build
+#
+# Build and run tests
+#
+.PHONY: lint test
+
+test: $(TEST_TARGETS)
+
+$(TEST_BIN_FILES): $(TEST_BIN_DIR)/%: $(TEST_DIR)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(TEST_CFLAGS) $(DEBUG_CFLAGS) $(LDFLAGS) $(DEBUG_LDFLAGS) $< -o $@
+
+$(TEST_TARGET_PREFIX)%: $(TEST_BIN_DIR)/%
+	./$<
 
 lint: $(SRC_FILES) $(HEADER_FILES)
 	cppcheck -DJP_USE_ASSERT_H --check-level=exhaustive $^
 
-.PHONY: debug release
-.PHONY: run-debug run-release
-.PHONY: clean-debug clean-release clean
-.PHONY: lint
+#
+# Cleaning build artefacts
+#
+
+.PHONY: clean-debug clean-release clean-test clean
+
+clean-debug:
+	rm -rf $(DEBUG_DIR)
+
+clean-release:
+	rm -rf $(RELEASE_DIR)
+
+clean-test:
+	rm -rf $(TEST_BIN_DIR)
+
+clean:
+	rm -rf $(BUILD_DIR)
+
