@@ -11,7 +11,7 @@
 
 #ifdef JP_USE_STRING_H
 #include <string.h>
-#endif
+#endif // JP_USE_STRING_H
 
 ////////////////////////
 // Scalar types
@@ -73,10 +73,16 @@ typedef s32 b32;
  * Basically memmove
  */
 #define jp_bytes_move memmove
-#else
+#else // JP_USE_STRING_H
+
 /**
  * Basically memcpy. This will most likely be replaced with memcpy during
  * compilation anyway.
+ *
+ * @param[out] dest area of memory to copy bytes to
+ * @param[in] src area of memory to copy bytes from
+ * @param[in] n number of bytes to copy
+ * @returns pointer to area of memory where bytes were copied to
  */
 static inline void *
 jp_bytes_copy(void *restrict dest, const void *restrict src, size_t n) {
@@ -89,6 +95,11 @@ jp_bytes_copy(void *restrict dest, const void *restrict src, size_t n) {
 /**
  * Basically memmove. Assumes that overlapping can be avoided by comparing
  * pointer ordering, which is OK for targets where this code is used.
+ *
+ * @param[out] dest area of memory to copy bytes to
+ * @param[in] src area of memory to copy bytes from
+ * @param[in] n number of bytes to copy
+ * @returns pointer to area of memory where bytes were copied to
  */
 static inline void *jp_bytes_move(void *dest, const void *src, size_t n) {
     if (dest == src) {
@@ -110,7 +121,8 @@ static inline void *jp_bytes_move(void *dest, const void *src, size_t n) {
     }
     return d;
 }
-#endif
+
+#endif // JP_USE_STRING_H
 
 ////////////////////////
 // Allocator
@@ -122,16 +134,24 @@ static inline void *jp_bytes_move(void *dest, const void *src, size_t n) {
 typedef struct {
     /**
      * Function for allocating memory.
+     *
+     * @param size amount of memory in bytes to allocate
+     * @param alignment memory alignment to use for the allocation
+     * @param ctx additional data to provide context for the allocation
+     * @returns pointer to area of memory that was allocated
      */
-    void *(*malloc)(size_t, size_t, void *ctx);
+    void *(*malloc)(size_t size, size_t alignment, void *ctx);
 
     /**
      * Function for freeing memory.
+     *
+     * @param ptr pointer to area of memory to free
+     * @param ctx additional data to provide context for freeing memory
      */
-    void (*free)(void *, void *ctx);
+    void (*free)(void *ptr, void *ctx);
 
     /**
-     * Custom context for the allocator.
+     * Custom data to provide context for the allocator.
      */
     void *ctx;
 } jp_allocator;
@@ -139,6 +159,11 @@ typedef struct {
 /**
  * Standard memory allocation (stdlib malloc) compatible with the custom memory
  * allocation interface.
+ *
+ * @param size amount of memory in bytes to allocate
+ * @param alignment memory alignment to use for the allocation (unused)
+ * @param ctx additional data to provide context for the allocation (unused)
+ * @returns pointer to area of memory that was allocated
  */
 static void *jp_std_malloc(size_t size, size_t alignment, void *ctx) {
     (void)ctx;
@@ -149,6 +174,9 @@ static void *jp_std_malloc(size_t size, size_t alignment, void *ctx) {
 /**
  * Standard memory allocation (stdlib free) compatible with the custom memory
  * allocation interface.
+ *
+ * @param ptr pointer to area of memory to free
+ * @param ctx additional data to provide context for freeing memory (unused)
  */
 static void jp_std_free(void *ptr, void *ctx) {
     (void)ctx;
@@ -163,18 +191,31 @@ static jp_allocator jp_std_allocator = {jp_std_malloc, jp_std_free, NULL};
 
 /**
  * Create given amount of new items of given type using an allocator.
+ *
+ * @param t type of the objects to allocate
+ * @param n number of objects to allocate
+ * @param allocator allocator to use for acquiring memory
+ * @returns pointer to area of memory that was allocated
  */
 #define jp_new(t, n, allocator) \
     (t *)jp_malloc(sizeof(t) * (n), _Alignof(t), allocator)
 
 /**
  * Call malloc on a custom memory allocation interface.
+ *
+ * @param size amount of memory in bytes to allocate
+ * @param alignment memory alignment to use for the allocation
+ * @param allocator allocator to use for acquiring memory
+ * @returns pointer to area of memory that was allocated
  */
 #define jp_malloc(size, alignment, allocator) \
     ((allocator)->malloc((size), (alignment), (allocator)->ctx))
 
 /**
  * Call free on a custom memory allocation interface.
+ *
+ * @param ptr pointer to area of memory to free
+ * @param allocator allocator to use for freeing memory
  */
 #define jp_free(ptr, allocator) ((allocator)->free((ptr), (allocator)->ctx))
 
@@ -186,12 +227,22 @@ static jp_allocator jp_std_allocator = {jp_std_malloc, jp_std_free, NULL};
  * Slice (aka fat pointer aka string)
  */
 typedef struct {
+    /**
+     * Buffer containing the data
+     */
     u8 *buffer;
+
+    /**
+     * Length of the slice in bytes
+     */
     size_t size;
 } jp_slice;
 
 /**
  * Create a slice to an array or a static string
+ *
+ * @param x an array or a static string
+ * @returns a new slice
  */
 #define jp_slice_from(x) \
     (jp_slice) { \
@@ -200,6 +251,10 @@ typedef struct {
 
 /**
  * Create a slice from a span between two pointers
+ *
+ * @param start pointer where the data starts from
+ * @param end pointer where the data ends
+ * @returns slice of data between the given pointers
  */
 jp_slice jp_slice_span(u8 *start, u8 *end) {
     u8 *temp;
@@ -217,6 +272,9 @@ jp_slice jp_slice_span(u8 *start, u8 *end) {
 
 /**
  * Check if two slices are equal
+ *
+ * @param a,b slices to compare
+ * @returns true when the slices are equal and false otherwise
  */
 s32 jp_slice_equal(jp_slice a, jp_slice b) {
     if (a.size != b.size) {
@@ -232,6 +290,9 @@ s32 jp_slice_equal(jp_slice a, jp_slice b) {
 
 /**
  * Copy slice contents to another slice.
+ *
+ * @param[out] dest slice to copy data to
+ * @param[in] src slice to copy data from
  */
 void jp_slice_copy(jp_slice dest, jp_slice src) {
     size_t amount = src.size > dest.size ? dest.size : src.size;
@@ -697,4 +758,4 @@ end:
     return io_res || close_res || 0;
 }
 
-#endif
+#endif // JP_H
