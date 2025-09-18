@@ -25,12 +25,15 @@ HEADER_FILES = $(wildcard src/*.h)
 SRC_FILES = $(wildcard src/*.c)
 DEBUG_OBJ_FILES = $(SRC_FILES:src/%.c=build/debug/%.o)
 RELEASE_OBJ_FILES = $(SRC_FILES:src/%.c=build/release/%.o)
+TEST_FILES = $(wildcard test/*.c)
+TEST_CMD_FILES = $(TEST_FILES:test/%.c=build/test/%.out)
 
 # Local configuration
 -include config.mk
 
 debug: build/debug/main
 release: build/release/main
+test: $(TEST_CMD_FILES)
 
 # Dependencies generated using -MMD -MP
 -include $(DEBUG_OBJ_FILES:.o=.d)
@@ -49,6 +52,11 @@ $(DEBUG_OBJ_FILES): build/debug/%.o: src/%.c
 $(RELEASE_OBJ_FILES): build/release/%.o: src/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) -c $< -o $@
+
+$(TEST_CMD_FILES): build/test/%.out: test/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(LDFLAGS) $(DEBUG_LDFLAGS) $< -o $@
+	$@
 
 run-debug: build/debug/main
 	$<
