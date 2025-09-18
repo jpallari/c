@@ -426,9 +426,7 @@ void *jp_dynarr_clone_ut(
         return NULL;
     }
     jp_dynarr_header *header = jp_dynarr_get_header(array);
-    if (!header) {
-        return NULL;
-    }
+    assert(header && "Header must not be null");
 
     void *new_array =
         jp_dynarr_new_sized(capacity, item_size, alignment, header->allocator);
@@ -441,17 +439,24 @@ void *jp_dynarr_clone_ut(
     new_header->capacity = capacity;
 
     jp_bytes_copy(new_array, array, new_header->count * item_size);
-
     return new_array;
 }
 
 /**
  * Clone a given array with new capacity.
  */
-#define jp_dynarr_clone(array, capacity, t, allocator) \
+#define jp_dynarr_clone(array, capacity, t) \
     ((t *)(jp_dynarr_clone_ut( \
-        (array), (capacity), sizeof(*(array)), _Alignof(t), (allocator) \
+        (array), (capacity), sizeof(*(array)), _Alignof(t) \
     )))
+
+/**
+ *  Grow a given array.
+ */
+#define jp_dynarr_grow(array, t) \
+    jp_dynarr_clone( \
+        (array), jp_dynarr_grow_count(jp_dynarr_get_capacity(array)), t \
+    )
 
 /**
  * Push item to given array. Returns true when the operation succeeded (i.e.
