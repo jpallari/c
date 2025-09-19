@@ -658,7 +658,7 @@ b32 jp_dynarr_remove_ut(void *array, u64 index, size_t item_size) {
         return 0;
     }
     jp_dynarr_header *header = jp_dynarr_get_header(array);
-    if (header->count < index) {
+    if (header->count <= index) {
         return 0;
     }
     u8 *data = (u8 *)array;
