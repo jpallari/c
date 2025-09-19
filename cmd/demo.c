@@ -1,4 +1,4 @@
-#include "../src/demo.h"
+#include "demo.h"
 
 int main(int argc, char **argv) {
     if (argc > 1) {

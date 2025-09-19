@@ -2,26 +2,8 @@ CC = gcc
 LANG_STD = c11
 SAN_FLAGS = -fsanitize=address,leak,undefined
 
-# C flags
-CFLAGS = \
-		-Wall \
-		-Wfatal-errors \
-		-std=$(LANG_STD) \
-		-MMD -MP \
-		-fno-omit-frame-pointer \
-		-fno-math-errno \
-		-ffinite-math-only
-CFLAGS += $(EXTRA_CFLAGS)
-DEBUG_CFLAGS = -g $(SAN_FLAGS) -DJP_DEBUG
-TEST_CFLAGS = --coverage
-RELEASE_CFLAGS = -O2 -flto
-
-# Linker flags
-LDFLAGS =
-DEBUG_LDFLAGS = $(SAN_FLAGS)
-RELEASE_LDFLAGS = -flto
-
 # Directories
+INCLUDE_DIR = include
 BUILD_DIR = build
 SRC_DIR = src
 CMD_DIR = cmd
@@ -33,6 +15,30 @@ RELEASE_DIR = $(BUILD_DIR)/release
 RELEASE_OBJ_DIR = $(BUILD_DIR)/release/obj
 RELEASE_CMD_OBJ_DIR = $(BUILD_DIR)/release/obj/cmd
 TEST_BIN_DIR = $(BUILD_DIR)/test
+
+# C flags
+CFLAGS = \
+		-Wall \
+		-Wfatal-errors \
+		-std=$(LANG_STD) \
+		-I$(INCLUDE_DIR) \
+		-MMD -MP \
+		-fno-omit-frame-pointer \
+		-fno-math-errno \
+		-ffinite-math-only
+CFLAGS += $(EXTRA_CFLAGS)
+DEBUG_CFLAGS = \
+			   -g \
+			   $(SAN_FLAGS) \
+			   -DJP_DEBUG \
+			   -fprofile-arcs \
+			   -ftest-coverage
+RELEASE_CFLAGS = -O2 -flto
+
+# Linker flags
+LDFLAGS =
+DEBUG_LDFLAGS = $(SAN_FLAGS) -lgcov --coverage
+RELEASE_LDFLAGS = -flto
 
 # Local configuration
 -include config.mk
@@ -48,6 +54,7 @@ CMD_DEBUG_BIN_FILES = $(CMD_FILES:$(CMD_DIR)/%.c=$(DEBUG_DIR)/%)
 RELEASE_OBJ_FILES = $(SRC_FILES:$(SRC_DIR)/%.c=$(RELEASE_OBJ_DIR)/%.o)
 RELEASE_CMD_OBJ_FILES = $(CMD_FILES:$(CMD_DIR)/%.c=$(RELEASE_CMD_OBJ_DIR)/%.o)
 CMD_RELEASE_BIN_FILES = $(CMD_FILES:$(CMD_DIR)/%.c=$(RELEASE_DIR)/%)
+TEST_OBJ_FILES = $(TEST_FILES:$(TEST_DIR)/%.c=$(TEST_BIN_DIR)/%.o)
 TEST_BIN_FILES = $(TEST_FILES:$(TEST_DIR)/%.c=$(TEST_BIN_DIR)/%)
 
 # Testing
@@ -103,9 +110,13 @@ $(CMD_RELEASE_BIN_FILES): $(RELEASE_DIR)/%: $(RELEASE_CMD_OBJ_DIR)/%.o $(RELEASE
 
 test: $(TEST_TARGETS)
 
-$(TEST_BIN_FILES): $(TEST_BIN_DIR)/%: $(TEST_DIR)/%.c
+$(TEST_OBJ_FILES): $(TEST_BIN_DIR)/%.o: $(TEST_DIR)/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(TEST_CFLAGS) $(DEBUG_CFLAGS) $(LDFLAGS) $(DEBUG_LDFLAGS) $< -o $@
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $^ -o $@
+
+$(TEST_BIN_FILES): $(TEST_BIN_DIR)/%: $(TEST_BIN_DIR)/%.o $(DEBUG_OBJ_FILES)
+	@mkdir -p $(dir $@)
+	$(CC) $(LDFLAGS) $(DEBUG_LDFLAGS) $^ -o $@
 
 $(TEST_TARGET_PREFIX)%: $(TEST_BIN_DIR)/%
 	./$<

@@ -1,4 +1,4 @@
-#include "../src/jp.h"
+#include "jp.h"
 #include "test.h"
 
 int dynarr_push() {

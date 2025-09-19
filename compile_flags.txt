@@ -8,3 +8,4 @@ c
 -fno-math-errno
 -ffinite-math-only
 -DJP_DEBUG
+-Iinclude
