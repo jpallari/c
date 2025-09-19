@@ -256,7 +256,7 @@ typedef struct {
 } jp_slice;
 
 /**
- * Create a slice to an array or a static string
+ * Create a slice from an array or a static string
  *
  * @param x an array or a static string
  * @returns a new slice
@@ -290,6 +290,14 @@ s32 jp_slice_equal(jp_slice a, jp_slice b);
  * @param[in] src slice to copy data from
  */
 void jp_slice_copy(jp_slice dest, jp_slice src);
+
+/**
+ * Create a slice from a null terminated string
+ *
+ * @param str null terminated string
+ * @returns a new slice pointing to the given string
+ */
+jp_slice jp_slice_from_cstr_unsafe(char *str);
 
 ////////////////////////
 // Arena allocator

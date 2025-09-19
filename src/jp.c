@@ -39,6 +39,14 @@ void jp_slice_copy(jp_slice dest, jp_slice src) {
     jp_bytes_move(dest.buffer, src.buffer, amount);
 }
 
+jp_slice jp_slice_from_cstr_unsafe(char *str) {
+    jp_slice slice = {0};
+    while (str[slice.size]) { slice.size += 1; }
+    slice.size += 1;
+    slice.buffer = (u8 *)str;
+    return slice;
+}
+
 ////////////////////////
 // Arena allocator
 ////////////////////////
