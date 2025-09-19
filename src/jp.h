@@ -1,3 +1,7 @@
+/**
+ * Library of common C utilities i.e. "personal standard library".
+ * Naming convention copied from stb.h. :^)
+ */
 #ifndef JP_H
 #define JP_H
 
@@ -121,14 +125,20 @@ static inline void *jp_bytes_move(void *dest, const void *src, size_t n) {
     const char *s = src;
 
     if (dest < src) {
-        for (size_t i = 0; i < n; i += 1) { d[i] = s[i]; }
+        for (size_t i = n; i > 0; i -= 1) { d[n-i] = s[n-i]; }
     } else {
-        for (size_t i = n; i > 0; i -= 1) { d[i] = s[i]; }
+        for (size_t i = n; i > 0; i -= 1) { d[i-1] = s[i-1]; }
     }
     return d;
 }
 
 #endif // JP_USE_STRING_H
+
+#define jp_copy_n(dest, src, n, type) \
+    jp_bytes_copy((dest), (src), n * sizeof(type))
+
+#define jp_move_n(dest, src, n, type) \
+    jp_bytes_move((dest), (src), n * sizeof(type))
 
 ////////////////////////
 // Allocator
