@@ -5,7 +5,6 @@ int dynarr_push() {
     int fails = 0;
 
     u64 capacity = 5;
-    b32 push_result = 0;
     int value = 0;
 
     // initialize an array
@@ -21,9 +20,9 @@ int dynarr_push() {
     // fill the array
     for (int i = 0; i < capacity; i += 1) {
         value = 100 + i;
-        push_result = jp_dynarr_push(arr, value);
         assert_true_inc(
-            push_result, "push must succeed when there is capacity left"
+            jp_dynarr_push(arr, &value, 1),
+            "push must succeed when there is capacity left"
         );
         assert_eq_inc(
             jp_dynarr_get_capacity(arr),
@@ -41,8 +40,10 @@ int dynarr_push() {
 
     // attempt to push a value beyond capacity
     value = 200;
-    push_result = jp_dynarr_push(arr, value);
-    assert_false_inc(push_result, "push does not succeed when capacity is met");
+    assert_false_inc(
+        jp_dynarr_push(arr, &value, 1),
+        "push does not succeed when capacity is met"
+    );
     assert_eq_inc(
         jp_dynarr_get_capacity(arr), capacity, "capacity must remain the same"
     );
@@ -75,12 +76,12 @@ int dynarr_push_grow() {
     // fill the array
     for (int i = 0; i < capacity; i += 1) {
         value = 100 + i;
-        jp_dynarr_push(arr, value);
+        jp_dynarr_push(arr, &value, 1);
     }
 
     // push one more over the capacity
     value = 1000;
-    jp_dynarr_push_grow(arr, value, int);
+    jp_dynarr_push_grow(arr, &value, 1, int);
     assert_eq_inc(jp_dynarr_get_count(arr), 6, "count must increase");
     assert_ge_inc(jp_dynarr_get_capacity(arr), 10, "capacity must increase");
     for (int i = 0; i < capacity; i += 1) {
@@ -108,7 +109,7 @@ int dynarr_clone() {
     // fill the array
     for (int i = 0; i < capacity; i += 1) {
         int value = 100 + i;
-        jp_dynarr_push(arr, value);
+        jp_dynarr_push(arr, &value, 1);
     }
 
     // clone array
@@ -147,9 +148,9 @@ int dynarr_pop() {
 
     // prepare array of 2 values
     value = 10;
-    assert_true_inc(jp_dynarr_push(arr, value), "push must succeed");
+    assert_true_inc(jp_dynarr_push(arr, &value, 1), "push must succeed");
     value = 20;
-    assert_true_inc(jp_dynarr_push(arr, value), "push must succeed");
+    assert_true_inc(jp_dynarr_push(arr, &value, 1), "push must succeed");
     assert_eq_inc(jp_dynarr_get_count(arr), 2, "expect 2 items");
 
     // 1st pop
@@ -185,19 +186,25 @@ int dynarr_remove() {
     // fill the array
     for (int i = 0; i < capacity; i += 1) {
         value = 100 + i;
-        jp_dynarr_push(arr, value);
+        jp_dynarr_push(arr, &value, 1);
     }
 
     // remove element from out of bounds
     assert_false_inc(jp_dynarr_remove(arr, 5), "OOB removal must fail");
-    assert_eq_inc(jp_dynarr_get_count(arr), 5, "array count must remain the same");
+    assert_eq_inc(
+        jp_dynarr_get_count(arr), 5, "array count must remain the same"
+    );
     for (int i = 0; i < capacity; i += 1) {
         assert_eq_inc(arr[i], 100 + i, "array must remain the same");
     }
 
     // remove element from the middle
-    assert_true_inc(jp_dynarr_remove(arr, 2), "removing from the middle must succeed");
-    assert_eq_inc(jp_dynarr_get_count(arr), 4, "array must have one element less");
+    assert_true_inc(
+        jp_dynarr_remove(arr, 2), "removing from the middle must succeed"
+    );
+    assert_eq_inc(
+        jp_dynarr_get_count(arr), 4, "array must have one element less"
+    );
     assert_eq_inc(arr[0], 100, "0: remain the same");
     assert_eq_inc(arr[1], 101, "1: remain the same");
     assert_eq_inc(arr[2], 103, "2: shift left");
