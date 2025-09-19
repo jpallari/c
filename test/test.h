@@ -99,8 +99,6 @@ void log_with_loc(
         if (c) { \
             log_fail(msg); \
             fails += 1; \
-        } else { \
-            log_ok(msg); \
         } \
     } while (0)
 
@@ -109,8 +107,6 @@ void log_with_loc(
         if (c) { \
             log_fail(msg); \
             return 1; \
-        } else { \
-            log_ok(msg); \
         } \
     } while (0)
 
@@ -154,6 +150,7 @@ int test_main(
     size_t test_count,
     test_case *test_cases
 ) {
+    char buf[1024] = {0};
     const char *no_color = getenv("NO_COLOR");
     if (no_color) {
         color_enabled = 0;
@@ -181,7 +178,11 @@ int test_main(
         test_case_resp = test_case.test_code();
         failed_asserts += test_case_resp;
         if (test_case_resp > 0) {
+            snprintf(buf, sizeof(buf), "%s failed %d asserts", test_case.name, test_case_resp);
+            log_no_loc(log_status_fail, buf);
             failed_test_cases += 1;
+        } else {
+            log_no_loc(log_status_ok, test_case.name);
         }
         if (setup && setup->after) {
             setup->after();
@@ -193,7 +194,6 @@ int test_main(
     }
 
     enum log_status final_status;
-    char buf[1024] = {0};
     if (failed_test_cases) {
         final_status = log_status_fail;
         snprintf(
