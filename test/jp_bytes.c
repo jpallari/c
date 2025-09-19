@@ -28,8 +28,8 @@ int bytes_copy() {
     }
     assert_eq_inc(mismatches, 0, "no mismatches should be found");
 
-    free(arr1);
-    free(arr2);
+    jp_free(arr1, &jp_std_allocator);
+    jp_free(arr2, &jp_std_allocator);
     return fails;
 }
 
@@ -60,8 +60,8 @@ int bytes_move_no_overlap() {
     }
     assert_eq_inc(mismatches, 0, "no mismatches should be found");
 
-    free(arr1);
-    free(arr2);
+    jp_free(arr1, &jp_std_allocator);
+    jp_free(arr2, &jp_std_allocator);
     return fails;
 }
 
