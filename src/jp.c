@@ -115,27 +115,23 @@ s32 jp_slice_equal(jp_slice a, jp_slice b) {
     if (a.size != b.size) {
         return 0;
     }
-    for (size_t i = 0; i < a.size; i += 1) {
-        if (a.buffer[i] != b.buffer[i]) {
-            return 0;
-        }
-    }
-    return 1;
+    return jp_bytes_eq(a.buffer, b.buffer, a.size);
 }
 
 void jp_slice_copy(jp_slice dest, jp_slice src) {
+    size_t amount = src.size > dest.size ? dest.size : src.size;
+    jp_bytes_copy(dest.buffer, src.buffer, amount);
+}
+
+void jp_slice_move(jp_slice dest, jp_slice src) {
     size_t amount = src.size > dest.size ? dest.size : src.size;
     jp_bytes_move(dest.buffer, src.buffer, amount);
 }
 
 jp_slice jp_slice_from_cstr_unsafe(char *str) {
     jp_slice slice = {0};
-    if (!str) {
-        return slice;
-    }
-    while (str[slice.size]) { slice.size += 1; }
-    slice.size += 1;
     slice.buffer = (u8 *)str;
+    slice.size = jp_cstr_len_unsafe(str);
     return slice;
 }
 

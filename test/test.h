@@ -159,6 +159,16 @@ void log_with_loc(
 #define assert_cmp_inc(l, r, cmp, f, msg) \
     __assert_cmp_base_simple(l, r, cmp, f, msg, fails += 1)
 
+#define assert_eq_bytes(l, r, msg) assert_true(jp_bytes_eq(l, r), (msg))
+
+#define assert_ne_bytes(l, r, msg) assert_false(jp_bytes_eq(l, r), (msg))
+
+#define assert_eq_bytes_inc(l, r, capacity, msg) \
+    assert_true_inc(jp_bytes_eq((l), (r), (capacity)), (msg))
+
+#define assert_ne_bytes_inc(l, r, capacity, msg) \
+    assert_false_inc(jp_bytes_eq((l), (r), (capacity)), (msg))
+
 #define assert_eq_cstr(l, r, msg) \
     __assert_cmp_base( \
         jp_cstr_eq_unsafe((l), (r)), l, r, ==, "%s", msg, __assert_fail_bail \
@@ -166,7 +176,7 @@ void log_with_loc(
 
 #define assert_eq_cstr_inc(l, r, msg) \
     __assert_cmp_base( \
-        jp_cstr_eq_unsafe((l), (r)), ==, "%s", msg, __assert_fail_inc \
+        jp_cstr_eq_unsafe((l), (r)), l, r, ==, "%s", msg, __assert_fail_inc \
     )
 
 #define assert_ne_cstr(l, r, msg) \

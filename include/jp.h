@@ -331,12 +331,20 @@ jp_slice jp_slice_span(u8 *start, u8 *end);
 s32 jp_slice_equal(jp_slice a, jp_slice b);
 
 /**
- * Copy slice contents to another slice.
+ * Copy slice contents to another slice where the slices do not overlap.
  *
  * @param[out] dest slice to copy data to
  * @param[in] src slice to copy data from
  */
 void jp_slice_copy(jp_slice dest, jp_slice src);
+
+/**
+ * Copy slice contents to another slice where the slices may overlap.
+ *
+ * @param[out] dest slice to copy data to
+ * @param[in] src slice to copy data from
+ */
+void jp_slice_move(jp_slice dest, jp_slice src);
 
 /**
  * Create a slice from a null terminated string

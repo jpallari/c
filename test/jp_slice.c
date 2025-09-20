@@ -1,7 +1,7 @@
 #include "jp.h"
 #include "test.h"
 
-int slice_span() {
+int test_slice_span() {
     int fails = 0;
 
     u8 arr[] = {10, 11, 12, 13, 14, 15, 16, 17};
@@ -22,7 +22,7 @@ int slice_span() {
     return fails;
 }
 
-int slice_equal() {
+int test_slice_equal() {
     int fails = 0;
 
     u8 arr1[] = {0, 0, 0, 11, 12, 13, 0, 0};
@@ -42,7 +42,7 @@ int slice_equal() {
     return fails;
 }
 
-int slice_from() {
+int test_slice_from() {
     int fails = 0;
 
     int arr[] = {100, 200, 300, 400};
@@ -53,17 +53,117 @@ int slice_from() {
     assert_eq_inc(
         s2.size, sizeof(int) * 4, "%ld", "s2 size must be size of array"
     );
-    assert_eq_cstr(
+    assert_eq_cstr_inc(
         (char *)s1.buffer, "hello world!", "s1 contents should be the same"
+    );
+    assert_eq_bytes_inc(
+        s2.buffer, (u8 *)arr, s2.size, "s2 contents should be the same"
+    );
+
+    return fails;
+}
+
+int test_slice_copy_larger() {
+    int fails = 0;
+
+    u8 arr1[] = {10, 11, 12, 13, 14, 15, 16, 17};
+    u8 arr2[] = {20, 21, 22, 23, 24, 25, 26, 27};
+    u8 expected_arr1[] = {10, 11, 21, 22, 23, 15, 16, 17};
+    u8 expected_arr2[] = {20, 21, 22, 23, 24, 25, 26, 27};
+    jp_slice s1 = jp_slice_span(&arr1[2], &arr1[6]);
+    jp_slice s2 = jp_slice_span(&arr2[1], &arr2[4]);
+
+    jp_slice_copy(s1, s2);
+
+    assert_eq_bytes_inc(
+        arr1, expected_arr1, sizeof(arr1), "arr1 should change"
+    );
+    assert_eq_bytes_inc(
+        s1.buffer, &expected_arr1[2], s1.size, "s1 should change"
+    );
+    assert_eq_bytes_inc(
+        arr2, expected_arr2, sizeof(arr2), "arr2 should not change"
+    );
+    assert_eq_bytes_inc(
+        s2.buffer, &expected_arr2[1], s2.size, "s2 should not change"
+    );
+
+    return fails;
+}
+
+int test_slice_copy_smaller() {
+    int fails = 0;
+
+    u8 arr1[] = {10, 11, 12, 13, 14, 15, 16, 17};
+    u8 arr2[] = {20, 21, 22, 23, 24, 25, 26, 27};
+    u8 expected_arr1[] = {10, 11, 21, 22, 14, 15, 16, 17};
+    u8 expected_arr2[] = {20, 21, 22, 23, 24, 25, 26, 27};
+    jp_slice s1 = jp_slice_span(&arr1[2], &arr1[4]);
+    jp_slice s2 = jp_slice_span(&arr2[1], &arr2[6]);
+
+    jp_slice_copy(s1, s2);
+
+    assert_eq_bytes_inc(
+        arr1, expected_arr1, sizeof(arr1), "arr1 should change"
+    );
+    assert_eq_bytes_inc(
+        s1.buffer, &expected_arr1[2], s1.size, "s1 should change"
+    );
+    assert_eq_bytes_inc(
+        arr2, expected_arr2, sizeof(arr2), "arr2 should not change"
+    );
+    assert_eq_bytes_inc(
+        s2.buffer, &expected_arr2[1], s2.size, "s2 should not change"
+    );
+
+    return fails;
+}
+
+int test_slice_move_overlapping() {
+    int fails = 0;
+
+    u8 arr[] = {10, 11, 12, 13, 14, 15, 16, 17};
+    u8 expected_arr[] = {10, 11, 13, 14, 14, 15, 16, 17};
+    jp_slice s1 = jp_slice_span(&arr[2], &arr[4]);
+    jp_slice s2 = jp_slice_span(&arr[3], &arr[6]);
+
+    jp_slice_move(s1, s2);
+
+    assert_eq_bytes_inc(arr, expected_arr, sizeof(arr), "arr should change");
+    assert_eq_bytes_inc(
+        s1.buffer, &expected_arr[2], s1.size, "s1 should change"
+    );
+
+    return fails;
+}
+
+int test_slice_from_cstr_unsafe() {
+    int fails = 0;
+
+    char *str = "hello world!";
+    jp_slice slice = jp_slice_from_cstr_unsafe(str);
+
+    assert_eq_inc(
+        slice.size, 13L, "%ld", "slice size must match string length"
+    );
+    assert_eq_inc(
+        (uintptr_t)slice.buffer,
+        (uintptr_t)str,
+        "%lu",
+        "slice and str pointers must match"
     );
 
     return fails;
 }
 
 static test_case tests[] = {
-    {"Slice span", slice_span},
-    {"Slice equal", slice_equal},
-    {"Slice from", slice_from}
+    {"Slice span", test_slice_span},
+    {"Slice equal", test_slice_equal},
+    {"Slice from", test_slice_from},
+    {"Slice copy to larger", test_slice_copy_larger},
+    {"Slice copy to smaller", test_slice_copy_smaller},
+    {"Slice move overlapping", test_slice_move_overlapping},
+    {"Slice from C string (unsafe)", test_slice_from_cstr_unsafe}
 };
 
 setup_tests(NULL, tests)

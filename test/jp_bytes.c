@@ -1,7 +1,7 @@
 #include "jp.h"
 #include "test.h"
 
-int bytes_copy() {
+int test_bytes_copy() {
     int fails = 0;
     size_t len = 1000;
     int mismatches = 0;
@@ -33,7 +33,7 @@ int bytes_copy() {
     return fails;
 }
 
-int bytes_move_no_overlap() {
+int test_bytes_move_no_overlap() {
     int fails = 0;
     size_t len = 1000;
     int mismatches = 0;
@@ -65,7 +65,7 @@ int bytes_move_no_overlap() {
     return fails;
 }
 
-int bytes_move_overlap_left() {
+int test_bytes_move_overlap_left() {
     int fails = 0;
     int arr[] = {10, 11, 12, 13, 14, 15, 16, 17};
     int *left = &arr[2];
@@ -87,7 +87,7 @@ int bytes_move_overlap_left() {
     return fails;
 }
 
-int bytes_move_overlap_right() {
+int test_bytes_move_overlap_right() {
     int fails = 0;
     int arr[] = {10, 11, 12, 13, 14, 15, 16, 17};
     int *left = &arr[1];
@@ -110,10 +110,10 @@ int bytes_move_overlap_right() {
 }
 
 static test_case tests[] = {
-    {"Bytes copy", bytes_copy},
-    {"Bytes move no overlap", bytes_move_no_overlap},
-    {"Bytes move overlap left", bytes_move_overlap_left},
-    {"Bytes move overlap right", bytes_move_overlap_right}
+    {"Bytes copy", test_bytes_copy},
+    {"Bytes move no overlap", test_bytes_move_no_overlap},
+    {"Bytes move overlap left", test_bytes_move_overlap_left},
+    {"Bytes move overlap right", test_bytes_move_overlap_right}
 };
 
 setup_tests(NULL, tests)

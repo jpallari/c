@@ -1,7 +1,7 @@
 #include "jp.h"
 #include "test.h"
 
-int dynarr_push() {
+int test_dynarr_push() {
     int fails = 0;
 
     u64 capacity = 5;
@@ -80,7 +80,7 @@ int dynarr_push() {
     return fails;
 }
 
-int dynarr_push_grow() {
+int test_dynarr_push_grow() {
     int fails = 0;
 
     u64 capacity = 5;
@@ -120,7 +120,7 @@ int dynarr_push_grow() {
     return fails;
 }
 
-int dynarr_clone() {
+int test_dynarr_clone() {
     int fails = 0;
 
     // initialize an array
@@ -160,7 +160,7 @@ int dynarr_clone() {
     return fails;
 }
 
-int dynarr_pop() {
+int test_dynarr_pop() {
     int fails = 0;
 
     u64 capacity = 5;
@@ -203,7 +203,7 @@ int dynarr_pop() {
     return fails;
 }
 
-int dynarr_remove() {
+int test_dynarr_remove() {
     int fails = 0;
 
     u64 capacity = 5;
@@ -245,11 +245,11 @@ int dynarr_remove() {
 }
 
 static test_case tests[] = {
-    {"Dynamic array push", dynarr_push},
-    {"Dynamic array push grow", dynarr_push_grow},
-    {"Dynamic array clone", dynarr_clone},
-    {"Dynamic array pop", dynarr_pop},
-    {"Dynamic array remove", dynarr_remove}
+    {"Dynamic array push", test_dynarr_push},
+    {"Dynamic array push grow", test_dynarr_push_grow},
+    {"Dynamic array clone", test_dynarr_clone},
+    {"Dynamic array pop", test_dynarr_pop},
+    {"Dynamic array remove", test_dynarr_remove}
 };
 
 setup_tests(NULL, tests)
