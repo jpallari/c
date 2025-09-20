@@ -1,16 +1,22 @@
 #ifndef JP_TEST_H
 #define JP_TEST_H
 
+#include "jp.h"
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 ////////////////////////
-// Logging
+// Config
 ////////////////////////
 
 static int color_enabled = 1;
+static int trap_on_assert_fail = 0;
+
+////////////////////////
+// Logging
+////////////////////////
 
 enum log_status {
     log_status_test,
@@ -94,36 +100,99 @@ void log_with_loc(
 // Assertions
 ////////////////////////
 
+#define __assert_msg_buf_size 1024
+#define breakpoint __asm__("int3; nop")
+
+#define __assert_fail_inc fails += 1
+#define __assert_fail_bail return 1
+
+#define __assert_fail(msg) \
+    do { \
+        log_fail(msg); \
+        if (trap_on_assert_fail) { \
+            breakpoint; \
+        } \
+    } while (0)
+
+#define __assert_cmp_log_msg(buf, l, r, cmp, f, msg) \
+    snprintf((buf), sizeof(buf), (f " " #cmp " " f " // %s"), (l), (r), (msg))
+
+#define __assert_cmp_base(c, l, r, cmp, f, msg, action) \
+    do { \
+        if (!(c)) { \
+            char __assert_log_msg[1024] = {0}; \
+            snprintf( \
+                __assert_log_msg, \
+                sizeof(__assert_log_msg), \
+                (f " " #cmp " " f " // %s"), \
+                (l), \
+                (r), \
+                (msg) \
+            ); \
+            __assert_fail(__assert_log_msg); \
+            action; \
+        } \
+    } while (0)
+
+#define __assert_cmp_base_simple(l, r, cmp, f, msg, action) \
+    __assert_cmp_base((l)cmp(r), l, r, cmp, f, msg, action)
+
 #define assert_false_inc(c, msg) \
     do { \
         if (c) { \
-            log_fail(msg); \
-            fails += 1; \
+            __assert_fail(msg); \
+            __assert_fail_inc; \
         } \
     } while (0)
 
 #define assert_false(c, msg) \
     do { \
         if (c) { \
-            log_fail(msg); \
-            return 1; \
+            __assert_fail(msg); \
+            __assert_fail_bail; \
         } \
     } while (0)
 
+#define assert_cmp(l, r, cmp, f, msg) \
+    __assert_cmp_base_simple(l, r, cmp, f, msg, return 1)
+
+#define assert_cmp_inc(l, r, cmp, f, msg) \
+    __assert_cmp_base_simple(l, r, cmp, f, msg, fails += 1)
+
+#define assert_eq_cstr(l, r, msg) \
+    __assert_cmp_base( \
+        jp_cstr_eq_unsafe((l), (r)), l, r, ==, "%s", msg, __assert_fail_bail \
+    )
+
+#define assert_eq_cstr_inc(l, r, msg) \
+    __assert_cmp_base( \
+        jp_cstr_eq_unsafe((l), (r)), ==, "%s", msg, __assert_fail_inc \
+    )
+
+#define assert_ne_cstr(l, r, msg) \
+    __assert_cmp_base( \
+        !jp_cstr_eq_unsafe((l), (r)), l, r, ==, "%s", msg, __assert_fail_bail \
+    )
+
+#define assert_ne_cstr_inc(l, r, msg) \
+    __assert_cmp_base( \
+        !jp_cstr_eq_unsafe((l), (r)), l, r, ==, "%s", msg, __assert_fail_inc \
+    )
+
 #define assert_true(c, msg) assert_false(!(c), msg)
-#define assert_eq(a, b, msg) assert_true((a) == (b), msg)
-#define assert_ne(a, b, msg) assert_true((a) != (b), msg)
-#define assert_lt(a, b, msg) assert_true((a) < (b), msg)
-#define assert_le(a, b, msg) assert_true((a) <= (b), msg)
-#define assert_gt(a, b, msg) assert_true((a) > (b), msg)
-#define assert_ge(a, b, msg) assert_true((a) >= (b), msg)
+#define assert_eq(a, b, f, msg) assert_cmp(a, b, ==, f, msg)
+#define assert_ne(a, b, f, msg) assert_cmp(a, b, !=, f, msg)
+#define assert_lt(a, b, f, msg) assert_cmp(a, b, <, f, msg)
+#define assert_le(a, b, f, msg) assert_cmp(a, b, <=, f, msg)
+#define assert_gt(a, b, f, msg) assert_cmp(a, b, >, f, msg)
+#define assert_ge(a, b, f, msg) assert_cmp(a, b, >=, f, msg)
 #define assert_true_inc(c, msg) assert_false_inc(!(c), msg)
-#define assert_eq_inc(a, b, msg) assert_true_inc((a) == (b), msg)
-#define assert_ne_inc(a, b, msg) assert_true_inc((a) != (b), msg)
-#define assert_lt_inc(a, b, msg) assert_true_inc((a) < (b), msg)
-#define assert_le_inc(a, b, msg) assert_true_inc((a) <= (b), msg)
-#define assert_gt_inc(a, b, msg) assert_true_inc((a) > (b), msg)
-#define assert_ge_inc(a, b, msg) assert_true_inc((a) >= (b), msg)
+#define assert_eq_inc(a, b, f, msg) assert_cmp_inc(a, b, ==, f, msg)
+#define assert_ne_inc(a, b, f, msg) assert_cmp_inc(a, b, !=, f, msg)
+#define assert_lt_inc(a, b, f, msg) assert_cmp_inc(a, b, <, f, msg)
+#define assert_le_inc(a, b, f, msg) assert_cmp_inc(a, b, <=, f, msg)
+#define assert_gt_inc(a, b, f, msg) assert_cmp_inc(a, b, >, f, msg)
+#define assert_ge_inc(a, b, f, msg) assert_cmp_inc(a, b, >=, f, msg)
 
 ////////////////////////
 // Test runner
@@ -151,9 +220,15 @@ int test_main(
     test_case *test_cases
 ) {
     char buf[1024] = {0};
+
+    // settings
     const char *no_color = getenv("NO_COLOR");
     if (no_color) {
         color_enabled = 0;
+    }
+    const char *assert_trap = getenv("ASSERT_TRAP");
+    if (assert_trap) {
+        trap_on_assert_fail = 1;
     }
 
     if (!test_cases) {
@@ -178,7 +253,13 @@ int test_main(
         test_case_resp = test_case.test_code();
         failed_asserts += test_case_resp;
         if (test_case_resp > 0) {
-            snprintf(buf, sizeof(buf), "%s failed %d asserts", test_case.name, test_case_resp);
+            snprintf(
+                buf,
+                sizeof(buf),
+                "%s failed %d asserts",
+                test_case.name,
+                test_case_resp
+            );
             log_no_loc(log_status_fail, buf);
             failed_test_cases += 1;
         } else {

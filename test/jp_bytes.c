@@ -26,7 +26,7 @@ int bytes_copy() {
             mismatches += 1;
         }
     }
-    assert_eq_inc(mismatches, 0, "no mismatches should be found");
+    assert_eq_inc(mismatches, 0, "%d", "no mismatches should be found");
 
     jp_free(arr1, &jp_std_allocator);
     jp_free(arr2, &jp_std_allocator);
@@ -58,7 +58,7 @@ int bytes_move_no_overlap() {
             mismatches += 1;
         }
     }
-    assert_eq_inc(mismatches, 0, "no mismatches should be found");
+    assert_eq_inc(mismatches, 0, "%d", "no mismatches should be found");
 
     jp_free(arr1, &jp_std_allocator);
     jp_free(arr2, &jp_std_allocator);
@@ -75,14 +75,14 @@ int bytes_move_overlap_left() {
     jp_bytes_move(left, right, sizeof(int) * 4);
 
     // check moves
-    assert_eq_inc(arr[0], 10, "0: remains the same");
-    assert_eq_inc(arr[1], 11, "1: remains the same");
-    assert_eq_inc(arr[2], 14, "2: moved");
-    assert_eq_inc(arr[3], 15, "3: moved");
-    assert_eq_inc(arr[4], 16, "4: moved");
-    assert_eq_inc(arr[5], 17, "5: moved");
-    assert_eq_inc(arr[6], 16, "6: remains the same");
-    assert_eq_inc(arr[7], 17, "7: remains the same");
+    assert_eq_inc(arr[0], 10, "%d", "0: remains the same");
+    assert_eq_inc(arr[1], 11, "%d", "1: remains the same");
+    assert_eq_inc(arr[2], 14, "%d", "2: moved");
+    assert_eq_inc(arr[3], 15, "%d", "3: moved");
+    assert_eq_inc(arr[4], 16, "%d", "4: moved");
+    assert_eq_inc(arr[5], 17, "%d", "5: moved");
+    assert_eq_inc(arr[6], 16, "%d", "6: remains the same");
+    assert_eq_inc(arr[7], 17, "%d", "7: remains the same");
 
     return fails;
 }
@@ -97,14 +97,14 @@ int bytes_move_overlap_right() {
     jp_bytes_move(right, left, sizeof(int) * 4);
 
     // check moves
-    assert_eq_inc(arr[0], 10, "0: remains the same");
-    assert_eq_inc(arr[1], 11, "1: remains the same");
-    assert_eq_inc(arr[2], 12, "2: remains the same");
-    assert_eq_inc(arr[3], 11, "3: moved");
-    assert_eq_inc(arr[4], 12, "4: moved");
-    assert_eq_inc(arr[5], 13, "5: moved");
-    assert_eq_inc(arr[6], 14, "6: moved");
-    assert_eq_inc(arr[7], 17, "7: remains the same");
+    assert_eq_inc(arr[0], 10, "%d", "0: remains the same");
+    assert_eq_inc(arr[1], 11, "%d", "1: remains the same");
+    assert_eq_inc(arr[2], 12, "%d", "2: remains the same");
+    assert_eq_inc(arr[3], 11, "%d", "3: moved");
+    assert_eq_inc(arr[4], 12, "%d", "4: moved");
+    assert_eq_inc(arr[5], 13, "%d", "5: moved");
+    assert_eq_inc(arr[6], 14, "%d", "6: moved");
+    assert_eq_inc(arr[7], 17, "%d", "7: remains the same");
 
     return fails;
 }
