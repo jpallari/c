@@ -44,7 +44,7 @@ RELEASE_LDFLAGS = -flto
 -include config.mk
 
 # Files
-HEADER_FILES = $(wildcard $(SRC_DIR)/*.h)
+HEADER_FILES = $(wildcard $(INCLUDE_DIR)/*.h)
 SRC_FILES = $(wildcard $(SRC_DIR)/*.c)
 CMD_FILES = $(wildcard $(CMD_DIR)/*.c)
 TEST_FILES = $(wildcard $(TEST_DIR)/*.c)
@@ -106,9 +106,10 @@ $(CMD_RELEASE_BIN_FILES): $(RELEASE_DIR)/%: $(RELEASE_CMD_OBJ_DIR)/%.o $(RELEASE
 # Build and run tests
 #
 
-.PHONY: lint test
+.PHONY: lint test test-build
 
 test: $(TEST_TARGETS)
+test-build: $(TEST_BIN_FILES)
 
 $(TEST_OBJ_FILES): $(TEST_BIN_DIR)/%.o: $(TEST_DIR)/%.c
 	@mkdir -p $(dir $@)
@@ -121,7 +122,7 @@ $(TEST_BIN_FILES): $(TEST_BIN_DIR)/%: $(TEST_BIN_DIR)/%.o $(DEBUG_OBJ_FILES)
 $(TEST_TARGET_PREFIX)%: $(TEST_BIN_DIR)/%
 	./$<
 
-lint: $(SRC_FILES) $(HEADER_FILES)
+lint: $(SRC_FILES) $(HEADER_FILES) $(CMD_FILES) $(TEST_FILES)
 	cppcheck -DJP_USE_ASSERT_H --check-level=exhaustive $^
 
 #
