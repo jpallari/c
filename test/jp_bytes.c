@@ -7,9 +7,9 @@ int test_bytes_copy() {
     int mismatches = 0;
 
     int *arr1 = jp_new(int, len, &jp_std_allocator);
-    assert_true(arr1, "malloc must succeed");
+    assert_true_bail(arr1, "malloc must succeed");
     int *arr2 = jp_new(int, len, &jp_std_allocator);
-    assert_true(arr2, "malloc must succeed");
+    assert_true_bail(arr2, "malloc must succeed");
 
     // fill data
     for (int i = 0; i < len; i += 1) {
@@ -26,7 +26,7 @@ int test_bytes_copy() {
             mismatches += 1;
         }
     }
-    assert_eq_inc(mismatches, 0, "%d", "no mismatches should be found");
+    assert_eq(mismatches, 0, "%d", "no mismatches should be found");
 
     jp_free(arr1, &jp_std_allocator);
     jp_free(arr2, &jp_std_allocator);
@@ -39,9 +39,9 @@ int test_bytes_move_no_overlap() {
     int mismatches = 0;
 
     int *arr1 = jp_new(int, len, &jp_std_allocator);
-    assert_true(arr1, "malloc must succeed");
+    assert_true_bail(arr1, "malloc must succeed");
     int *arr2 = jp_new(int, len, &jp_std_allocator);
-    assert_true(arr2, "malloc must succeed");
+    assert_true_bail(arr2, "malloc must succeed");
 
     // fill data
     for (int i = 0; i < len; i += 1) {
@@ -58,7 +58,7 @@ int test_bytes_move_no_overlap() {
             mismatches += 1;
         }
     }
-    assert_eq_inc(mismatches, 0, "%d", "no mismatches should be found");
+    assert_eq(mismatches, 0, "%d", "no mismatches should be found");
 
     jp_free(arr1, &jp_std_allocator);
     jp_free(arr2, &jp_std_allocator);
@@ -75,14 +75,14 @@ int test_bytes_move_overlap_left() {
     jp_bytes_move(left, right, sizeof(int) * 4);
 
     // check moves
-    assert_eq_inc(arr[0], 10, "%d", "0: remains the same");
-    assert_eq_inc(arr[1], 11, "%d", "1: remains the same");
-    assert_eq_inc(arr[2], 14, "%d", "2: moved");
-    assert_eq_inc(arr[3], 15, "%d", "3: moved");
-    assert_eq_inc(arr[4], 16, "%d", "4: moved");
-    assert_eq_inc(arr[5], 17, "%d", "5: moved");
-    assert_eq_inc(arr[6], 16, "%d", "6: remains the same");
-    assert_eq_inc(arr[7], 17, "%d", "7: remains the same");
+    assert_eq(arr[0], 10, "%d", "0: remains the same");
+    assert_eq(arr[1], 11, "%d", "1: remains the same");
+    assert_eq(arr[2], 14, "%d", "2: moved");
+    assert_eq(arr[3], 15, "%d", "3: moved");
+    assert_eq(arr[4], 16, "%d", "4: moved");
+    assert_eq(arr[5], 17, "%d", "5: moved");
+    assert_eq(arr[6], 16, "%d", "6: remains the same");
+    assert_eq(arr[7], 17, "%d", "7: remains the same");
 
     return fails;
 }
@@ -97,14 +97,14 @@ int test_bytes_move_overlap_right() {
     jp_bytes_move(right, left, sizeof(int) * 4);
 
     // check moves
-    assert_eq_inc(arr[0], 10, "%d", "0: remains the same");
-    assert_eq_inc(arr[1], 11, "%d", "1: remains the same");
-    assert_eq_inc(arr[2], 12, "%d", "2: remains the same");
-    assert_eq_inc(arr[3], 11, "%d", "3: moved");
-    assert_eq_inc(arr[4], 12, "%d", "4: moved");
-    assert_eq_inc(arr[5], 13, "%d", "5: moved");
-    assert_eq_inc(arr[6], 14, "%d", "6: moved");
-    assert_eq_inc(arr[7], 17, "%d", "7: remains the same");
+    assert_eq(arr[0], 10, "%d", "0: remains the same");
+    assert_eq(arr[1], 11, "%d", "1: remains the same");
+    assert_eq(arr[2], 12, "%d", "2: remains the same");
+    assert_eq(arr[3], 11, "%d", "3: moved");
+    assert_eq(arr[4], 12, "%d", "4: moved");
+    assert_eq(arr[5], 13, "%d", "5: moved");
+    assert_eq(arr[6], 14, "%d", "6: moved");
+    assert_eq(arr[7], 17, "%d", "7: remains the same");
 
     return fails;
 }
