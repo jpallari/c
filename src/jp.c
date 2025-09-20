@@ -2,6 +2,95 @@
 #include <errno.h>
 
 ////////////////////////
+// Bytes
+////////////////////////
+
+b32 jp_bytes_eq(const u8 *b1, const u8 *b2, size_t capacity) {
+    if (b1 == b2) {
+        return 1;
+    }
+    if (!b1 || !b2) {
+        return 0;
+    }
+
+    for (size_t i = 0; i < capacity; i += 1) {
+        if (b1[i] != b2[i]) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+////////////////////////
+// C strings
+////////////////////////
+
+b32 jp_cstr_eq_unsafe(const char *s1, const char *s2) {
+    if (s1 == s2) {
+        return 1;
+    }
+    if (!s1 || !s2) {
+        return 0;
+    }
+
+    size_t len = 0;
+    while (s1[len] && s2[len]) {
+        if (s1[len] != s2[len]) {
+            return 0;
+        }
+        len += 1;
+    }
+    if (s1[len] != s2[len]) {
+        return 0;
+    }
+
+    return 1;
+}
+
+b32 jp_cstr_eq(const char *s1, const char *s2, size_t capacity) {
+    if (s1 == s2) {
+        return 1;
+    }
+    if (!s1 || !s2) {
+        return 0;
+    }
+
+    for (size_t i = 0; i < capacity; i += 1) {
+        if (s1[i] != s2[i]) {
+            return 0;
+        }
+        if (!s1[i] && !s2[i]) {
+            break;
+        }
+    }
+
+    return 1;
+}
+
+size_t jp_cstr_len_unsafe(const char *str) {
+    if (!str) {
+        return 0;
+    }
+    size_t len = 0;
+    while (str[len]) { len += 1; }
+    len += 1;
+    return len;
+}
+
+size_t jp_cstr_len(const char *str, size_t capacity) {
+    if (!str) {
+        return 0;
+    }
+    size_t len = 0;
+    while (str[len] && len < capacity) { len += 1; }
+    if (len + 1 < capacity) {
+        len += 1;
+    }
+    return len;
+}
+
+////////////////////////
 // Slices
 ////////////////////////
 
@@ -41,6 +130,9 @@ void jp_slice_copy(jp_slice dest, jp_slice src) {
 
 jp_slice jp_slice_from_cstr_unsafe(char *str) {
     jp_slice slice = {0};
+    if (!str) {
+        return slice;
+    }
     while (str[slice.size]) { slice.size += 1; }
     slice.size += 1;
     slice.buffer = (u8 *)str;

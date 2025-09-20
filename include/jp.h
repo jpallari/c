@@ -133,6 +133,15 @@ static inline void *jp_bytes_move(void *dest, const void *src, size_t n) {
 
 #endif // JP_USE_STRING_H
 
+/**
+ * Check whether both buffers contain the same bytes up to the given capacity.
+ *
+ * @param b1,b2 byte buffers to compare
+ * @param capacity the capacity of the buffers
+ * @returns true when bytes contain the same bytes and false otherwise
+ */
+b32 jp_bytes_eq(const u8 *b1, const u8 *b2, size_t capacity);
+
 #define jp_copy_n(dest, src, n, type) \
     jp_bytes_copy((dest), (src), n * sizeof(type))
 
@@ -237,6 +246,44 @@ __attribute__((unused)) static jp_allocator jp_std_allocator = {
 #define jp_free(ptr, allocator) ((allocator)->free((ptr), (allocator)->ctx))
 
 ////////////////////////
+// C strings
+////////////////////////
+
+/**
+ * Unsafe equality comparison of two strings.
+ *
+ * @param s1,s2 strings to compare
+ * @returns true when strings are equal and false otherwise
+ */
+b32 jp_cstr_eq_unsafe(const char *s1, const char *s2);
+
+/**
+ * Equality comparison of two strings with max bound.
+ *
+ * @param s1,s2 strings to compare
+ * @param capacity minimum capacity of the two strings
+ * @returns true when strings are equal and false otherwise
+ */
+b32 jp_cstr_eq(const char *s1, const char *s2, size_t capacity);
+
+/**
+ * Unsafe get length of string.
+ *
+ * @param str string to get length for
+ * @returns the length of the string
+ */
+size_t jp_cstr_len_unsafe(const char *str);
+
+/**
+ * Get length of string with a bound check.
+ *
+ * @param str string to get length for
+ * @param capacity the capacity of the string
+ * @returns the length of the string
+ */
+size_t jp_cstr_len(const char *str, size_t capacity);
+
+////////////////////////
 // Slices
 ////////////////////////
 
@@ -263,7 +310,7 @@ typedef struct {
  */
 #define jp_slice_from(x) \
     (jp_slice) { \
-        (u8 *)(x), jp_lengthof(x) \
+        (u8 *)(x), sizeof(x) \
     }
 
 /**
