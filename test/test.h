@@ -8,6 +8,12 @@
 #include <stdlib.h>
 
 ////////////////////////
+// Panic
+////////////////////////
+
+#define panic __builtin_unreachable
+
+////////////////////////
 // Config
 ////////////////////////
 
@@ -121,14 +127,7 @@ void log_with_loc(
     do { \
         if (!(c)) { \
             char __assert_log_msg[1024] = {0}; \
-            snprintf( \
-                __assert_log_msg, \
-                sizeof(__assert_log_msg), \
-                (f " " #cmp " " f " // %s"), \
-                (l), \
-                (r), \
-                (msg) \
-            ); \
+            __assert_cmp_log_msg(__assert_log_msg, l, r, cmp, f, msg); \
             __assert_fail(__assert_log_msg); \
             action; \
         } \
@@ -159,9 +158,11 @@ void log_with_loc(
 #define assert_cmp(l, r, cmp, f, msg) \
     __assert_cmp_base_simple(l, r, cmp, f, msg, __assert_fail_inc)
 
-#define assert_eq_bytes_bail(l, r, msg) assert_true_bail(jp_bytes_eq(l, r), (msg))
+#define assert_eq_bytes_bail(l, r, msg) \
+    assert_true_bail(jp_bytes_eq(l, r), (msg))
 
-#define assert_ne_bytes_bail(l, r, msg) assert_false_bail(jp_bytes_eq(l, r), (msg))
+#define assert_ne_bytes_bail(l, r, msg) \
+    assert_false_bail(jp_bytes_eq(l, r), (msg))
 
 #define assert_eq_bytes(l, r, capacity, msg) \
     assert_true(jp_bytes_eq((l), (r), (capacity)), (msg))
