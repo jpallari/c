@@ -34,7 +34,7 @@ typedef struct {
 
 typedef struct {
     char *name;
-    u8 **logs; // dynamic array
+    u8 **logs_handle; // dynamic array
     test_assert *asserts; // dynamic array
     u32 assert_count;
     u32 asserts_passed;
@@ -57,9 +57,9 @@ void test_report_append(
     const char *func
 ) {
     assert(t && "test report must not be null");
-    assert(t->logs && "logs pointer must not be null");
-    assert(*t->logs && "logs storage must not be null");
-    u64 logs_offset = jp_dynarr_len(*t->logs);
+    assert(t->logs_handle && "logs pointer must not be null");
+    assert(*t->logs_handle && "logs storage must not be null");
+    u64 logs_offset = jp_dynarr_len(*t->logs_handle);
 
     test_assert assert_report = {
         .logs_offset = logs_offset,
@@ -77,9 +77,9 @@ void test_report_append(
     }
 
     u8 *next_logs =
-        jp_dynarr_push_grow(*t->logs, log_message.buffer, log_message.len, u8);
+        jp_dynarr_push_grow(*t->logs_handle, log_message.buffer, log_message.len, u8);
     if (next_logs) {
-        *t->logs = next_logs;
+        *t->logs_handle = next_logs;
     } else {
         panic();
     }
@@ -121,7 +121,7 @@ void test_suite_report_pretty(test_suite_report *report, FILE *stream) {
                     ar.file,
                     ar.line,
                     ar.func,
-                    (char *)(&((*tr.logs)[ar.logs_offset]))
+                    (char *)(&((*tr.logs_handle)[ar.logs_offset]))
                 );
             }
         }
@@ -191,7 +191,7 @@ int test_main(
         test_case = test_cases[i];
         test *t = &report.test_reports[i];
         t->name = test_case.name;
-        t->logs = &logs;
+        t->logs_handle = &logs;
         t->asserts = jp_dynarr_new(10, test_assert, &jp_std_allocator);
         if (!t->asserts) {
             panic();
