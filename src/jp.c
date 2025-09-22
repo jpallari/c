@@ -149,7 +149,6 @@ jp_arena jp_arena_new(u8 *buffer, u64 size) {
 void *jp_arena_alloc_bytes(jp_arena *arena, u64 size, u64 alignment) {
     u64 aligned_used = jp_arena_aligned_used(arena->used, alignment);
     if (arena->size < size + aligned_used) {
-        assert("Arena ran out of memory");
         return NULL;
     }
     void *p = ((u8 *)arena->buffer) + aligned_used;
