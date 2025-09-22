@@ -49,6 +49,13 @@ typedef s32 b32;
 #endif // JP_USE_ASSERT_H
 
 ////////////////////////
+// Math
+////////////////////////
+
+#define min(a, b) ((a) < (b) ? (a) : (b))
+#define max(a, b) ((a) > (b) ? (a) : (b))
+
+////////////////////////
 // Arrays
 ////////////////////////
 
@@ -156,17 +163,25 @@ static inline void *jp_bytes_zero(void *s, size_t n) {
 /**
  * Check whether both buffers contain the same bytes up to the given capacity.
  *
- * @param b1,b2 byte buffers to compare
+ * @param a,b byte buffers to compare
  * @param capacity the capacity of the buffers
  * @returns true when bytes contain the same bytes and false otherwise
  */
-b32 jp_bytes_eq(const u8 *b1, const u8 *b2, size_t capacity);
+b32 jp_bytes_eq(const void *a, const void *b, size_t capacity);
 
-#define jp_copy_n(dest, src, n, type) \
+#define jp_copy_n(dest, src, n) jp_bytes_copy((dest), (src), n * sizeof(*(src)))
+
+#define jp_move_n(dest, src, n) jp_bytes_move((dest), (src), n * sizeof(*(src)))
+
+#define jp_zero_n(dest, n) jp_bytes_zero((dest), n * sizeof(*(dest)))
+
+#define jp_copy_nt(dest, src, n, type) \
     jp_bytes_copy((dest), (src), n * sizeof(type))
 
-#define jp_move_n(dest, src, n, type) \
+#define jp_move_nt(dest, src, n, type) \
     jp_bytes_move((dest), (src), n * sizeof(type))
+
+#define jp_zero_nt(dest, n, type) jp_bytes_zero((dest), n * sizeof(type))
 
 ////////////////////////
 // Allocator
@@ -255,7 +270,7 @@ __attribute__((unused)) static jp_allocator jp_std_allocator = {
  * @returns pointer to area of memory that was allocated
  */
 #define jp_malloc(size, alignment, allocator) \
-    ((allocator)->malloc((size), (alignment), (allocator)->ctx))
+    (allocator)->malloc((size), (alignment), (allocator)->ctx)
 
 /**
  * Call free on a custom memory allocation interface.
@@ -263,7 +278,7 @@ __attribute__((unused)) static jp_allocator jp_std_allocator = {
  * @param ptr pointer to area of memory to free
  * @param allocator allocator to use for freeing memory
  */
-#define jp_free(ptr, allocator) ((allocator)->free((ptr), (allocator)->ctx))
+#define jp_free(ptr, allocator) (allocator)->free((ptr), (allocator)->ctx)
 
 ////////////////////////
 // C strings
@@ -319,7 +334,7 @@ typedef struct {
     /**
      * Length of the slice in bytes
      */
-    size_t size;
+    size_t len;
 } jp_slice;
 
 /**
@@ -451,7 +466,7 @@ typedef struct {
     /**
      * Number of existing items
      */
-    u64 count;
+    u64 len;
 
     /**
      * Number of items the array can hold
@@ -497,13 +512,13 @@ void *jp_dynarr_new_sized(
 /**
  * Get the count for given array
  */
-#define jp_dynarr_get_count(array) \
-    (array ? (((jp_dynarr_header *)(array)) - 1)->count : 0)
+#define jp_dynarr_len(array) \
+    (array ? (((jp_dynarr_header *)(array)) - 1)->len : 0)
 
 /**
  * Get the capacity for given array
  */
-#define jp_dynarr_get_capacity(array) \
+#define jp_dynarr_capacity(array) \
     (array ? (((jp_dynarr_header *)(array)) - 1)->capacity : 0)
 
 /**
@@ -513,6 +528,9 @@ void jp_dynarr_free(void *array);
 
 /**
  * Clone a given array with new capacity.
+ *
+ * @returns new array with the original array contents or null when the memory
+ *          allocation fails
  */
 void *jp_dynarr_clone_ut(
     void *array, u64 capacity, size_t item_size, size_t alignment
@@ -521,10 +539,10 @@ void *jp_dynarr_clone_ut(
 /**
  * Clone a given array with new capacity.
  */
-#define jp_dynarr_clone(array, capacity, t) \
-    ((t *)(jp_dynarr_clone_ut( \
-        (array), (capacity), sizeof(*(array)), _Alignof(t) \
-    )))
+#define jp_dynarr_clone(array, capacity) \
+    jp_dynarr_clone_ut( \
+        (array), (capacity), sizeof(*(array)), _Alignof(*(array)) \
+    )
 
 /**
  *  Grow a given array.
@@ -541,27 +559,43 @@ void *jp_dynarr_clone_ut(
 b32 jp_dynarr_push_ut(void *array, void *items, u64 count, size_t item_size);
 
 /**
- * Push items to given array. Returns true when the operation succeeded (i.e.
- * there's capacity).
+ * Push items to given array.
+ *
+ * Push may fail under these conditions:
+ * - Array is NULL
+ * - There is not enough capacity to hold the items
+ *
+ * @returns false when the operation succeeds and false otherwise
  */
 #define jp_dynarr_push(array, items, count) \
     jp_dynarr_push_ut((array), (items), (count), sizeof(*(items)))
 
 /**
- * Push items to given array and grow the array automatically. Returns the array
- * with the items.
+ * Push items to given array and grow the array automatically.
+ *
+ * Push may fail under these conditions:
+ * - Array is NULL
+ * - Array growth fails
+ *
+ * @returns array containing the new contents or null when push fails
  */
 void *jp_dynarr_push_grow_ut(
     void *array, void *items, u64 count, size_t item_size, size_t alignment
 );
 
 /**
- * Push items to given array and assign it back to the array.
+ * Push items to given array and grow the array automatically.
+ *
+ * Push may fail under these conditions:
+ * - Array is NULL
+ * - Array growth fails
+ *
+ * @returns array containing the new contents or null when push fails
  */
 #define jp_dynarr_push_grow(array, items, count, type) \
-    ((array) = jp_dynarr_push_grow_ut( \
-         (array), (items), (count), sizeof(type), _Alignof(type) \
-     ))
+    (type *)jp_dynarr_push_grow_ut( \
+        (array), (items), (count), sizeof(type), _Alignof(type) \
+    )
 
 /**
  * Pop an element from the tail of the array.
@@ -577,7 +611,7 @@ b32 jp_dynarr_pop_ut(void *array, void *out, size_t item_size);
  * Pop an element from the tail of the array
  */
 #define jp_dynarr_pop(array, out) \
-    (jp_dynarr_pop_ut((array), &(out), sizeof(*(array))))
+    jp_dynarr_pop_ut((array), &(out), sizeof(*(array)))
 
 /**
  * Remove an element by index from given array.
@@ -592,7 +626,7 @@ b32 jp_dynarr_remove_ut(void *array, u64 index, size_t item_size);
  * Remove an element by index from given array.
  */
 #define jp_dynarr_remove(array, index) \
-    (jp_dynarr_remove_ut((array), (index), sizeof(*(array))))
+    jp_dynarr_remove_ut((array), (index), sizeof(*(array)))
 
 ////////////////////////
 // File I/O (blocking)

@@ -5,16 +5,18 @@
 // Bytes
 ////////////////////////
 
-b32 jp_bytes_eq(const u8 *b1, const u8 *b2, size_t capacity) {
-    if (b1 == b2) {
+b32 jp_bytes_eq(const void *a, const void *b, size_t capacity) {
+    const u8 *a_ = a, *b_ = b;
+
+    if (a_ == b_) {
         return 1;
     }
-    if (!b1 || !b2) {
+    if (!a || !b) {
         return 0;
     }
 
     for (size_t i = 0; i < capacity; i += 1) {
-        if (b1[i] != b2[i]) {
+        if (a_[i] != b_[i]) {
             return 0;
         }
     }
@@ -107,31 +109,31 @@ jp_slice jp_slice_span(u8 *start, u8 *end) {
 
     jp_slice s = {0};
     s.buffer = start;
-    s.size = end - start;
+    s.len = end - start;
     return s;
 }
 
 s32 jp_slice_equal(jp_slice a, jp_slice b) {
-    if (a.size != b.size) {
+    if (a.len != b.len) {
         return 0;
     }
-    return jp_bytes_eq(a.buffer, b.buffer, a.size);
+    return jp_bytes_eq(a.buffer, b.buffer, a.len);
 }
 
 void jp_slice_copy(jp_slice dest, jp_slice src) {
-    size_t amount = src.size > dest.size ? dest.size : src.size;
+    size_t amount = min(src.len, dest.len);
     jp_bytes_copy(dest.buffer, src.buffer, amount);
 }
 
 void jp_slice_move(jp_slice dest, jp_slice src) {
-    size_t amount = src.size > dest.size ? dest.size : src.size;
+    size_t amount = min(src.len, dest.len);
     jp_bytes_move(dest.buffer, src.buffer, amount);
 }
 
 jp_slice jp_slice_from_cstr_unsafe(char *str) {
     jp_slice slice = {0};
     slice.buffer = (u8 *)str;
-    slice.size = jp_cstr_len_unsafe(str);
+    slice.len = jp_cstr_len_unsafe(str);
     return slice;
 }
 
@@ -191,7 +193,7 @@ void *jp_dynarr_new_sized(
     }
 
     jp_dynarr_header *header = (jp_dynarr_header *)data;
-    header->count = 0;
+    header->len = 0;
     header->capacity = capacity;
     header->allocator = allocator;
 
@@ -222,10 +224,10 @@ void *jp_dynarr_clone_ut(
     }
 
     jp_dynarr_header *new_header = jp_dynarr_get_header(new_array);
-    new_header->count = header->count;
+    new_header->len = header->len;
     new_header->capacity = capacity;
 
-    jp_bytes_copy(new_array, array, new_header->count * item_size);
+    jp_bytes_copy(new_array, array, new_header->len * item_size);
     return new_array;
 }
 
@@ -240,17 +242,15 @@ b32 jp_dynarr_push_ut(void *array, void *items, u64 count, size_t item_size) {
     jp_dynarr_header *header = jp_dynarr_get_header(array);
     assert(header && "Header must not be null");
 
-    if (header->count + count > header->capacity) {
+    if (header->len + count > header->capacity) {
         // out of capacity
         return 0;
     }
 
     jp_bytes_copy(
-        ((u8 *)array) + header->count * item_size,
-        (u8 *)items,
-        count * item_size
+        ((u8 *)array) + header->len * item_size, (u8 *)items, count * item_size
     );
-    header->count += count;
+    header->len += count;
     return 1;
 }
 
@@ -258,19 +258,17 @@ void *jp_dynarr_push_grow_ut(
     void *array, void *items, u64 count, size_t item_size, size_t alignment
 ) {
     if (count == 0) {
-        return 0;
+        return array;
     }
+
+    assert(array && "array must not be null");
     if (!array) {
-        // Array does not exist? Create a new one from scratch.
-        // Use standard allocator since previous allocator is unknown.
-        array = jp_dynarr_new_sized(
-            jp_dynarr_grow_count(0), item_size, alignment, &jp_std_allocator
-        );
+        return NULL;
     }
     jp_dynarr_header *header = jp_dynarr_get_header(array);
-    assert(header && "Header must not be null");
+    assert(header && "header must not be null");
 
-    if (header->count + count > header->capacity) {
+    if (header->len + count > header->capacity) {
         u64 new_capacity = jp_dynarr_grow_count(header->capacity + count);
         void *new_array =
             jp_dynarr_clone_ut(array, new_capacity, item_size, alignment);
@@ -278,18 +276,15 @@ void *jp_dynarr_push_grow_ut(
             return NULL;
         }
         jp_dynarr_header *new_header = jp_dynarr_get_header(new_array);
-        assert(new_header && "New header must not be null");
+        assert(new_header && "new header must not be null");
         jp_dynarr_free(array);
         array = new_array;
         header = new_header;
     }
 
-    jp_bytes_copy(
-        ((u8 *)array) + header->count * item_size,
-        (u8 *)items,
-        count * item_size
-    );
-    header->count += count;
+    void *dest = ((u8 *)array) + header->len * item_size;
+    jp_bytes_copy(dest, items, count * item_size);
+    header->len += count;
     return array;
 }
 
@@ -298,12 +293,12 @@ b32 jp_dynarr_pop_ut(void *array, void *out, size_t item_size) {
         return 0;
     }
     jp_dynarr_header *header = jp_dynarr_get_header(array);
-    if (header->count == 0) {
+    if (header->len == 0) {
         return 0;
     }
-    u8 *item = ((u8 *)array) + (header->count - 1) * item_size;
+    u8 *item = ((u8 *)array) + (header->len - 1) * item_size;
     jp_bytes_copy((u8 *)out, item, item_size);
-    header->count -= 1;
+    header->len -= 1;
     return 1;
 }
 
@@ -312,15 +307,15 @@ b32 jp_dynarr_remove_ut(void *array, u64 index, size_t item_size) {
         return 0;
     }
     jp_dynarr_header *header = jp_dynarr_get_header(array);
-    if (header->count <= index) {
+    if (header->len <= index) {
         return 0;
     }
     u8 *data = (u8 *)array;
     u8 *data_dst = data + index * item_size;
     u8 *data_src = data_dst + item_size;
-    u64 bytes = (header->count - index - 1) * item_size;
+    u64 bytes = (header->len - index - 1) * item_size;
     jp_bytes_move(data_dst, data_src, bytes);
-    header->count -= 1;
+    header->len -= 1;
     return 1;
 }
 
@@ -367,9 +362,7 @@ jp_file_result jp_read_file(const char *filename, jp_allocator *allocator) {
          bs_remaining -= read_res,
         cursor += read_res,
         result.size += (u64)read_res) {
-        chunk_size = (bs_remaining < file_stat.st_blksize)
-            ? bs_remaining
-            : file_stat.st_blksize;
+        chunk_size = min(bs_remaining, file_stat.st_blksize);
         read_res = read(fd, cursor, chunk_size);
         if (read_res == 0) { // EOF
             goto end;
@@ -411,9 +404,7 @@ s64 jp_write_file(char *filename, void *data, u64 size) {
 
     for (bs_remaining = size; bs_remaining > 0;
          bs_remaining -= write_res, cursor += write_res) {
-        chunk_size = (bs_remaining < file_stat.st_blksize)
-            ? bs_remaining
-            : file_stat.st_blksize;
+        chunk_size = min(bs_remaining, file_stat.st_blksize);
         write_res = write(fd, cursor, chunk_size);
         if (write_res <= 0) {
             goto end;

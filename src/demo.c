@@ -6,26 +6,33 @@ int array_demo(void) {
     jp_arena arena = jp_arena_new(buffer, 1024 * 1024);
     jp_allocator allocator = jp_arena_allocator_new(&arena);
 
-    float *data = jp_dynarr_new(10, float, &allocator);
+    float *arr = jp_dynarr_new(10, float, &allocator);
     float last = 0.0;
-
     int i;
+
     for (i = 0; i < 20; i += 1) {
         float v = ((float)i) / 10;
-        jp_dynarr_push_grow(data, &v, 1, float);
+        float *new_arr = jp_dynarr_push_grow(&arr, &v, 1, float);
+        if (new_arr) {
+            arr = new_arr;
+        } else {
+            printf("allocation failed!\n");
+            goto end;
+        }
     }
 
-    jp_dynarr_remove(data, 9);
-    jp_dynarr_remove(data, 12);
-    jp_dynarr_pop(data, last);
+    jp_dynarr_remove(arr, 9);
+    jp_dynarr_remove(arr, 12);
+    jp_dynarr_pop(arr, last);
 
-    for (i = 0; i < jp_dynarr_get_count(data); i += 1) {
-        printf("data %d: %f\n", i, data[i]);
+    for (i = 0; i < jp_dynarr_len(arr); i += 1) {
+        printf("data %d: %f\n", i, arr[i]);
     }
 
-    printf("2: %f, 15: %f, last: %f\n", data[2], data[15], last);
+    printf("2: %f, 15: %f, last: %f\n", arr[2], arr[15], last);
 
-    jp_dynarr_free(data);
+end:
+    jp_dynarr_free(arr);
     jp_arena_clear(&arena);
     jp_free(buffer, &jp_std_allocator);
 
@@ -53,5 +60,3 @@ int file_demo(int argc, char **argv) {
     }
     return 0;
 }
-
-
