@@ -67,6 +67,7 @@ typedef s32 b32;
 ////////////////////////
 
 #ifdef JP_USE_STRING_H
+
 /**
  * Basically memcpy
  */
@@ -76,7 +77,13 @@ typedef s32 b32;
  * Basically memmove
  */
 #define jp_bytes_move memmove
-#else // JP_USE_STRING_H
+
+/**
+ * Basically memset to 0
+ */
+#define jp_bytes_zero(s, n) memzero(s, 0, n)
+
+#else
 
 /**
  * Basically memcpy. This will most likely be replaced with memcpy during
@@ -129,6 +136,19 @@ static inline void *jp_bytes_move(void *dest, const void *src, size_t n) {
         for (size_t i = n; i > 0; i -= 1) { d[i - 1] = s[i - 1]; }
     }
     return d;
+}
+
+/**
+ * Basically memset to 0.
+ *
+ * @param[out] s buffer to zero
+ * @param[in] n number of bytes to zero
+ * @returns pointer to the memory area that was zero'd
+ */
+static inline void *jp_bytes_zero(void *s, size_t n) {
+    u8 *s_ = s;
+    for (size_t i = 0; i < n; i += 1) { s_[i] = 0; }
+    return s;
 }
 
 #endif // JP_USE_STRING_H

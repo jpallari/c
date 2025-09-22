@@ -109,11 +109,24 @@ int test_bytes_move_overlap_right() {
     return fails;
 }
 
+int test_bytes_zero() {
+    int fails = 0;
+    int arr[] = {10, 11, 12, 13, 14, 15, 16, 17};
+    int expected_arr[] = {0, 0, 0, 0, 0, 0, 0, 0};
+
+    jp_bytes_zero(arr, sizeof(arr));
+
+    assert_eq_bytes(arr, expected_arr, sizeof(arr), "array must be zeroed");
+
+    return fails;
+}
+
 static test_case tests[] = {
     {"Bytes copy", test_bytes_copy},
     {"Bytes move no overlap", test_bytes_move_no_overlap},
     {"Bytes move overlap left", test_bytes_move_overlap_left},
-    {"Bytes move overlap right", test_bytes_move_overlap_right}
+    {"Bytes move overlap right", test_bytes_move_overlap_right},
+    {"Bytes zero", test_bytes_zero}
 };
 
 setup_tests(NULL, tests)
