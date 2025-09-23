@@ -113,9 +113,19 @@ void test_bytes_zero(test *t) {
     int arr[] = {10, 11, 12, 13, 14, 15, 16, 17};
     int expected_arr[] = {0, 0, 0, 0, 0, 0, 0, 0};
 
-    jp_bytes_zero(arr, sizeof(arr));
+    jp_bytes_set(arr, 0, sizeof(arr));
 
     assert_eq_bytes(t, arr, expected_arr, sizeof(arr), "array must be zeroed");
+}
+
+void test_bytes_to_hex(test *t) {
+    const char *str = "hello world!";
+    const char *expected_str = "68656c6c6f20776f726c6421";
+    unsigned char dest[25] = {0};
+
+    jp_bytes_to_hex(dest, str, jp_cstr_len_unsafe(str) - 1);
+
+    assert_eq_cstr(t, (char *)dest, expected_str, "string converstion to hex string");
 }
 
 static test_case tests[] = {
@@ -123,7 +133,8 @@ static test_case tests[] = {
     {"Bytes move no overlap", test_bytes_move_no_overlap},
     {"Bytes move overlap left", test_bytes_move_overlap_left},
     {"Bytes move overlap right", test_bytes_move_overlap_right},
-    {"Bytes zero", test_bytes_zero}
+    {"Bytes zero", test_bytes_zero},
+    {"Bytes to hex", test_bytes_to_hex}
 };
 
 setup_tests(NULL, tests)

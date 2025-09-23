@@ -266,7 +266,7 @@ int test_main(
     if (!report.test_reports) {
         panic();
     }
-    jp_zero_n(report.test_reports, test_count);
+    jp_set_n(report.test_reports, 0, test_count);
 
     if (setup && setup->before_all) {
         setup->before_all();

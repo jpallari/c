@@ -86,9 +86,9 @@ typedef s32 b32;
 #define jp_bytes_move memmove
 
 /**
- * Basically memset to 0
+ * Basically memset
  */
-#define jp_bytes_zero(s, n) memzero(s, 0, n)
+#define jp_bytes_set(s, c, n) memset(s, c, n)
 
 #else
 
@@ -146,19 +146,40 @@ static inline void *jp_bytes_move(void *dest, const void *src, size_t n) {
 }
 
 /**
- * Basically memset to 0.
+ * Basically memset.
  *
- * @param[out] s buffer to zero
- * @param[in] n number of bytes to zero
- * @returns pointer to the memory area that was zero'd
+ * @param[out] dest buffer to fill with a pattern
+ * @param[in] c byte pattern to fill the buffer with
+ * @param[in] n number of bytes to fill
+ * @returns pointer to the memory area that was filled
  */
-static inline void *jp_bytes_zero(void *s, size_t n) {
-    u8 *s_ = s;
-    for (size_t i = 0; i < n; i += 1) { s_[i] = 0; }
-    return s;
+static inline void *jp_bytes_set(void *dest, int c, size_t n) {
+    if (!n) {
+        return dest;
+    }
+    u8 *d = dest;
+    for (size_t i = 0; i < n; i += 1) { d[i] = (u8)c; }
+    return d;
 }
 
 #endif // JP_USE_STRING_H
+
+#define jp_copy_n(dest, src, n) \
+    jp_bytes_copy((dest), (src), (n) * sizeof(*(src)))
+
+#define jp_move_n(dest, src, n) \
+    jp_bytes_move((dest), (src), (n) * sizeof(*(src)))
+
+#define jp_set_n(dest, c, n) jp_bytes_set((dest), (c), (n) * sizeof(*(dest)))
+
+#define jp_copy_nt(dest, src, n, type) \
+    jp_bytes_copy((dest), (src), (n) * sizeof(type))
+
+#define jp_move_nt(dest, src, n, type) \
+    jp_bytes_move((dest), (src), (n) * sizeof(type))
+
+#define jp_set_nt(dest, c, n, type) \
+    jp_bytes_set((dest), (c), (n) * sizeof(type))
 
 /**
  * Check whether both buffers contain the same bytes up to the given capacity.
@@ -169,19 +190,18 @@ static inline void *jp_bytes_zero(void *s, size_t n) {
  */
 b32 jp_bytes_eq(const void *a, const void *b, size_t capacity);
 
-#define jp_copy_n(dest, src, n) jp_bytes_copy((dest), (src), n * sizeof(*(src)))
-
-#define jp_move_n(dest, src, n) jp_bytes_move((dest), (src), n * sizeof(*(src)))
-
-#define jp_zero_n(dest, n) jp_bytes_zero((dest), n * sizeof(*(dest)))
-
-#define jp_copy_nt(dest, src, n, type) \
-    jp_bytes_copy((dest), (src), n * sizeof(type))
-
-#define jp_move_nt(dest, src, n, type) \
-    jp_bytes_move((dest), (src), n * sizeof(type))
-
-#define jp_zero_nt(dest, n, type) jp_bytes_zero((dest), n * sizeof(type))
+/**
+ * Write bytes as a hex string.
+ *
+ * Note that the destination buffer must have at least twice + 1 the space as
+ * the number of bytes that are to be converted.
+ *
+ * @param[out] dest buffer to write the hex string to
+ * @param[in] src data to convert to a hex string
+ * @param[in] n number of bytes to convert to a hex string
+ * @returns number of bytes written
+ */
+size_t jp_bytes_to_hex(unsigned char *dest, const char *src, size_t n);
 
 ////////////////////////
 // Allocator

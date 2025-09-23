@@ -24,6 +24,30 @@ b32 jp_bytes_eq(const void *a, const void *b, size_t capacity) {
     return 1;
 }
 
+char jp_byte_to_hex_char(u8 b) {
+    assert(b < 16 && "byte must be between 0..=15");
+
+    if (b < 10) {
+        return '0' + b;
+    }
+    return 'a' - 10 + b;
+}
+
+void jp_byte_to_hex_chars(u8 b, char *high, char *low) {
+    *high = jp_byte_to_hex_char(b / 16);
+    *low = jp_byte_to_hex_char(b % 16);
+}
+
+size_t jp_bytes_to_hex(unsigned char *dest, const char *src, size_t n) {
+    int j = 0;
+    for (size_t i = 0; i < n; i += 1, j += 2) {
+        jp_byte_to_hex_chars((u8)src[i], &dest[j], &dest[j + 1]);
+    }
+    dest[j] = 0;
+    j += 1;
+    return j;
+}
+
 ////////////////////////
 // C strings
 ////////////////////////
