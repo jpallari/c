@@ -170,12 +170,12 @@ void test_suite_report_pretty(test_suite_report *report, FILE *stream) {
     for (int i = 0; i < report->test_count; i += 1) {
         test_report tr = report->test_reports[i];
         const char *prefix =
-            tr.assert_count > tr.asserts_passed ? "FAIL" : "OK";
+            tr.assert_count > tr.asserts_passed ? "FAIL" : " OK ";
         const char *color =
             tr.assert_count > tr.asserts_passed ? color_fail : color_ok;
         fprintf(
             stream,
-            "%s[ %s ]%s %s %s(%d/%d passed)%s\n",
+            "%s[%s]%s %s %s(%d/%d passed)%s\n",
             color,
             prefix,
             color_reset,
