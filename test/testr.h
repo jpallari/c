@@ -14,6 +14,46 @@
 #define panic __builtin_unreachable
 
 ////////////////////////
+// Breakpoint
+////////////////////////
+
+// Use a builtin for breakpoints if possible
+#if defined(__has_builtin)
+#if __has_builtin(__builtin_debugtrap)
+#define breakpoint() __builtin_debugtrap()
+#elif __has_builtin(__debugbreak)
+#define breakpoint() __debugbreak()
+#endif
+#endif
+
+// ASM based breakpoint
+#if !defined(breakpoint)
+#if defined(__i386__) || defined(__x86_64__)
+static inline void breakpoint(void) {
+    __asm__ __volatile__("int3");
+}
+#elif defined(__aarch64__)
+static inline void breakpoint() {
+    __asm__ __volatile__(".inst 0xd4200000");
+}
+#elif defined(__arm__)
+static inline void breakpoint() {
+    __asm__ __volatile__(".inst 0xe7f001f0");
+}
+#else
+// Breakpoint using signals
+#if !defined(breakpoint)
+#include <signal.h>
+#if defined(SIGTRAP)
+#define breakpoint() raise(SIGTRAP)
+#else
+#define breakpoint() raise(SIGABRT)
+#endif
+#endif
+#endif
+#endif
+
+////////////////////////
 // Config
 ////////////////////////
 
@@ -27,59 +67,70 @@ static int trap_on_assert_fail = 0;
 typedef struct {
     u64 logs_offset;
     const char *file;
-    const char *func;
     s32 line;
     b32 passed;
 } test_assert;
 
 typedef struct {
-    char *name;
-    u8 **logs_handle; // dynamic array
+    u8 *logs; // dynamic array
+} logs_handle;
+
+typedef struct {
     test_assert *asserts; // dynamic array
+} asserts_handle;
+
+typedef struct {
+    logs_handle *logs_handle;
+    asserts_handle *asserts_handle;
     u32 assert_count;
     u32 asserts_passed;
 } test;
 
 typedef struct {
-    test *test_reports;
+    const char *name;
+    test_assert *asserts;
+    u32 assert_count;
+    u32 asserts_passed;
+} test_report;
+
+typedef struct {
+    logs_handle *logs_handle;
+    asserts_handle *asserts_handle;
+    test_report *test_reports;
     u64 test_count;
     u64 tests_passed;
     u32 assert_count;
     u32 asserts_passed;
 } test_suite_report;
 
-void test_report_append(
-    test *t,
-    b32 passed,
-    jp_slice log_message,
-    const char *file,
-    int line,
-    const char *func
+b32 test_report_append(
+    test *t, b32 passed, jp_slice log_message, const char *file, int line
 ) {
     assert(t && "test report must not be null");
-    assert(t->logs_handle && "logs pointer must not be null");
-    assert(*t->logs_handle && "logs storage must not be null");
-    u64 logs_offset = jp_dynarr_len(*t->logs_handle);
+    assert(t->logs_handle && "logs handle must not be null");
+    assert(t->logs_handle->logs && "logs storage must not be null");
+    u64 logs_offset = jp_dynarr_len(t->logs_handle->logs);
 
     test_assert assert_report = {
         .logs_offset = logs_offset,
         .passed = passed,
         .file = file,
         .line = line,
-        .func = func,
     };
-    test_assert *next_ar =
-        jp_dynarr_push_grow(t->asserts, &assert_report, 1, test_assert);
+    test_assert *next_ar = jp_dynarr_push_grow(
+        t->asserts_handle->asserts, &assert_report, 1, test_assert
+    );
     if (next_ar) {
-        t->asserts = next_ar;
+        t->asserts_handle->asserts = next_ar;
     } else {
         panic();
     }
 
-    u8 *next_logs =
-        jp_dynarr_push_grow(*t->logs_handle, log_message.buffer, log_message.len, u8);
+    u8 *next_logs = jp_dynarr_push_grow(
+        t->logs_handle->logs, log_message.buffer, log_message.len, u8
+    );
     if (next_logs) {
-        *t->logs_handle = next_logs;
+        t->logs_handle->logs = next_logs;
     } else {
         panic();
     }
@@ -88,40 +139,61 @@ void test_report_append(
     if (passed) {
         t->asserts_passed += 1;
     }
+
+    if (!passed && trap_on_assert_fail) {
+        breakpoint();
+    }
+    return passed;
 }
 
 void test_suite_report_pretty(test_suite_report *report, FILE *stream) {
     assert(report && "test suite report must not be null");
+
+    char *color_ok = "\x1B[32m";
+    char *color_fail = "\x1B[31m";
+    char *color_reset = "\x1B[0m";
+    char *color_info = "\x1B[1;30m";
+    if (!color_enabled) {
+        color_ok = "";
+        color_fail = "";
+        color_reset = "";
+        color_info = "";
+    }
 
     if (!report->test_count) {
         fprintf(stream, "No tests executed");
         return;
     }
 
+    const u8 *logs = report->logs_handle->logs;
+
     for (int i = 0; i < report->test_count; i += 1) {
-        test tr = report->test_reports[i];
+        test_report tr = report->test_reports[i];
         const char *prefix =
             tr.assert_count > tr.asserts_passed ? "FAIL" : "OK";
+        const char *color =
+            tr.assert_count > tr.asserts_passed ? color_fail : color_ok;
         fprintf(
             stream,
-            "[ %s ] %s (%d/%d passed)\n",
+            "%s[ %s ]%s %s %s(%d/%d passed)%s\n",
+            color,
             prefix,
+            color_reset,
             tr.name,
+            color_info,
             tr.asserts_passed,
-            tr.assert_count
+            tr.assert_count,
+            color_reset
         );
-        for (int j = 0; j < jp_dynarr_len(tr.asserts); j += 1) {
+        for (int j = 0; j < tr.assert_count; j += 1) {
             test_assert ar = tr.asserts[j];
             if (!ar.passed) {
-                const char *prefix = ar.passed ? "OK" : "FAIL";
                 fprintf(
                     stream,
-                    "    [ %s ] %s:%d (%s): %s\n",
-                    prefix,
+                    "    %s:%d: %s\n",
                     ar.file,
                     ar.line,
-                    ar.func,
-                    (char *)(&((*tr.logs_handle)[ar.logs_offset]))
+                    (char *)(&(logs[ar.logs_offset]))
                 );
             }
         }
@@ -165,14 +237,27 @@ int test_main(
         trap_on_assert_fail = 1;
     }
 
-    u8 *logs = jp_dynarr_new(4096, u8, &jp_std_allocator);
-    if (!logs) {
+    // buffer to back logs
+    logs_handle logs_handle = {
+        .logs = jp_dynarr_new(4096, u8, &jp_std_allocator),
+    };
+    if (!logs_handle.logs) {
         panic();
     }
 
-    test_case test_case;
+    // buffer to back assert data
+    asserts_handle asserts_handle = {
+        .asserts = jp_dynarr_new(1000, test_assert, &jp_std_allocator),
+    };
+    if (!asserts_handle.asserts) {
+        panic();
+    }
+
+    // init report
     test_suite_report report = {
-        .test_reports = jp_new(test, test_count, &jp_std_allocator),
+        .logs_handle = &logs_handle,
+        .asserts_handle = &asserts_handle,
+        .test_reports = jp_new(test_report, test_count, &jp_std_allocator),
         .test_count = test_count,
         .tests_passed = 0,
         .assert_count = 0,
@@ -188,28 +273,34 @@ int test_main(
     }
 
     for (size_t i = 0; i < test_count; i += 1) {
-        test_case = test_cases[i];
-        test *t = &report.test_reports[i];
-        t->name = test_case.name;
-        t->logs_handle = &logs;
-        t->asserts = jp_dynarr_new(10, test_assert, &jp_std_allocator);
-        if (!t->asserts) {
-            panic();
-        }
+        test_case test_case = test_cases[i];
+        test t = {
+            .logs_handle = &logs_handle,
+            .asserts_handle = &asserts_handle,
+            .assert_count = 0,
+            .asserts_passed = 0,
+        };
+        test_report *tr = &report.test_reports[i];
+        tr->name = test_case.name;
+        tr->asserts =
+            &asserts_handle.asserts[jp_dynarr_len(asserts_handle.asserts)];
 
         if (setup && setup->before) {
             setup->before();
         }
 
-        test_case.test_code(t);
-        report.assert_count += t->assert_count;
-        report.asserts_passed += t->asserts_passed;
-        if (t->assert_count == t->asserts_passed) {
-            report.tests_passed += 1;
-        }
+        test_case.test_code(&t);
 
         if (setup && setup->after) {
             setup->after();
+        }
+
+        tr->assert_count += t.assert_count;
+        tr->asserts_passed += t.asserts_passed;
+        report.assert_count += t.assert_count;
+        report.asserts_passed += t.asserts_passed;
+        if (t.assert_count == t.asserts_passed) {
+            report.tests_passed += 1;
         }
     }
 
@@ -219,11 +310,9 @@ int test_main(
 
     test_suite_report_pretty(&report, stream);
 
-    for (size_t i = 0; i < test_count; i += 1) {
-        jp_dynarr_free(report.test_reports[i].asserts);
-    }
-    jp_dynarr_free(logs);
     free(report.test_reports);
+    jp_dynarr_free(asserts_handle.asserts);
+    jp_dynarr_free(logs_handle.logs);
 
     return report.test_count - report.tests_passed;
 }
@@ -239,18 +328,8 @@ int test_main(
 // Assertions
 ////////////////////////
 
-#define breakpoint __asm__("int3; nop")
-
 #define assert_true(t, c, msg) \
-    do { \
-        b32 __result = !!(c); \
-        test_report_append( \
-            (t), __result, jp_slice_from((msg)), __FILE__, __LINE__, __func__ \
-        ); \
-        if (!__result && trap_on_assert_fail) { \
-            breakpoint; \
-        } \
-    } while (0)
+    test_report_append((t), !!(c), jp_slice_from((msg)), __FILE__, __LINE__)
 
 #define assert_false(t, c, msg) assert_true(t, !(c), msg)
 
