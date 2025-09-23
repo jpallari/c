@@ -500,11 +500,6 @@ typedef struct {
 } jp_dynarr_header;
 
 /**
- * Calculate array size to grow to after given size
- */
-#define jp_dynarr_grow_count(n) (2 * (n) + 8)
-
-/**
  * Convert item count and size to byte size (incl. header)
  */
 #define jp_dynarr_count_to_bytes(n, item_size) \
@@ -547,29 +542,55 @@ void *jp_dynarr_new_sized(
 void jp_dynarr_free(void *array);
 
 /**
+ * Grow an existing array with a capacity increase.
+ *
+ * Growing is done by allocating more memory using the array's allocator. If the
+ * allocated memory is adjacent to the existing array, the existing array is
+ * extended to cover the allocated memory.
+ *
+ * @param array the array to grow
+ * @param capacity_increase the number of additional items the new array should
+ * hold
+ * @param item_size the size of an item
+ * @param alignment the memory alignment of an item
+ * @returns an array with increased capacity
+ */
+void *jp_dynarr_grow_ut(
+    void *array, u64 capacity_increase, size_t item_size, size_t alignment
+);
+
+/**
+ * Grow an existing array with a capacity increase.
+ *
+ * Growing is done by allocating more memory using the array's allocator. If the
+ * allocated memory is adjacent to the existing array, the existing array is
+ * extended to cover the allocated memory.
+ *
+ * @param array the array to grow
+ * @param capacity_increase the number of additional items the new array should
+ * hold
+ * @param t type of the item to hold in the array
+ * @returns an array with increased capacity
+ */
+#define jp_dynarr_grow(array, capacity_increase, t) \
+    jp_dynarr_grow_ut((array), (capacity_increase), sizeof(t), _Alignof(t))
+
+/**
  * Clone a given array with new capacity.
  *
  * @returns new array with the original array contents or null when the memory
- *          allocation fails
+ * allocation fails
  */
 void *jp_dynarr_clone_ut(
-    void *array, u64 capacity, size_t item_size, size_t alignment
+    void *array, u64 capacity_increase, size_t item_size, size_t alignment
 );
 
 /**
  * Clone a given array with new capacity.
  */
-#define jp_dynarr_clone(array, capacity, type) \
+#define jp_dynarr_clone(array, capacity_increase, type) \
     (type *)jp_dynarr_clone_ut( \
-        (array), (capacity), sizeof(*(array)), _Alignof(type) \
-    )
-
-/**
- *  Grow a given array.
- */
-#define jp_dynarr_grow(array, t) \
-    jp_dynarr_clone( \
-        (array), jp_dynarr_grow_count(jp_dynarr_get_capacity(array)), t \
+        (array), (capacity_increase), sizeof(*(array)), _Alignof(type) \
     )
 
 /**

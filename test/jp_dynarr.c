@@ -125,8 +125,10 @@ void test_dynarr_push_grow(test *t) {
 }
 
 void test_dynarr_clone(test *t) {
-    // initialize an array
     u64 capacity = 5;
+    u64 capacity_increase = 3;
+
+    // initialize an array
     int *arr = jp_dynarr_new(capacity, int, &jp_std_allocator);
     if (!assert_true(t, arr, "array must not be null")) {
         return;
@@ -139,7 +141,7 @@ void test_dynarr_clone(test *t) {
     }
 
     // clone array
-    int *arr_clone = jp_dynarr_clone(arr, capacity * 2, int);
+    int *arr_clone = jp_dynarr_clone(arr, capacity_increase, int);
     if (!assert_true(t, arr, "cloned array must not be null")) {
         return;
     };
@@ -147,9 +149,9 @@ void test_dynarr_clone(test *t) {
     assert_eq(
         t,
         jp_dynarr_capacity(arr_clone),
-        capacity * 2,
+        capacity + capacity_increase,
         "%ld",
-        "capacity must be doubled"
+        "capacity must be increased"
     );
     assert_eq(
         t,
@@ -294,13 +296,72 @@ void test_dynarr_remove_uo(test *t) {
     jp_dynarr_free(arr);
 }
 
+void test_dynarr_grow_in_arena(test *t) {
+    u8 buffer[100] = {0};
+    jp_arena arena = jp_arena_new(buffer, sizeof(buffer));
+    jp_allocator alloc = jp_arena_allocator_new(&arena);
+
+    // prepare array
+    char *arr = jp_dynarr_new(5, char, &alloc);
+    if (!assert_true(t, arr, "array must not be null")) {
+        return;
+    }
+    char *items = "hello";
+    assert_true(t, jp_dynarr_push(arr, items, 5), "push must succeed");
+
+    // grow array
+    char *new_arr = jp_dynarr_grow(arr, 10, char);
+    assert_eq(
+        t,
+        jp_dynarr_capacity(arr),
+        20L,
+        "%ld",
+        "existing capacity must double and add 10"
+    );
+    assert_eq(
+        t,
+        (uintptr_t)arr,
+        (uintptr_t)new_arr,
+        "%ld",
+        "new and old array must be the same"
+    );
+
+    // push more stuff to array
+    items = " world!";
+    assert_true(t, jp_dynarr_push(arr, items, 8), "push must succeed");
+
+    // check backing buffer
+    jp_dynarr_header *buf_head = (jp_dynarr_header *)buffer;
+    assert_eq(
+        t,
+        buf_head->capacity,
+        20L,
+        "%ld",
+        "array head on backing buffer start: capacity"
+    );
+    assert_eq(
+        t,
+        buf_head->len,
+        13L,
+        "%ld",
+        "array head on backing buffer start: length"
+    );
+    assert_eq_cstr(
+        t,
+        (char *)buffer + sizeof(jp_dynarr_header),
+        "hello world!",
+        "backing buffer must have the array contents"
+    );
+}
+
 static test_case tests[] = {
     {"Dynamic array push", test_dynarr_push},
     {"Dynamic array push grow", test_dynarr_push_grow},
     {"Dynamic array clone", test_dynarr_clone},
     {"Dynamic array pop", test_dynarr_pop},
     {"Dynamic array remove", test_dynarr_remove},
-    {"Dynamic array remove unordered", test_dynarr_remove_uo}
+    {"Dynamic array remove unordered", test_dynarr_remove_uo},
+    {"Dynamic array grow in an arena", test_dynarr_grow_in_arena}
 };
 
 setup_tests(NULL, tests)

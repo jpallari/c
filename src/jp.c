@@ -220,7 +220,7 @@ void *jp_dynarr_new_sized(
     header->capacity = capacity;
     header->allocator = allocator;
 
-    return (data + sizeof(jp_dynarr_header));
+    return data + sizeof(jp_dynarr_header);
 }
 
 void jp_dynarr_free(void *array) {
@@ -231,8 +231,8 @@ void jp_dynarr_free(void *array) {
     jp_free(header, header->allocator);
 }
 
-void *jp_dynarr_clone_ut(
-    void *array, u64 capacity, size_t item_size, size_t alignment
+void *jp_dynarr_grow_ut(
+    void *array, u64 capacity_increase, size_t item_size, size_t alignment
 ) {
     if (!array) {
         return NULL;
@@ -240,6 +240,45 @@ void *jp_dynarr_clone_ut(
     jp_dynarr_header *header = jp_dynarr_get_header(array);
     assert(header && "Header must not be null");
 
+    u64 capacity = capacity_increase + header->capacity;
+    u8 *new_array_data = jp_malloc(
+        jp_dynarr_count_to_bytes(capacity, item_size),
+        alignment,
+        header->allocator
+    );
+    if (!new_array_data) {
+        return NULL;
+    }
+
+    if ((uintptr_t)array + header->capacity == (uintptr_t)new_array_data) {
+        // We got adjacent memory block, so we can extend the array and skip
+        // copying. This mainly works with memory arenas.
+        // If this happens for other allocators, this could introduce a memory
+        // leak because freeing the array will only free one of the pointers.
+        header->capacity += capacity;
+        return array;
+    }
+
+    u8 *new_array = new_array_data + sizeof(jp_dynarr_header);
+    jp_dynarr_header *new_header = (jp_dynarr_header *)new_array_data;
+    new_header->len = header->len;
+    new_header->capacity = capacity;
+    new_header->allocator = header->allocator;
+
+    jp_bytes_copy(new_array, array, new_header->len * item_size);
+    return new_array;
+}
+
+void *jp_dynarr_clone_ut(
+    void *array, u64 capacity_increase, size_t item_size, size_t alignment
+) {
+    if (!array) {
+        return NULL;
+    }
+    jp_dynarr_header *header = jp_dynarr_get_header(array);
+    assert(header && "Header must not be null");
+
+    u64 capacity = capacity_increase + header->capacity;
     void *new_array =
         jp_dynarr_new_sized(capacity, item_size, alignment, header->allocator);
     if (!new_array) {
@@ -292,17 +331,20 @@ void *jp_dynarr_push_grow_ut(
     assert(header && "header must not be null");
 
     if (header->len + count > header->capacity) {
-        u64 new_capacity = jp_dynarr_grow_count(header->capacity + count);
+        u64 capacity_increase = header->capacity + count + 8;
         void *new_array =
-            jp_dynarr_clone_ut(array, new_capacity, item_size, alignment);
+            jp_dynarr_grow_ut(array, capacity_increase, item_size, alignment);
         if (!new_array) {
             return NULL;
         }
-        jp_dynarr_header *new_header = jp_dynarr_get_header(new_array);
-        assert(new_header && "new header must not be null");
-        jp_dynarr_free(array);
-        array = new_array;
-        header = new_header;
+        if ((uintptr_t)array != (uintptr_t)new_array) {
+            // Arrays are different, so we need to replace the old one
+            jp_dynarr_header *new_header = jp_dynarr_get_header(new_array);
+            assert(new_header && "new header must not be null");
+            jp_dynarr_free(array);
+            array = new_array;
+            header = new_header;
+        }
     }
 
     void *dest = ((u8 *)array) + header->len * item_size;
