@@ -121,11 +121,13 @@ void test_bytes_zero(test *t) {
 void test_bytes_to_hex(test *t) {
     const char *str = "hello world!";
     const char *expected_str = "68656c6c6f20776f726c6421";
-    unsigned char dest[25] = {0};
+    char dest[25] = {0};
 
     jp_bytes_to_hex(dest, str, jp_cstr_len_unsafe(str) - 1);
 
-    assert_eq_cstr(t, (char *)dest, expected_str, "string converstion to hex string");
+    assert_eq_cstr(
+        t, (char *)dest, expected_str, "string converstion to hex string"
+    );
 }
 
 static test_case tests[] = {

@@ -201,7 +201,7 @@ b32 jp_bytes_eq(const void *a, const void *b, size_t capacity);
  * @param[in] n number of bytes to convert to a hex string
  * @returns number of bytes written
  */
-size_t jp_bytes_to_hex(unsigned char *dest, const char *src, size_t n);
+size_t jp_bytes_to_hex(char *dest, const char *src, size_t n);
 
 ////////////////////////
 // Allocator

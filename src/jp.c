@@ -38,7 +38,7 @@ void jp_byte_to_hex_chars(u8 b, char *high, char *low) {
     *low = jp_byte_to_hex_char(b % 16);
 }
 
-size_t jp_bytes_to_hex(unsigned char *dest, const char *src, size_t n) {
+size_t jp_bytes_to_hex(char *dest, const char *src, size_t n) {
     int j = 0;
     for (size_t i = 0; i < n; i += 1, j += 2) {
         jp_byte_to_hex_chars((u8)src[i], &dest[j], &dest[j + 1]);
