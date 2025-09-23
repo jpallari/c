@@ -85,6 +85,7 @@ void test_dynarr_push(test *t) {
 void test_dynarr_push_grow(test *t) {
     u64 capacity = 5;
     int value = 0;
+    int arr_after_fill[] = {100, 101, 102, 103, 104};
 
     // initialize an array
     int *arr = jp_dynarr_new(capacity, int, &jp_std_allocator);
@@ -104,12 +105,13 @@ void test_dynarr_push_grow(test *t) {
     assert_true(t, arr, "allocation must succeed");
     assert_eq(t, jp_dynarr_len(arr), 6L, "%ld", "count must increase");
     assert_ge(t, jp_dynarr_capacity(arr), 10L, "%ld", "capacity must increase");
-    for (int i = 0; i < capacity; i += 1) {
-        // turn this to bytes eq
-        assert_eq(
-            t, arr[i], 100 + i, "%d", "filled values must remain the same"
-        );
-    }
+    assert_eq_bytes(
+        t,
+        arr,
+        arr_after_fill,
+        sizeof(arr_after_fill),
+        "array must remain the same"
+    );
     assert_eq(
         t,
         arr[jp_dynarr_len(arr) - 1],
@@ -137,7 +139,7 @@ void test_dynarr_clone(test *t) {
     }
 
     // clone array
-    int *arr_clone = jp_dynarr_clone(arr, capacity * 2);
+    int *arr_clone = jp_dynarr_clone(arr, capacity * 2, int);
     if (!assert_true(t, arr, "cloned array must not be null")) {
         return;
     };
@@ -157,10 +159,9 @@ void test_dynarr_clone(test *t) {
         "lengths must be same"
     );
 
-    for (int i = 0; i < capacity; i += 1) {
-        // turn this to bytes eq
-        assert_eq(t, arr[i], arr_clone[i], "%d", "elements must be the same");
-    }
+    assert_eq_bytes(
+        t, arr, arr_clone, sizeof(int) * capacity, "elements must be the same"
+    );
 
     // exit
     jp_dynarr_free(arr);
@@ -206,6 +207,7 @@ void test_dynarr_pop(test *t) {
 void test_dynarr_remove(test *t) {
     u64 capacity = 5;
     int value = 0;
+    int arr_after_fill[] = {100, 101, 102, 103, 104};
 
     // initialize an array
     int *arr = jp_dynarr_new(capacity, int, &jp_std_allocator);
@@ -224,10 +226,13 @@ void test_dynarr_remove(test *t) {
     assert_eq(
         t, jp_dynarr_len(arr), 5L, "%ld", "array count must remain the same"
     );
-    for (int i = 0; i < capacity; i += 1) {
-        // turn this to bytes eq
-        assert_eq(t, arr[i], 100 + i, "%d", "array must remain the same");
-    }
+    assert_eq_bytes(
+        t,
+        arr,
+        arr_after_fill,
+        sizeof(arr_after_fill),
+        "array must remain the same"
+    );
 
     // remove element from the middle
     assert_true(
@@ -244,12 +249,58 @@ void test_dynarr_remove(test *t) {
     jp_dynarr_free(arr);
 }
 
+void test_dynarr_remove_uo(test *t) {
+    u64 capacity = 5;
+    int value = 0;
+    int arr_after_fill[] = {100, 101, 102, 103, 104};
+
+    // initialize an array
+    int *arr = jp_dynarr_new(capacity, int, &jp_std_allocator);
+    if (!assert_true(t, arr, "array must not be null")) {
+        return;
+    };
+
+    // fill the array
+    for (int i = 0; i < capacity; i += 1) {
+        value = 100 + i;
+        jp_dynarr_push(arr, &value, 1);
+    }
+
+    // remove element from out of bounds
+    assert_false(t, jp_dynarr_remove_uo(arr, 5), "OOB removal must fail");
+    assert_eq(
+        t, jp_dynarr_len(arr), 5L, "%ld", "array count must remain the same"
+    );
+    assert_eq_bytes(
+        t,
+        arr,
+        arr_after_fill,
+        sizeof(arr_after_fill),
+        "array must remain the same"
+    );
+
+    // remove element from the middle
+    assert_true(
+        t, jp_dynarr_remove_uo(arr, 2), "removing from the middle must succeed"
+    );
+    assert_eq(
+        t, jp_dynarr_len(arr), 4L, "%ld", "array must have one element less"
+    );
+    assert_eq(t, arr[0], 100, "%d", "0: remain the same");
+    assert_eq(t, arr[1], 101, "%d", "1: remain the same");
+    assert_eq(t, arr[2], 104, "%d", "2: swapped");
+    assert_eq(t, arr[3], 103, "%d", "3: remain the same");
+
+    jp_dynarr_free(arr);
+}
+
 static test_case tests[] = {
     {"Dynamic array push", test_dynarr_push},
     {"Dynamic array push grow", test_dynarr_push_grow},
     {"Dynamic array clone", test_dynarr_clone},
     {"Dynamic array pop", test_dynarr_pop},
-    {"Dynamic array remove", test_dynarr_remove}
+    {"Dynamic array remove", test_dynarr_remove},
+    {"Dynamic array remove unordered", test_dynarr_remove_uo}
 };
 
 setup_tests(NULL, tests)

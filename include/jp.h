@@ -559,9 +559,9 @@ void *jp_dynarr_clone_ut(
 /**
  * Clone a given array with new capacity.
  */
-#define jp_dynarr_clone(array, capacity) \
-    jp_dynarr_clone_ut( \
-        (array), (capacity), sizeof(*(array)), _Alignof(*(array)) \
+#define jp_dynarr_clone(array, capacity, type) \
+    (type *)jp_dynarr_clone_ut( \
+        (array), (capacity), sizeof(*(array)), _Alignof(type) \
     )
 
 /**
@@ -636,7 +636,8 @@ b32 jp_dynarr_pop_ut(void *array, void *out, size_t item_size);
 /**
  * Remove an element by index from given array.
  *
- * @param array array to pop the value from
+ * @param array array remove the value from
+ * @param index the index of the element to remove
  * @param item_size size of an array item
  * @returns true when an item was removed and false otherwise
  */
@@ -644,9 +645,35 @@ b32 jp_dynarr_remove_ut(void *array, u64 index, size_t item_size);
 
 /**
  * Remove an element by index from given array.
+ *
+ * @param array array remove the value from
+ * @param index the index of the element to remove
+ * @returns true when an item was removed and false otherwise
  */
 #define jp_dynarr_remove(array, index) \
     jp_dynarr_remove_ut((array), (index), sizeof(*(array)))
+
+/**
+ * Remove an element by index from given array, but do not guarantee array
+ * element ordering after remove.
+ *
+ * @param array array remove the value from
+ * @param index the index of the element to remove
+ * @param item_size size of an array item
+ * @returns true when an item was removed and false otherwise
+ */
+b32 jp_dynarr_remove_uo_ut(void *array, u64 index, size_t item_size);
+
+/**
+ * Remove an element by index from given array, but do not guarantee array
+ * element ordering after remove.
+ *
+ * @param array array remove the value from
+ * @param index the index of the element to remove
+ * @returns true when an item was removed and false otherwise
+ */
+#define jp_dynarr_remove_uo(array, index) \
+    jp_dynarr_remove_uo_ut((array), (index), sizeof(*(array)))
 
 ////////////////////////
 // File I/O (blocking)

@@ -342,6 +342,22 @@ b32 jp_dynarr_remove_ut(void *array, u64 index, size_t item_size) {
     return 1;
 }
 
+b32 jp_dynarr_remove_uo_ut(void *array, u64 index, size_t item_size) {
+    if (!array) {
+        return 0;
+    }
+    jp_dynarr_header *header = jp_dynarr_get_header(array);
+    if (header->len <= index) {
+        return 0;
+    }
+    u8 *data = (u8 *)array;
+    u8 *data_dst = data + index * item_size;
+    u8 *data_src = data + (header->len - 1) * item_size;
+    jp_bytes_copy(data_dst, data_src, item_size);
+    header->len -= 1;
+    return 1;
+}
+
 ////////////////////////
 // File I/O (blocking)
 ////////////////////////
