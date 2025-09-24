@@ -18,22 +18,40 @@ TEST_BIN_DIR = $(BUILD_DIR)/test
 
 # C flags
 CFLAGS = \
-		-Wall \
-		-Wfatal-errors \
-		-std=$(LANG_STD) \
-		-I$(INCLUDE_DIR) \
-		-MMD -MP \
-		-fno-omit-frame-pointer \
-		-fno-math-errno \
-		-ffinite-math-only
+	-Wall \
+	-Wfatal-errors \
+	-std=$(LANG_STD) \
+	-I$(INCLUDE_DIR) \
+	-MMD -MP \
+	-fno-omit-frame-pointer \
+	-fno-math-errno \
+	-ffinite-math-only
 CFLAGS += $(EXTRA_CFLAGS)
 DEBUG_CFLAGS = \
-			   -g \
-			   $(SAN_FLAGS) \
-			   -DJP_DEBUG \
-			   -fprofile-arcs \
-			   -ftest-coverage
+	-g \
+	$(SAN_FLAGS) \
+	-DJP_DEBUG \
+	-fprofile-arcs \
+	-ftest-coverage
 RELEASE_CFLAGS = -O2 -flto
+ifneq (,$(findstring gcc,$(CC)))
+	CFLAGS += -ftree-vectorize
+	ifdef VEC_INFO
+		CFLAGS += \
+			-fopt-info-vec-optimized \
+			-fopt-info-vec-missed \
+			-fopt-info-vec-all
+	endif
+endif
+ifneq (,$(findstring clang,$(CC)))
+	CFLAGS += -fvectorize
+	ifdef VEC_INFO
+		CFLAGS += \
+			-Rpass=loop-vectorize \
+			-Rpass-missed=loop-vectorize \
+			-Rpass-analysis=loop-vectorize
+	endif
+endif
 
 # Linker flags
 LDFLAGS =
