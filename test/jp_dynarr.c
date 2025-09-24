@@ -22,8 +22,8 @@ void test_dynarr_push(test *t) {
     assert_eq(t, jp_dynarr_len(arr), 0L, "%ld", "length must start at zero");
 
     // fill the array
-    for (int i = 0; i < capacity; i += 1) {
-        value = 100 + i;
+    for (u64 i = 0; i < capacity; i += 1) {
+        value = 100 + (int)i;
         assert_true(
             t,
             jp_dynarr_push(arr, &value, 1),
@@ -72,9 +72,9 @@ void test_dynarr_push(test *t) {
     );
 
     // verify contents remain the same
-    for (int i = 0; i < capacity; i += 1) {
+    for (u64 i = 0; i < capacity; i += 1) {
         assert_eq(
-            t, arr[i], 100 + i, "%d", "array contents must remain the same"
+            t, arr[i], 100 + (int)i, "%d", "array contents must remain the same"
         );
     }
 
@@ -94,8 +94,8 @@ void test_dynarr_push_grow(test *t) {
     };
 
     // fill the array
-    for (int i = 0; i < capacity; i += 1) {
-        value = 100 + i;
+    for (u64 i = 0; i < capacity; i += 1) {
+        value = 100 + (int)i;
         jp_dynarr_push(arr, &value, 1);
     }
 
@@ -135,8 +135,8 @@ void test_dynarr_clone(test *t) {
     };
 
     // fill the array
-    for (int i = 0; i < capacity; i += 1) {
-        int value = 100 + i;
+    for (u64 i = 0; i < capacity; i += 1) {
+        int value = 100 + (int)i;
         jp_dynarr_push(arr, &value, 1);
     }
 
@@ -218,8 +218,8 @@ void test_dynarr_remove(test *t) {
     };
 
     // fill the array
-    for (int i = 0; i < capacity; i += 1) {
-        value = 100 + i;
+    for (u64 i = 0; i < capacity; i += 1) {
+        value = 100 + (int)i;
         jp_dynarr_push(arr, &value, 1);
     }
 
@@ -263,8 +263,8 @@ void test_dynarr_remove_uo(test *t) {
     };
 
     // fill the array
-    for (int i = 0; i < capacity; i += 1) {
-        value = 100 + i;
+    for (u64 i = 0; i < capacity; i += 1) {
+        value = 100 + (int)i;
         jp_dynarr_push(arr, &value, 1);
     }
 
@@ -306,7 +306,7 @@ void test_dynarr_grow_in_arena(test *t) {
     if (!assert_true(t, arr, "array must not be null")) {
         return;
     }
-    char *items = "hello";
+    const char *items = "hello";
     assert_true(t, jp_dynarr_push(arr, items, 5), "push must succeed");
 
     // grow array

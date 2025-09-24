@@ -39,14 +39,14 @@ typedef struct {
 } cliargs_opts;
 
 typedef struct {
-    char *opt;
-    char *val;
+    const char *opt;
+    const char *val;
     u16 opt_len;
     u16 val_len;
     u16 prefix_dash_count;
 } cliargs_arg;
 
-cliargs_arg parse_arg(char *arg);
+cliargs_arg parse_arg(const char *arg);
 
 b32 parse(cliargs_opts *opts, int argc, char **argv);
 

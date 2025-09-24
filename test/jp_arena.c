@@ -29,8 +29,8 @@ void test_arena(test *t) {
     );
 
     // fill arena buffers
-    for (int i = 0; i < buf1_count; i += 1) { buf1[i] = 100 + i; }
-    for (int i = 0; i < buf2_count; i += 1) { buf2[i] = 200 + i; }
+    for (size_t i = 0; i < buf1_count; i += 1) { buf1[i] = 100 + (int)i; }
+    for (size_t i = 0; i < buf2_count; i += 1) { buf2[i] = 200 + (int)i; }
 
     // check that original buffer was modified as expected
     int expected_buffer[] = {100, 101, 102, 103, 104, 200, 201, 202, 203, 0};

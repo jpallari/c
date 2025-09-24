@@ -597,7 +597,7 @@ void *jp_dynarr_clone_ut(
  * Push items to given array. Returns true when the operation succeeded (i.e.
  * there's capacity).
  */
-b32 jp_dynarr_push_ut(void *array, void *items, u64 count, size_t item_size);
+b32 jp_dynarr_push_ut(void *array, const void *items, u64 count, size_t item_size);
 
 /**
  * Push items to given array.
@@ -621,7 +621,7 @@ b32 jp_dynarr_push_ut(void *array, void *items, u64 count, size_t item_size);
  * @returns array containing the new contents or null when push fails
  */
 void *jp_dynarr_push_grow_ut(
-    void *array, void *items, u64 count, size_t item_size, size_t alignment
+    void *array, const void *items, u64 count, size_t item_size, size_t alignment
 );
 
 /**

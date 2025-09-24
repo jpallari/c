@@ -16,16 +16,16 @@ void test_bytes_copy(test *t) {
     }
 
     // fill data
-    for (int i = 0; i < len; i += 1) {
-        arr1[i] = 100 + i;
-        arr2[i] = 200 + i;
+    for (size_t i = 0; i < len; i += 1) {
+        arr1[i] = 100 + (int)i;
+        arr2[i] = 200 + (int)i;
     }
 
     // copy
     jp_bytes_copy(arr1, arr2, sizeof(int) * len);
 
     // verify no mismatches
-    for (int i = 0; i < len; i += 1) {
+    for (size_t i = 0; i < len; i += 1) {
         if (arr1[i] != arr2[i]) {
             mismatches += 1;
         }
@@ -51,16 +51,16 @@ void test_bytes_move_no_overlap(test *t) {
     };
 
     // fill data
-    for (int i = 0; i < len; i += 1) {
-        arr1[i] = 100 + i;
-        arr2[i] = 200 + i;
+    for (size_t i = 0; i < len; i += 1) {
+        arr1[i] = 100 + (int)i;
+        arr2[i] = 200 + (int)i;
     }
 
     // move
     jp_bytes_move(arr1, arr2, sizeof(int) * len);
 
     // verify no mismatches
-    for (int i = 0; i < len; i += 1) {
+    for (size_t i = 0; i < len; i += 1) {
         if (arr1[i] != arr2[i]) {
             mismatches += 1;
         }

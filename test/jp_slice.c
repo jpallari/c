@@ -35,8 +35,9 @@ void test_slice_equal(test *t) {
 }
 
 void test_slice_from(test *t) {
+    char str[] = "hello world!";
     int arr[] = {100, 200, 300, 400};
-    jp_slice s1 = jp_slice_from("hello world!");
+    jp_slice s1 = jp_slice_from(str);
     jp_slice s2 = jp_slice_from(arr);
 
     assert_eq(t, s1.len, 13L, "%ld", "s1 len must be size of string");
@@ -108,7 +109,7 @@ void test_slice_move_overlapping(test *t) {
 }
 
 void test_slice_from_cstr_unsafe(test *t) {
-    char *str = "hello world!";
+    char str[] = "hello world!";
     jp_slice slice = jp_slice_from_cstr_unsafe(str);
 
     assert_eq(t, slice.len, 13L, "%ld", "slice len must match string length");

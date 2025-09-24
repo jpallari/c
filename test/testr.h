@@ -33,11 +33,11 @@ static inline void breakpoint(void) {
     __asm__ __volatile__("int3");
 }
 #elif defined(__aarch64__)
-static inline void breakpoint() {
+static inline void breakpoint(void) {
     __asm__ __volatile__(".inst 0xd4200000");
 }
 #elif defined(__arm__)
-static inline void breakpoint() {
+static inline void breakpoint(void) {
     __asm__ __volatile__(".inst 0xe7f001f0");
 }
 #else
@@ -104,7 +104,7 @@ typedef struct {
 } test_suite_report;
 
 b32 test_report_append(
-    test *t, b32 passed, jp_slice log_message, const char *file, int line
+    test *t, b32 passed, const char *log_message, size_t log_message_size, const char *file, int line
 ) {
     assert(t && "test report must not be null");
     assert(t->logs_handle && "logs handle must not be null");
@@ -127,7 +127,7 @@ b32 test_report_append(
     }
 
     u8 *next_logs = jp_dynarr_push_grow(
-        t->logs_handle->logs, log_message.buffer, log_message.len, u8
+        t->logs_handle->logs, log_message, log_message_size, u8
     );
     if (next_logs) {
         t->logs_handle->logs = next_logs;
@@ -149,10 +149,10 @@ b32 test_report_append(
 void test_suite_report_pretty(test_suite_report *report, FILE *stream) {
     assert(report && "test suite report must not be null");
 
-    char *color_ok = "\x1B[32m";
-    char *color_fail = "\x1B[31m";
-    char *color_reset = "\x1B[0m";
-    char *color_info = "\x1B[1;30m";
+    const char *color_ok = "\x1B[32m";
+    const char *color_fail = "\x1B[31m";
+    const char *color_reset = "\x1B[0m";
+    const char *color_info = "\x1B[1;30m";
     if (!color_enabled) {
         color_ok = "";
         color_fail = "";
@@ -167,7 +167,7 @@ void test_suite_report_pretty(test_suite_report *report, FILE *stream) {
 
     const u8 *logs = report->logs_handle->logs;
 
-    for (int i = 0; i < report->test_count; i += 1) {
+    for (u64 i = 0; i < report->test_count; i += 1) {
         test_report tr = report->test_reports[i];
         const char *prefix =
             tr.assert_count > tr.asserts_passed ? "FAIL" : " OK ";
@@ -185,7 +185,7 @@ void test_suite_report_pretty(test_suite_report *report, FILE *stream) {
             tr.assert_count,
             color_reset
         );
-        for (int j = 0; j < tr.assert_count; j += 1) {
+        for (u32 j = 0; j < tr.assert_count; j += 1) {
             test_assert ar = tr.asserts[j];
             if (!ar.passed) {
                 fprintf(
@@ -193,7 +193,7 @@ void test_suite_report_pretty(test_suite_report *report, FILE *stream) {
                     "    %s:%d: %s\n",
                     ar.file,
                     ar.line,
-                    (char *)(&(logs[ar.logs_offset]))
+                    (const unsigned char *)(&(logs[ar.logs_offset]))
                 );
             }
         }
@@ -214,7 +214,7 @@ typedef struct {
 } test_setup;
 
 typedef struct {
-    char *name;
+    const char *name;
     test_case_fun test_code;
 } test_case;
 
@@ -314,7 +314,8 @@ int test_main(
     jp_dynarr_free(asserts_handle.asserts);
     jp_dynarr_free(logs_handle.logs);
 
-    return report.test_count - report.tests_passed;
+    u64 fail_count = report.test_count - report.tests_passed;
+    return (int)fail_count;
 }
 
 #define setup_tests(setup, tests) \
@@ -329,7 +330,7 @@ int test_main(
 ////////////////////////
 
 #define assert_true(t, c, msg) \
-    test_report_append((t), !!(c), jp_slice_from((msg)), __FILE__, __LINE__)
+    test_report_append((t), !!(c), (msg), sizeof(msg), __FILE__, __LINE__)
 
 #define assert_false(t, c, msg) assert_true(t, !(c), msg)
 

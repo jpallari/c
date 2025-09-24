@@ -8,7 +8,7 @@ int array_demo(void) {
 
     float *arr = jp_dynarr_new(10, float, &allocator);
     float last = 0.0;
-    int i;
+    u64 i;
 
     for (i = 0; i < 20; i += 1) {
         float v = ((float)i) / 10;
@@ -26,7 +26,7 @@ int array_demo(void) {
     jp_dynarr_pop(arr, last);
 
     for (i = 0; i < jp_dynarr_len(arr); i += 1) {
-        printf("data %d: %f\n", i, arr[i]);
+        printf("data %ld: %f\n", i, arr[i]);
     }
 
     printf("2: %f, 15: %f, last: %f\n", arr[2], arr[15], last);

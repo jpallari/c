@@ -39,7 +39,7 @@ void jp_byte_to_hex_chars(u8 b, char *high, char *low) {
 }
 
 size_t jp_bytes_to_hex(char *dest, const char *src, size_t n) {
-    int j = 0;
+    size_t j = 0;
     for (size_t i = 0; i < n; i += 1, j += 2) {
         jp_byte_to_hex_chars((u8)src[i], &dest[j], &dest[j + 1]);
     }
@@ -133,7 +133,7 @@ jp_slice jp_slice_span(u8 *start, u8 *end) {
 
     jp_slice s = {0};
     s.buffer = start;
-    s.len = end - start;
+    s.len = (u64)((uintptr_t)end - (uintptr_t)start);
     return s;
 }
 
@@ -293,7 +293,7 @@ void *jp_dynarr_clone_ut(
     return new_array;
 }
 
-b32 jp_dynarr_push_ut(void *array, void *items, u64 count, size_t item_size) {
+b32 jp_dynarr_push_ut(void *array, const void *items, u64 count, size_t item_size) {
     if (count == 0) {
         return 0;
     }
@@ -310,14 +310,14 @@ b32 jp_dynarr_push_ut(void *array, void *items, u64 count, size_t item_size) {
     }
 
     jp_bytes_copy(
-        ((u8 *)array) + header->len * item_size, (u8 *)items, count * item_size
+        ((u8 *)array) + header->len * item_size, items, count * item_size
     );
     header->len += count;
     return 1;
 }
 
 void *jp_dynarr_push_grow_ut(
-    void *array, void *items, u64 count, size_t item_size, size_t alignment
+    void *array, const void *items, u64 count, size_t item_size, size_t alignment
 ) {
     if (count == 0) {
         return array;
@@ -430,8 +430,9 @@ jp_file_result jp_read_file(const char *filename, jp_allocator *allocator) {
         result.err_code = -3;
         goto end;
     }
+    size_t block_size = (size_t)file_stat.st_blksize;
 
-    data = jp_new(u8, file_stat.st_size, allocator);
+    data = jp_new(u8, (u64)file_stat.st_size, allocator);
     if (!data) {
         result.err_code = -2;
         goto end;
@@ -440,10 +441,10 @@ jp_file_result jp_read_file(const char *filename, jp_allocator *allocator) {
 
     for (bs_remaining = (size_t)file_stat.st_size, cursor = data;
          bs_remaining > 0;
-         bs_remaining -= read_res,
+         bs_remaining -= (size_t)read_res,
         cursor += read_res,
         result.size += (u64)read_res) {
-        chunk_size = min(bs_remaining, file_stat.st_blksize);
+        chunk_size = min(bs_remaining, block_size);
         read_res = read(fd, cursor, chunk_size);
         if (read_res == 0) { // EOF
             goto end;
@@ -482,10 +483,11 @@ s64 jp_write_file(char *filename, void *data, u64 size) {
     if (io_res < 0) {
         goto end;
     }
+    size_t block_size = (size_t)file_stat.st_blksize;
 
     for (bs_remaining = size; bs_remaining > 0;
-         bs_remaining -= write_res, cursor += write_res) {
-        chunk_size = min(bs_remaining, file_stat.st_blksize);
+         bs_remaining -= (size_t)write_res, cursor += write_res) {
+        chunk_size = min(bs_remaining, block_size);
         write_res = write(fd, cursor, chunk_size);
         if (write_res <= 0) {
             goto end;

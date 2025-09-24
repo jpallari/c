@@ -19,7 +19,19 @@ TEST_BIN_DIR = $(BUILD_DIR)/test
 # C flags
 CFLAGS = \
 	-Wall \
+	-Wcast-align \
+	-Wcast-qual \
+	-Wconversion \
+	-Wextra \
 	-Wfatal-errors \
+	-Wfloat-equal \
+	-Wpointer-arith \
+	-Wstrict-prototypes \
+	-Wswitch-default \
+	-Wswitch-enum \
+	-Wundef \
+	-Wunreachable-code \
+	-Wwrite-strings \
 	-std=$(LANG_STD) \
 	-I$(INCLUDE_DIR) \
 	-MMD -MP \

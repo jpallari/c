@@ -1,6 +1,6 @@
 #include "cliargs.h"
 
-cliargs_arg parse_arg(char *arg) {
+cliargs_arg parse_arg(const char *arg) {
     cliargs_arg a = {0};
     int parsing_mode = 1, previous_parsing_mode = 1;
     u16 i = 0;
