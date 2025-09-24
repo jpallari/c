@@ -12,10 +12,10 @@ void test_slice_span(test *t) {
     assert_eq(t, s1.buffer[1], 13, "%d", "slice 1 index 1");
     assert_eq(t, s1.buffer[2], 14, "%d", "slice 1 index 2");
     assert_eq(t, s1.buffer[3], 15, "%d", "slice 1 index 3");
-    assert_eq(t, s2.buffer[0], 12, "%d", "slice 1 index 0");
-    assert_eq(t, s2.buffer[1], 13, "%d", "slice 1 index 1");
-    assert_eq(t, s2.buffer[2], 14, "%d", "slice 1 index 2");
-    assert_eq(t, s2.buffer[3], 15, "%d", "slice 1 index 3");
+    assert_eq(t, s2.buffer[0], 12, "%d", "slice 2 index 0");
+    assert_eq(t, s2.buffer[1], 13, "%d", "slice 2 index 1");
+    assert_eq(t, s2.buffer[2], 14, "%d", "slice 2 index 2");
+    assert_eq(t, s2.buffer[3], 15, "%d", "slice 2 index 3");
 }
 
 void test_slice_equal(test *t) {
