@@ -383,7 +383,7 @@ jp_slice jp_slice_span(u8 *start, u8 *end);
  * @param a,b slices to compare
  * @returns true when the slices are equal and false otherwise
  */
-s32 jp_slice_equal(jp_slice a, jp_slice b);
+s32 jp_slice_eq(jp_slice a, jp_slice b);
 
 /**
  * Copy slice contents to another slice where the slices do not overlap.

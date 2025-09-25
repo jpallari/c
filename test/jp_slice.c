@@ -26,12 +26,12 @@ void test_slice_equal(test *t) {
     jp_slice s1_3 = jp_slice_span(&arr1[3], &arr1[7]);
     jp_slice s2_1 = jp_slice_span(&arr2[1], &arr2[4]);
 
-    assert_true(t, jp_slice_equal(s1_1, s1_1), "equals with itself");
-    assert_false(t, jp_slice_equal(s1_1, s1_2), "not equals with shifted");
+    assert_true(t, jp_slice_eq(s1_1, s1_1), "equals with itself");
+    assert_false(t, jp_slice_eq(s1_1, s1_2), "not equals with shifted");
     assert_false(
-        t, jp_slice_equal(s1_1, s1_3), "not equals with different length"
+        t, jp_slice_eq(s1_1, s1_3), "not equals with different length"
     );
-    assert_true(t, jp_slice_equal(s1_1, s2_1), "equals with similar");
+    assert_true(t, jp_slice_eq(s1_1, s2_1), "equals with similar");
 }
 
 void test_slice_from(test *t) {

@@ -137,7 +137,7 @@ jp_slice jp_slice_span(u8 *start, u8 *end) {
     return s;
 }
 
-s32 jp_slice_equal(jp_slice a, jp_slice b) {
+s32 jp_slice_eq(jp_slice a, jp_slice b) {
     if (a.len != b.len) {
         return 0;
     }
