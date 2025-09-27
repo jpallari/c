@@ -104,11 +104,21 @@ typedef struct {
 } test_suite_report;
 
 b32 test_report_append(
-    test *t, b32 passed, const char *log_message, size_t log_message_size, const char *file, int line
+    test *t,
+    b32 passed,
+    const char *log_message,
+    size_t log_message_size,
+    const char *file,
+    int line,
+    const char *format,
+    const void *left,
+    const void *right
 ) {
     assert(t && "test report must not be null");
     assert(t->logs_handle && "logs handle must not be null");
     assert(t->logs_handle->logs && "logs storage must not be null");
+
+    char buffer[1024] = {0};
     u64 logs_offset = jp_dynarr_len(t->logs_handle->logs);
 
     test_assert assert_report = {
@@ -126,9 +136,14 @@ b32 test_report_append(
         panic();
     }
 
-    u8 *next_logs = jp_dynarr_push_grow(
-        t->logs_handle->logs, log_message, log_message_size, u8
-    );
+    const char *log = log_message;
+    if (format && left && right) {
+        snprintf(buffer, sizeof(buffer), format, left, right, log_message);
+        log = buffer;
+    }
+
+    u8 *next_logs =
+        jp_dynarr_push_grow(t->logs_handle->logs, log, log_message_size, u8);
     if (next_logs) {
         t->logs_handle->logs = next_logs;
     } else {
@@ -330,19 +345,32 @@ int test_main(
 ////////////////////////
 
 #define assert_true(t, c, msg) \
-    test_report_append((t), !!(c), (msg), sizeof(msg), __FILE__, __LINE__)
+    test_report_append( \
+        (t), \
+        !!(c), \
+        (msg), \
+        sizeof(msg), \
+        __FILE__, \
+        __LINE__, \
+        NULL, \
+        NULL, \
+        NULL \
+    )
 
 #define assert_false(t, c, msg) assert_true(t, !(c), msg)
 
-#define __assert_cmp_log_msg(buf, l, r, cmp, f, msg) \
-    snprintf((buf), sizeof(buf), (f " " #cmp " " f " // %s"), (l), (r), (msg))
-
-#define __assert_cmp(t, c, l, r, cmp, f, msg) \
-    do { \
-        char __assert_log_msg[1024] = {0}; \
-        __assert_cmp_log_msg(__assert_log_msg, l, r, cmp, f, msg); \
-        assert_true(t, c, __assert_log_msg); \
-    } while (0)
+#define __assert_cmp(t, c, l, r, cmp, format, msg) \
+    test_report_append( \
+        (t), \
+        !!(c), \
+        (msg), \
+        sizeof(msg), \
+        __FILE__, \
+        __LINE__, \
+        (format " " #cmp " " format " // %s"), \
+        &(l), \
+        &(r) \
+    )
 
 #define assert_eq(t, a, b, f, msg) __assert_cmp(t, (a) == (b), a, b, ==, f, msg)
 #define assert_ne(t, a, b, f, msg) __assert_cmp(t, (a) != (b), a, b, !=, f, msg)
