@@ -182,6 +182,19 @@ static inline void *jp_bytes_set(void *dest, int c, size_t n) {
     jp_bytes_set((dest), (c), (n) * sizeof(type))
 
 /**
+ * Check which index the given two buffers differ starting from given index
+ *
+ * @param a,b byte buffers to compare
+ * @param start index to start comparing from
+ * @param capacity the capacity of the buffers
+ * @returns -1 when the buffers contain the same bytes, and the index of the
+ * differing byte otherwise
+ */
+int jp_bytes_diff_index(
+    const void *a, const void *b, size_t start, size_t capacity
+);
+
+/**
  * Check whether both buffers contain the same bytes up to the given capacity.
  *
  * @param a,b byte buffers to compare

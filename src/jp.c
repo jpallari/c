@@ -5,22 +5,31 @@
 // Bytes
 ////////////////////////
 
-b32 jp_bytes_eq(const void *a, const void *b, size_t capacity) {
+int jp_bytes_diff_index(
+    const void *a, const void *b, size_t start, size_t capacity
+) {
+    assert(start < capacity && "start must be lower than capacity");
     const u8 *a_ = a, *b_ = b;
-
-    if (a_ == b_) {
-        return 1;
+    if ((uintptr_t)a_ == (uintptr_t)b_) {
+        return -1;
     }
     if (!a || !b) {
         return 0;
     }
 
-    for (size_t i = 0; i < capacity; i += 1) {
+    for (size_t i = start; i < capacity; i += 1) {
         if (a_[i] != b_[i]) {
-            return 0;
+            return (int)i;
         }
     }
 
+    return -1;
+}
+
+b32 jp_bytes_eq(const void *a, const void *b, size_t capacity) {
+    if (jp_bytes_diff_index(a, b, 0, capacity) >= 0) {
+        return 0;
+    }
     return 1;
 }
 
