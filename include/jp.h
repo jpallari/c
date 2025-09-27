@@ -396,7 +396,7 @@ jp_slice jp_slice_span(u8 *start, u8 *end);
  * @param a,b slices to compare
  * @returns true when the slices are equal and false otherwise
  */
-s32 jp_slice_eq(jp_slice a, jp_slice b);
+s32 jp_slice_eq(const jp_slice a, const jp_slice b);
 
 /**
  * Copy slice contents to another slice where the slices do not overlap.
@@ -404,7 +404,7 @@ s32 jp_slice_eq(jp_slice a, jp_slice b);
  * @param[out] dest slice to copy data to
  * @param[in] src slice to copy data from
  */
-void jp_slice_copy(jp_slice dest, jp_slice src);
+void jp_slice_copy(jp_slice dest, const jp_slice src);
 
 /**
  * Copy slice contents to another slice where the slices may overlap.
@@ -412,7 +412,7 @@ void jp_slice_copy(jp_slice dest, jp_slice src);
  * @param[out] dest slice to copy data to
  * @param[in] src slice to copy data from
  */
-void jp_slice_move(jp_slice dest, jp_slice src);
+void jp_slice_move(jp_slice dest, const jp_slice src);
 
 /**
  * Create a slice from a null terminated string
@@ -610,7 +610,9 @@ void *jp_dynarr_clone_ut(
  * Push items to given array. Returns true when the operation succeeded (i.e.
  * there's capacity).
  */
-b32 jp_dynarr_push_ut(void *array, const void *items, u64 count, size_t item_size);
+b32 jp_dynarr_push_ut(
+    void *array, const void *items, u64 count, size_t item_size
+);
 
 /**
  * Push items to given array.
@@ -634,7 +636,11 @@ b32 jp_dynarr_push_ut(void *array, const void *items, u64 count, size_t item_siz
  * @returns array containing the new contents or null when push fails
  */
 void *jp_dynarr_push_grow_ut(
-    void *array, const void *items, u64 count, size_t item_size, size_t alignment
+    void *array,
+    const void *items,
+    u64 count,
+    size_t item_size,
+    size_t alignment
 );
 
 /**

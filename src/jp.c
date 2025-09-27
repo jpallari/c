@@ -146,19 +146,19 @@ jp_slice jp_slice_span(u8 *start, u8 *end) {
     return s;
 }
 
-s32 jp_slice_eq(jp_slice a, jp_slice b) {
+s32 jp_slice_eq(const jp_slice a, const jp_slice b) {
     if (a.len != b.len) {
         return 0;
     }
     return jp_bytes_eq(a.buffer, b.buffer, a.len);
 }
 
-void jp_slice_copy(jp_slice dest, jp_slice src) {
+void jp_slice_copy(jp_slice dest, const jp_slice src) {
     size_t amount = min(src.len, dest.len);
     jp_bytes_copy(dest.buffer, src.buffer, amount);
 }
 
-void jp_slice_move(jp_slice dest, jp_slice src) {
+void jp_slice_move(jp_slice dest, const jp_slice src) {
     size_t amount = min(src.len, dest.len);
     jp_bytes_move(dest.buffer, src.buffer, amount);
 }
@@ -302,7 +302,9 @@ void *jp_dynarr_clone_ut(
     return new_array;
 }
 
-b32 jp_dynarr_push_ut(void *array, const void *items, u64 count, size_t item_size) {
+b32 jp_dynarr_push_ut(
+    void *array, const void *items, u64 count, size_t item_size
+) {
     if (count == 0) {
         return 0;
     }
@@ -326,7 +328,11 @@ b32 jp_dynarr_push_ut(void *array, const void *items, u64 count, size_t item_siz
 }
 
 void *jp_dynarr_push_grow_ut(
-    void *array, const void *items, u64 count, size_t item_size, size_t alignment
+    void *array,
+    const void *items,
+    u64 count,
+    size_t item_size,
+    size_t alignment
 ) {
     if (count == 0) {
         return array;
