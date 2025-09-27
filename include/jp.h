@@ -314,44 +314,6 @@ __attribute__((unused)) static jp_allocator jp_std_allocator = {
 #define jp_free(ptr, allocator) (allocator)->free((ptr), (allocator)->ctx)
 
 ////////////////////////
-// C strings
-////////////////////////
-
-/**
- * Unsafe equality comparison of two strings.
- *
- * @param s1,s2 strings to compare
- * @returns true when strings are equal and false otherwise
- */
-b32 jp_cstr_eq_unsafe(const char *s1, const char *s2);
-
-/**
- * Equality comparison of two strings with max bound.
- *
- * @param s1,s2 strings to compare
- * @param capacity minimum capacity of the two strings
- * @returns true when strings are equal and false otherwise
- */
-b32 jp_cstr_eq(const char *s1, const char *s2, size_t capacity);
-
-/**
- * Unsafe get length of string.
- *
- * @param str string to get length for
- * @returns the length of the string
- */
-size_t jp_cstr_len_unsafe(const char *str);
-
-/**
- * Get length of string with a bound check.
- *
- * @param str string to get length for
- * @param capacity the capacity of the string
- * @returns the length of the string
- */
-size_t jp_cstr_len(const char *str, size_t capacity);
-
-////////////////////////
 // Slices
 ////////////////////////
 
@@ -714,6 +676,114 @@ b32 jp_dynarr_remove_uo_ut(void *array, u64 index, size_t item_size);
  */
 #define jp_dynarr_remove_uo(array, index) \
     jp_dynarr_remove_uo_ut((array), (index), sizeof(*(array)))
+
+////////////////////////
+// C strings
+////////////////////////
+
+/**
+ * Unsafe equality comparison of two strings.
+ *
+ * @param s1,s2 strings to compare
+ * @returns true when strings are equal and false otherwise
+ */
+b32 jp_cstr_eq_unsafe(const char *s1, const char *s2);
+
+/**
+ * Equality comparison of two strings with max bound.
+ *
+ * @param s1,s2 strings to compare
+ * @param len length of the two strings
+ * @returns true when strings are equal and false otherwise
+ */
+b32 jp_cstr_eq(const char *s1, const char *s2, size_t len);
+
+/**
+ * Unsafe get length of string.
+ *
+ * @param str string to get length for
+ * @returns the length of the string
+ */
+size_t jp_cstr_len_unsafe(const char *str);
+
+/**
+ * Get length of string with a bound check.
+ *
+ * @param str string to get length for
+ * @param capacity the capacity of the string
+ * @returns the length of the string
+ */
+size_t jp_cstr_len(const char *str, size_t capacity);
+
+/**
+ * String split iterator
+ */
+typedef struct {
+    /**
+     * String to split
+     */
+    char *str;
+
+    /**
+     * Length of the string to split
+     */
+    size_t str_len;
+
+    /**
+     * Characters based on which string should be split.
+     */
+    const char *split_chars;
+
+    /**
+     * Length of the split characters list.
+     */
+    size_t split_chars_len;
+
+    /**
+     * The next character index to check for string split.
+     */
+    size_t index;
+
+    /**
+     * Flag: whether or not to null-terminate on split characters
+     */
+    u32 null_terminate : 1;
+} jp_cstr_split_iter;
+
+/**
+ * Get a slice to the next sub-string from a split iterator.
+ *
+ * @param split the split iterator to advance
+ * @returns slice to the next sub-string or empty slice when there are no
+ * sub-strings left
+ */
+jp_slice jp_cstr_split_next(jp_cstr_split_iter *split);
+
+/**
+ * Collect all sub-strings from a split iterator to an array of slices.
+ *
+ * @param arr an array of slices to collect sub-strings to
+ * @param len length of the array
+ * @param split the split iterator to advance
+ * @returns number of sub-strings captured from the split iterator
+ */
+size_t
+jp_cstr_split_collect(jp_slice *arr, size_t len, jp_cstr_split_iter *split);
+
+/**
+ * Collect all sub-strings from a split iterator to an array of C strings.
+ *
+ * Null-termination will be automatically enabled for the split iterator for the
+ * duration of the function.
+ *
+ * @param arr an array of C-strings to collect sub-strings to
+ * @param len length of the array
+ * @param split the split iterator to advance
+ * @returns number of sub-strings captured from the split iterator
+ */
+size_t jp_cstr_split_collect_strings(
+    char **strings, size_t len, jp_cstr_split_iter *split
+);
 
 ////////////////////////
 // File I/O (blocking)

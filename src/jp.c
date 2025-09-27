@@ -58,74 +58,6 @@ size_t jp_bytes_to_hex(char *dest, const char *src, size_t n) {
 }
 
 ////////////////////////
-// C strings
-////////////////////////
-
-b32 jp_cstr_eq_unsafe(const char *s1, const char *s2) {
-    if (s1 == s2) {
-        return 1;
-    }
-    if (!s1 || !s2) {
-        return 0;
-    }
-
-    size_t len = 0;
-    while (s1[len] && s2[len]) {
-        if (s1[len] != s2[len]) {
-            return 0;
-        }
-        len += 1;
-    }
-    if (s1[len] != s2[len]) {
-        return 0;
-    }
-
-    return 1;
-}
-
-b32 jp_cstr_eq(const char *s1, const char *s2, size_t capacity) {
-    if (s1 == s2) {
-        return 1;
-    }
-    if (!s1 || !s2) {
-        return 0;
-    }
-
-    for (size_t i = 0; i < capacity; i += 1) {
-        if (s1[i] != s2[i]) {
-            return 0;
-        }
-        if (!s1[i] && !s2[i]) {
-            break;
-        }
-    }
-
-    return 1;
-}
-
-size_t jp_cstr_len_unsafe(const char *str) {
-    if (!str) {
-        return 0;
-    }
-    size_t len = 0;
-    while (str[len]) { len += 1; }
-    len += 1;
-    return len;
-}
-
-size_t jp_cstr_len(const char *str, size_t capacity) {
-    if (!str) {
-        return 0;
-    }
-    size_t len = 0;
-    while (str[len] && len < capacity) { len += 1; }
-    if (len + 1 < capacity) {
-        len += 1;
-    }
-    return len;
-}
-
-////////////////////////
 // Slices
 ////////////////////////
 
@@ -413,6 +345,156 @@ b32 jp_dynarr_remove_uo_ut(void *array, u64 index, size_t item_size) {
     jp_bytes_copy(data_dst, data_src, item_size);
     header->len -= 1;
     return 1;
+}
+
+////////////////////////
+// C strings
+////////////////////////
+
+b32 jp_cstr_eq_unsafe(const char *s1, const char *s2) {
+    if (s1 == s2) {
+        return 1;
+    }
+    if (!s1 || !s2) {
+        return 0;
+    }
+
+    size_t len = 0;
+    while (s1[len] && s2[len]) {
+        if (s1[len] != s2[len]) {
+            return 0;
+        }
+        len += 1;
+    }
+    if (s1[len] != s2[len]) {
+        return 0;
+    }
+
+    return 1;
+}
+
+b32 jp_cstr_eq(const char *s1, const char *s2, size_t len) {
+    if (s1 == s2) {
+        return 1;
+    }
+    if (!s1 || !s2) {
+        return 0;
+    }
+
+    for (size_t i = 0; i < len; i += 1) {
+        if (s1[i] != s2[i]) {
+            return 0;
+        }
+        if (!s1[i] && !s2[i]) {
+            break;
+        }
+    }
+
+    return 1;
+}
+
+size_t jp_cstr_len_unsafe(const char *str) {
+    if (!str) {
+        return 0;
+    }
+    size_t len = 0;
+    while (str[len]) { len += 1; }
+    return len;
+}
+
+size_t jp_cstr_len(const char *str, size_t capacity) {
+    if (!str) {
+        return 0;
+    }
+    size_t len = 0;
+    while (str[len] && len < capacity) { len += 1; }
+    if (len + 1 < capacity) {
+        len += 1;
+    }
+    return len;
+}
+
+jp_slice jp_cstr_split_next(jp_cstr_split_iter *split) {
+    assert(split && "split struct must not be null");
+    assert(split->split_chars && "split chars must not be null");
+
+    jp_slice slice = {0};
+
+    if (!split->str || !split->str_len || !split->split_chars_len
+        || split->index >= split->str_len || !split->str[split->index]) {
+        return slice;
+    }
+
+    slice.buffer = (u8 *)split->str + split->index;
+    b32 len_set = 0;
+
+    while (split->index < split->str_len && !len_set) {
+        char ch = split->str[split->index];
+        if (ch) {
+            for (size_t si = 0; si < split->split_chars_len; si += 1) {
+                if (split->split_chars[si] == ch) {
+                    if (split->null_terminate) {
+                        split->str[split->index] = '\0';
+                    }
+                    uintptr_t str = (uintptr_t)split->str;
+                    uintptr_t buf = (uintptr_t)slice.buffer;
+                    slice.len = (u64)(str + split->index - buf);
+                    len_set = 1;
+                    break;
+                }
+            }
+        } else {
+            uintptr_t str = (uintptr_t)split->str;
+            uintptr_t buf = (uintptr_t)slice.buffer;
+            slice.len = (u64)(str + split->index - buf);
+            len_set = 1;
+        }
+        split->index += 1;
+    }
+
+    return slice;
+}
+
+size_t
+jp_cstr_split_collect(jp_slice *arr, size_t len, jp_cstr_split_iter *split) {
+    assert(arr && "array must not be null");
+    assert(split && "split must not be null");
+
+    size_t i = 0;
+    for (; i < len; i += 1) {
+        jp_slice slice = jp_cstr_split_next(split);
+        if (!slice.buffer) {
+            break;
+        }
+        arr[i] = slice;
+    }
+    return i;
+}
+
+size_t jp_cstr_split_collect_strings(
+    char **strings, size_t len, jp_cstr_split_iter *split
+) {
+    assert(strings && "strings must not be null");
+    assert(split && "split must not be null");
+
+    struct {
+        u32 null_terminate : 1;
+    } flags = {
+        .null_terminate = split->null_terminate,
+    };
+    split->null_terminate = 1;
+
+    size_t i = 0;
+    for (; i < len; i += 1) {
+        jp_slice slice = jp_cstr_split_next(split);
+        if (!slice.buffer) {
+            break;
+        }
+        strings[i] = (char *)slice.buffer;
+    }
+
+    split->null_terminate = flags.null_terminate;
+    return i;
 }
 
 ////////////////////////

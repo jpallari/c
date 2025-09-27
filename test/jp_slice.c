@@ -112,7 +112,7 @@ void test_slice_from_cstr_unsafe(test *t) {
     char str[] = "hello world!";
     jp_slice slice = jp_slice_from_cstr_unsafe(str);
 
-    assert_eq(t, slice.len, 13L, "%ld", "slice len must match string length");
+    assert_eq(t, slice.len, 12L, "%ld", "slice len must match string length");
     assert_eq(
         t,
         (uintptr_t)slice.buffer,
