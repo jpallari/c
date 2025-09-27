@@ -420,6 +420,9 @@ b32 jp_dynarr_remove_uo_ut(void *array, u64 index, size_t item_size) {
 ////////////////////////
 
 jp_file_result jp_read_file(const char *filename, jp_allocator *allocator) {
+    assert(filename && "filename must not be null");
+    assert(allocator && "allocator must not be null");
+
     int fd = 0, io_res = 0;
     ssize_t read_res = 0;
     u8 *data = NULL, *cursor = NULL;
@@ -480,6 +483,9 @@ end:
 }
 
 s64 jp_write_file(char *filename, void *data, u64 size) {
+    assert(filename && "filename must not be null");
+    assert(data && "data must not be null");
+
     int fd = 0, io_res = 0, close_res = 0;
     u8 *cursor = data;
     struct stat file_stat = {0};
