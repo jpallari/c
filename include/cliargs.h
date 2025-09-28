@@ -11,44 +11,51 @@ typedef enum {
     cliargs_type_bool,
 } cliargs_type;
 
-typedef struct {
-    u64 value;
-    u32 count;
-    u32 max_count;
-    cliargs_type t;
+typedef union {
+    s64 sint;
+    u64 uint;
+    double real;
+    const char *str;
 } cliargs_val;
 
 typedef struct {
-    char *long_name;
-    char *short_name;
-    char *help_text;
+    const char *long_name;
+    const char *short_name;
+    const char *help_text;
+    cliargs_val *vals;
+    u32 len;
+    u32 max_len;
+    cliargs_type type;
 } cliargs_opt;
 
 typedef struct {
     struct {
-        cliargs_opt opt;
-        cliargs_val *val;
+        cliargs_opt *opts;
+        u32 len;
     } named;
     struct {
-        cliargs_val *val;
-        u32 count;
-        u32 max_count;
+        char const **vals;
+        u32 len;
+        u32 max_len;
     } positional;
-    char *errors;
-    u32 errors_size;
-} cliargs_opts;
+    struct {
+        char *buffer;
+        u32 len;
+        u32 max_len;
+    } errors;
+} cliargs;
 
-typedef struct {
-    const char *opt;
-    const char *val;
-    u16 opt_len;
-    u16 val_len;
-    u16 prefix_dash_count;
-} cliargs_arg;
+#define cliargs_opt_add(opts, count, lname, sname, htext, vs, t) \
+    (opts)[(count)++] = (cliargs_opt) { \
+        .long_name = (lname), \
+        .short_name = (sname), \
+        .help_text = (htext), \
+        .vals = (cliargs_val *)(vs), \
+        .len = 0, \
+        .max_len = jp_countof(vs), \
+        .type = (t) \
+    }
 
-cliargs_arg parse_arg(const char *arg);
-
-b32 parse(cliargs_opts *opts, int argc, char **argv);
+b32 cliargs_parse(cliargs *args, int argc, char **argv);
 
 #endif
-
