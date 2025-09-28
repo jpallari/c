@@ -1,5 +1,7 @@
 #include "cliargs.h"
 #include "jp.h"
+#include <errno.h>
+#include <limits.h>
 #include <stdlib.h>
 
 typedef struct {
@@ -13,6 +15,7 @@ typedef struct {
 cliargs_error
 cliargs_parse_value(cliargs_type t, const char *arg, cliargs_val *value) {
     cliargs_val v;
+    char *end = NULL;
 
     switch (t) {
     case cliargs_type_bool:
@@ -26,15 +29,24 @@ cliargs_parse_value(cliargs_type t, const char *arg, cliargs_val *value) {
         *value = v;
         return cliargs_error_none;
     case cliargs_type_f64:
-        v.real = strtod(arg, NULL);
+        v.real = strtod(arg, &end);
+        if (errno == ERANGE || *end != '\0') {
+            return cliargs_error_parse_fail;
+        }
         *value = v;
         return cliargs_error_none;
     case cliargs_type_s64:
-        v.sint = strtoll(arg, NULL, 10);
+        v.sint = strtoll(arg, &end, 10);
+        if (errno == ERANGE || *end != '\0') {
+            return cliargs_error_parse_fail;
+        }
         *value = v;
         return cliargs_error_none;
     case cliargs_type_u64:
-        v.uint = strtoull(arg, NULL, 10);
+        v.uint = strtoull(arg, &end, 10);
+        if (errno == ERANGE || *end != '\0') {
+            return cliargs_error_parse_fail;
+        }
         *value = v;
         return cliargs_error_none;
     case cliargs_type_str:
