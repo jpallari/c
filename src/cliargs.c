@@ -10,7 +10,7 @@ typedef struct {
     u16 prefix_dash_count;
 } cliargs_arg;
 
-s32 parse_val(cliargs_type t, const char *arg, cliargs_val *value) {
+cliargs_error parse_val(cliargs_type t, const char *arg, cliargs_val *value) {
     cliargs_val v;
 
     switch (t) {
@@ -20,32 +20,28 @@ s32 parse_val(cliargs_type t, const char *arg, cliargs_val *value) {
         } else if (jp_cstr_eq_unsafe(arg, "false")) {
             v.uint = 0;
         } else {
-            // unknown value
-            return 1;
+            return cliargs_error_parse_fail;
         }
         *value = v;
-        return 0;
+        return cliargs_error_none;
     case cliargs_type_f64:
         v.real = strtod(arg, NULL);
         *value = v;
-        return 0;
+        return cliargs_error_none;
     case cliargs_type_s64:
         v.sint = strtoll(arg, NULL, 10);
         *value = v;
-        return 0;
+        return cliargs_error_none;
     case cliargs_type_u64:
         v.uint = strtoull(arg, NULL, 10);
         *value = v;
-        return 0;
+        return cliargs_error_none;
     case cliargs_type_str:
         v.str = arg;
         *value = v;
-        return 0;
-    default:
-        // unknown type
-        return 2;
+        return cliargs_error_none;
+    default: return cliargs_error_unknown_type;
     }
-    return 2;
 }
 
 cliargs_arg cliargs_parse_arg(const char *arg) {
@@ -139,7 +135,7 @@ cliargs_find_by_name(cliargs *args, const char *name, size_t name_len) {
     return NULL;
 }
 
-b32 cliargs_parse(cliargs *args, int argc, char **argv) {
+cliargs_error cliargs_parse(cliargs *args, int argc, char **argv) {
     assert(args && "args must not be null");
 
     b32 positional_only = 0;
@@ -153,8 +149,7 @@ b32 cliargs_parse(cliargs *args, int argc, char **argv) {
 
         if (positional_only) {
             if (args->positional.len >= args->positional.max_len) {
-                // reached max positional count
-                return 0;
+                return cliargs_error_too_many_pos_args;
             }
             args->positional.vals[args->positional.len] = arg;
             args->positional.len += 1;
@@ -163,16 +158,15 @@ b32 cliargs_parse(cliargs *args, int argc, char **argv) {
             if (opt) {
                 // awaiting val for an opt
                 if (!a.val_len) {
-                    // expected a val
-                    return 0;
+                    return cliargs_error_value_expected;
                 }
                 if (opt->len >= opt->max_len) {
-                    // max count for opt reached
-                    return 0;
+                    return cliargs_error_too_many_flag_args;
                 }
-                if (parse_val(opt->type, a.val, (opt->vals + opt->len))) {
-                    // parse failed
-                    return 0;
+                cliargs_error parse_res =
+                    parse_val(opt->type, a.val, (opt->vals + opt->len));
+                if (parse_res) {
+                    return parse_res;
                 };
                 opt->len += 1;
                 opt = NULL;
@@ -180,16 +174,15 @@ b32 cliargs_parse(cliargs *args, int argc, char **argv) {
                 // opt and val combined
                 opt = cliargs_find_by_name(args, a.opt, a.opt_len);
                 if (!opt) {
-                    // option not found
-                    return 0;
+                    return cliargs_error_unknown_flag;
                 }
                 if (opt->len >= opt->max_len) {
-                    // max count for opt reached
-                    return 0;
+                    return cliargs_error_too_many_flag_args;
                 }
-                if (parse_val(opt->type, a.val, (opt->vals + opt->len))) {
-                    // parse failed
-                    return 0;
+                cliargs_error parse_res =
+                    parse_val(opt->type, a.val, (opt->vals + opt->len));
+                if (parse_res) {
+                    return parse_res;
                 };
                 opt->len += 1;
                 opt = NULL;
@@ -197,14 +190,12 @@ b32 cliargs_parse(cliargs *args, int argc, char **argv) {
                 // only opt found
                 opt = cliargs_find_by_name(args, a.opt, a.opt_len);
                 if (!opt) {
-                    // option not found
-                    return 0;
+                    return cliargs_error_unknown_flag;
                 }
                 if (opt->type == cliargs_type_bool) {
                     // boolean flags don't need to wait for a val
                     if (opt->len >= opt->max_len) {
-                        // max count for opt reached
-                        return 0;
+                        return cliargs_error_too_many_flag_args;
                     }
                     cliargs_val v;
                     v.uint = 1;
@@ -214,8 +205,7 @@ b32 cliargs_parse(cliargs *args, int argc, char **argv) {
                 }
             } else {
                 if (args->positional.len >= args->positional.max_len) {
-                    // reached max positional count
-                    return 0;
+                    return cliargs_error_too_many_pos_args;
                 }
                 args->positional.vals[args->positional.len] = arg;
                 args->positional.len += 1;
@@ -223,5 +213,5 @@ b32 cliargs_parse(cliargs *args, int argc, char **argv) {
         }
     }
 
-    return 1;
+    return cliargs_error_none;
 }

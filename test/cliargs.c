@@ -105,7 +105,7 @@ void parse_opts_all(test *t) {
         return;
     }
 
-    if (!assert_true(
+    if (!assert_false(
             t,
             cliargs_parse(&opts, jp_countof(argv), argv),
             "cli args must be parsed w/o errors"

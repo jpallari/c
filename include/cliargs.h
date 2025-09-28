@@ -4,6 +4,16 @@
 #include "jp.h"
 
 typedef enum {
+    cliargs_error_none = 0,
+    cliargs_error_parse_fail,
+    cliargs_error_too_many_flag_args,
+    cliargs_error_too_many_pos_args,
+    cliargs_error_unknown_flag,
+    cliargs_error_unknown_type,
+    cliargs_error_value_expected,
+} cliargs_error;
+
+typedef enum {
     cliargs_type_s64,
     cliargs_type_u64,
     cliargs_type_f64,
@@ -45,17 +55,6 @@ typedef struct {
     } errors;
 } cliargs;
 
-#define cliargs_opt_add(opts, count, lname, sname, htext, vs, t) \
-    (opts)[(count)++] = (cliargs_opt) { \
-        .long_name = (lname), \
-        .short_name = (sname), \
-        .help_text = (htext), \
-        .vals = (cliargs_val *)(vs), \
-        .len = 0, \
-        .max_len = jp_countof(vs), \
-        .type = (t) \
-    }
-
-b32 cliargs_parse(cliargs *args, int argc, char **argv);
+cliargs_error cliargs_parse(cliargs *args, int argc, char **argv);
 
 #endif
