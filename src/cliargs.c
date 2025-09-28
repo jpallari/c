@@ -3,14 +3,15 @@
 #include <stdlib.h>
 
 typedef struct {
-    const char *opt;
+    const char *flag;
     const char *val;
-    u16 opt_len;
+    u16 flag_len;
     u16 val_len;
     u16 prefix_dash_count;
 } cliargs_arg;
 
-cliargs_error parse_val(cliargs_type t, const char *arg, cliargs_val *value) {
+cliargs_error
+cliargs_parse_value(cliargs_type t, const char *arg, cliargs_val *value) {
     cliargs_val v;
 
     switch (t) {
@@ -52,7 +53,7 @@ cliargs_arg cliargs_parse_arg(const char *arg) {
     while (arg[i]) {
         previous_parsing_mode = parsing_mode;
         switch (parsing_mode) {
-        case 1: // opt or val
+        case 1: // flag or val
             for (; arg[i] && parsing_mode == previous_parsing_mode; i += 1) {
                 switch (arg[i]) {
                 case '-': a.prefix_dash_count += 1; break;
@@ -63,9 +64,9 @@ cliargs_arg cliargs_parse_arg(const char *arg) {
                     break;
                 default:
                     if (a.prefix_dash_count > 0) {
-                        // start parsing an opt
-                        a.opt = &arg[i];
-                        a.opt_len += 1;
+                        // start parsing an flag
+                        a.flag = &arg[i];
+                        a.flag_len += 1;
                         parsing_mode = 2;
                     } else {
                         // start parsing a val
@@ -77,22 +78,22 @@ cliargs_arg cliargs_parse_arg(const char *arg) {
                 }
             }
             break;
-        case 2: // opt
+        case 2: // flag
             for (; arg[i] && parsing_mode == previous_parsing_mode; i += 1) {
                 switch (arg[i]) {
                 case '=':
-                    if (a.opt_len == 0) {
-                        // dashes followed by = means there's no opt
+                    if (a.flag_len == 0) {
+                        // dashes followed by = means there's no flag
                         a.val = arg;
                         a.val_len = i;
                     }
                     parsing_mode = 3;
                     break;
                 default:
-                    if (!a.opt) {
-                        a.opt = &arg[i];
+                    if (!a.flag) {
+                        a.flag = &arg[i];
                     }
-                    a.opt_len += 1;
+                    a.flag_len += 1;
                     break;
                 }
             }
@@ -135,8 +136,43 @@ cliargs_find_by_name(cliargs *args, const char *name, size_t name_len) {
     return NULL;
 }
 
+cliargs_error cliargs_add_pos_arg(cliargs *args, const char *arg) {
+    if (args->positional.len >= args->positional.max_len) {
+        return cliargs_error_too_many_pos_args;
+    }
+    args->positional.vals[args->positional.len] = arg;
+    args->positional.len += 1;
+    return cliargs_error_none;
+}
+
+cliargs_error cliargs_parse_value_to_opt(cliargs_opt *opt, const char *value) {
+    if (!opt) {
+        return cliargs_error_unknown_flag;
+    }
+    if (opt->len >= opt->max_len) {
+        return cliargs_error_too_many_flag_args;
+    }
+    cliargs_error parse_res =
+        cliargs_parse_value(opt->type, value, (opt->vals + opt->len));
+    if (parse_res) {
+        return parse_res;
+    };
+    opt->len += 1;
+    return cliargs_error_none;
+}
+
+cliargs_error cliargs_opt_add_value(cliargs_opt *opt, cliargs_val v) {
+    if (opt->len >= opt->max_len) {
+        return cliargs_error_too_many_flag_args;
+    }
+    opt->vals[opt->len] = v;
+    opt->len += 1;
+    return cliargs_error_none;
+}
+
 cliargs_error cliargs_parse(cliargs *args, int argc, char **argv) {
     assert(args && "args must not be null");
+    assert(argv && "argv must not be null");
 
     b32 positional_only = 0;
     cliargs_opt *opt = NULL;
@@ -144,71 +180,61 @@ cliargs_error cliargs_parse(cliargs *args, int argc, char **argv) {
     for (int i = 0; i < argc; i += 1) {
         const char *arg = argv[i];
         if (!arg) {
+            // skip over null args
             continue;
         }
 
         if (positional_only) {
-            if (args->positional.len >= args->positional.max_len) {
-                return cliargs_error_too_many_pos_args;
+            // skip over flag usage when only positionals are expected
+            cliargs_error err = cliargs_add_pos_arg(args, arg);
+            if (err) {
+                return err;
             }
-            args->positional.vals[args->positional.len] = arg;
-            args->positional.len += 1;
+            continue;
+        }
+
+        cliargs_arg a = cliargs_parse_arg(arg);
+        if (opt) {
+            // awaiting val for an opt
+            if (!a.val_len) {
+                return cliargs_error_value_expected;
+            }
+            cliargs_error err = cliargs_parse_value_to_opt(opt, a.val);
+            if (err) {
+                return err;
+            }
+            opt = NULL;
+        } else if (a.flag_len == 0 && a.val_len == 0
+                   && a.prefix_dash_count > 1) {
+            // multiple prefix dashes = rest of the args are positional
+            positional_only = 1;
+        } else if (a.flag_len > 0 && a.val_len > 0) {
+            // flag and val combined
+            opt = cliargs_find_by_name(args, a.flag, a.flag_len);
+            cliargs_error err = cliargs_parse_value_to_opt(opt, a.val);
+            if (err) {
+                return err;
+            }
+            opt = NULL;
+        } else if (a.flag_len > 0) {
+            // only flag found
+            opt = cliargs_find_by_name(args, a.flag, a.flag_len);
+            if (!opt) {
+                return cliargs_error_unknown_flag;
+            }
+            if (opt->type == cliargs_type_bool) {
+                // boolean flags don't need to wait for a val
+                cliargs_val v = {.uint = 1};
+                cliargs_error err = cliargs_opt_add_value(opt, v);
+                if (err) {
+                    return err;
+                }
+                opt = NULL;
+            }
         } else {
-            cliargs_arg a = cliargs_parse_arg(arg);
-            if (opt) {
-                // awaiting val for an opt
-                if (!a.val_len) {
-                    return cliargs_error_value_expected;
-                }
-                if (opt->len >= opt->max_len) {
-                    return cliargs_error_too_many_flag_args;
-                }
-                cliargs_error parse_res =
-                    parse_val(opt->type, a.val, (opt->vals + opt->len));
-                if (parse_res) {
-                    return parse_res;
-                };
-                opt->len += 1;
-                opt = NULL;
-            } else if (a.opt_len > 0 && a.val_len > 0) {
-                // opt and val combined
-                opt = cliargs_find_by_name(args, a.opt, a.opt_len);
-                if (!opt) {
-                    return cliargs_error_unknown_flag;
-                }
-                if (opt->len >= opt->max_len) {
-                    return cliargs_error_too_many_flag_args;
-                }
-                cliargs_error parse_res =
-                    parse_val(opt->type, a.val, (opt->vals + opt->len));
-                if (parse_res) {
-                    return parse_res;
-                };
-                opt->len += 1;
-                opt = NULL;
-            } else if (a.opt_len > 0) {
-                // only opt found
-                opt = cliargs_find_by_name(args, a.opt, a.opt_len);
-                if (!opt) {
-                    return cliargs_error_unknown_flag;
-                }
-                if (opt->type == cliargs_type_bool) {
-                    // boolean flags don't need to wait for a val
-                    if (opt->len >= opt->max_len) {
-                        return cliargs_error_too_many_flag_args;
-                    }
-                    cliargs_val v;
-                    v.uint = 1;
-                    opt->vals[opt->len] = v;
-                    opt->len += 1;
-                    opt = NULL;
-                }
-            } else {
-                if (args->positional.len >= args->positional.max_len) {
-                    return cliargs_error_too_many_pos_args;
-                }
-                args->positional.vals[args->positional.len] = arg;
-                args->positional.len += 1;
+            cliargs_error err = cliargs_add_pos_arg(args, arg);
+            if (err) {
+                return err;
             }
         }
     }
