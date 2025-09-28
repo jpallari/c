@@ -6,27 +6,18 @@ void test_arena(test *t) {
     size_t buf1_count = 5, buf2_count = 4;
     jp_arena arena = jp_arena_new((u8 *)buffer, sizeof(buffer));
     jp_allocator alloc = jp_arena_allocator_new(&arena);
-    assert_eq(t, arena.size, sizeof(buffer), "%ld", "arena size");
+    size_t buffer_size = sizeof(buffer);
+    assert_eq_uint(t, arena.size, buffer_size, "arena size");
 
     // allocate 1st arena buffer
     int *buf1 = jp_new(int, buf1_count, &alloc);
-    assert_eq(
-        t,
-        arena.used,
-        sizeof(int) * buf1_count,
-        "%ld",
-        "arena used after first alloc"
-    );
+    size_t buf1_size = sizeof(int) * buf1_count;
+    assert_eq_uint(t, arena.used, buf1_size, "arena used after first alloc");
 
     // allocate 2nd arena buffer
     int *buf2 = jp_new(int, buf2_count, &alloc);
-    assert_eq(
-        t,
-        arena.used,
-        sizeof(int) * (buf1_count + buf2_count),
-        "%ld",
-        "arena used after second alloc"
-    );
+    size_t buf2_size = sizeof(int) * (buf1_count + buf2_count);
+    assert_eq_uint(t, arena.used, buf2_size, "arena used after second alloc");
 
     // fill arena buffers
     for (size_t i = 0; i < buf1_count; i += 1) { buf1[i] = 100 + (int)i; }

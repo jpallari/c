@@ -30,7 +30,13 @@ void test_bytes_copy(test *t) {
             mismatches += 1;
         }
     }
-    assert_eq(t, mismatches, 0, "%d", "no mismatches should be found");
+    int expected_mismatches = 0;
+    assert_eq_sint(
+        t,
+        mismatches,
+        expected_mismatches,
+        "no mismatches should be found"
+    );
 
     jp_free(arr1, &jp_std_allocator);
     jp_free(arr2, &jp_std_allocator);
@@ -65,7 +71,13 @@ void test_bytes_move_no_overlap(test *t) {
             mismatches += 1;
         }
     }
-    assert_eq(t, mismatches, 0, "%d", "no mismatches should be found");
+    int expected_mismatches = 0;
+    assert_eq_sint(
+        t,
+        mismatches,
+        expected_mismatches,
+        "no mismatches should be found"
+    );
 
     jp_free(arr1, &jp_std_allocator);
     jp_free(arr2, &jp_std_allocator);
@@ -80,14 +92,14 @@ void test_bytes_move_overlap_left(test *t) {
     jp_bytes_move(left, right, sizeof(int) * 4);
 
     // check moves
-    assert_eq(t, arr[0], 10, "%d", "0: remains the same");
-    assert_eq(t, arr[1], 11, "%d", "1: remains the same");
-    assert_eq(t, arr[2], 14, "%d", "2: moved");
-    assert_eq(t, arr[3], 15, "%d", "3: moved");
-    assert_eq(t, arr[4], 16, "%d", "4: moved");
-    assert_eq(t, arr[5], 17, "%d", "5: moved");
-    assert_eq(t, arr[6], 16, "%d", "6: remains the same");
-    assert_eq(t, arr[7], 17, "%d", "7: remains the same");
+    assert_eq_sint(t, arr[0], 10, "0: remains the same");
+    assert_eq_sint(t, arr[1], 11, "1: remains the same");
+    assert_eq_sint(t, arr[2], 14, "2: moved");
+    assert_eq_sint(t, arr[3], 15, "3: moved");
+    assert_eq_sint(t, arr[4], 16, "4: moved");
+    assert_eq_sint(t, arr[5], 17, "5: moved");
+    assert_eq_sint(t, arr[6], 16, "6: remains the same");
+    assert_eq_sint(t, arr[7], 17, "7: remains the same");
 }
 
 void test_bytes_move_overlap_right(test *t) {
@@ -99,14 +111,14 @@ void test_bytes_move_overlap_right(test *t) {
     jp_bytes_move(right, left, sizeof(int) * 4);
 
     // check moves
-    assert_eq(t, arr[0], 10, "%d", "0: remains the same");
-    assert_eq(t, arr[1], 11, "%d", "1: remains the same");
-    assert_eq(t, arr[2], 12, "%d", "2: remains the same");
-    assert_eq(t, arr[3], 11, "%d", "3: moved");
-    assert_eq(t, arr[4], 12, "%d", "4: moved");
-    assert_eq(t, arr[5], 13, "%d", "5: moved");
-    assert_eq(t, arr[6], 14, "%d", "6: moved");
-    assert_eq(t, arr[7], 17, "%d", "7: remains the same");
+    assert_eq_sint(t, arr[0], 10, "0: remains the same");
+    assert_eq_sint(t, arr[1], 11, "1: remains the same");
+    assert_eq_sint(t, arr[2], 12, "2: remains the same");
+    assert_eq_sint(t, arr[3], 11, "3: moved");
+    assert_eq_sint(t, arr[4], 12, "4: moved");
+    assert_eq_sint(t, arr[5], 13, "5: moved");
+    assert_eq_sint(t, arr[6], 14, "6: moved");
+    assert_eq_sint(t, arr[7], 17, "7: remains the same");
 }
 
 void test_bytes_zero(test *t) {

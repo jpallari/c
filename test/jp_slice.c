@@ -6,16 +6,16 @@ void test_slice_span(test *t) {
     jp_slice s1 = jp_slice_span(&arr[2], &arr[6]);
     jp_slice s2 = jp_slice_span(&arr[6], &arr[2]);
 
-    assert_eq(t, s1.len, 4L, "%ld", "slice 1 length 4");
-    assert_eq(t, s2.len, 4L, "%ld", "slice 2 length 4");
-    assert_eq(t, s1.buffer[0], 12, "%d", "slice 1 index 0");
-    assert_eq(t, s1.buffer[1], 13, "%d", "slice 1 index 1");
-    assert_eq(t, s1.buffer[2], 14, "%d", "slice 1 index 2");
-    assert_eq(t, s1.buffer[3], 15, "%d", "slice 1 index 3");
-    assert_eq(t, s2.buffer[0], 12, "%d", "slice 2 index 0");
-    assert_eq(t, s2.buffer[1], 13, "%d", "slice 2 index 1");
-    assert_eq(t, s2.buffer[2], 14, "%d", "slice 2 index 2");
-    assert_eq(t, s2.buffer[3], 15, "%d", "slice 2 index 3");
+    assert_eq_uint(t, s1.len, 4L, "slice 1 length 4");
+    assert_eq_uint(t, s2.len, 4L, "slice 2 length 4");
+    assert_eq_uint(t, s1.buffer[0], 12, "slice 1 index 0");
+    assert_eq_uint(t, s1.buffer[1], 13, "slice 1 index 1");
+    assert_eq_uint(t, s1.buffer[2], 14, "slice 1 index 2");
+    assert_eq_uint(t, s1.buffer[3], 15, "slice 1 index 3");
+    assert_eq_uint(t, s2.buffer[0], 12, "slice 2 index 0");
+    assert_eq_uint(t, s2.buffer[1], 13, "slice 2 index 1");
+    assert_eq_uint(t, s2.buffer[2], 14, "slice 2 index 2");
+    assert_eq_uint(t, s2.buffer[3], 15, "slice 2 index 3");
 }
 
 void test_slice_equal(test *t) {
@@ -40,9 +40,9 @@ void test_slice_from(test *t) {
     jp_slice s1 = jp_slice_from(str);
     jp_slice s2 = jp_slice_from(arr);
 
-    assert_eq(t, s1.len, 13L, "%ld", "s1 len must be size of string");
-    assert_eq(
-        t, s2.len, sizeof(int) * 4, "%ld", "s2 len must be size of array"
+    assert_eq_uint(t, s1.len, 13L, "s1 len must be size of string");
+    assert_eq_uint(
+        t, s2.len, sizeof(int) * 4, "s2 len must be size of array"
     );
     assert_eq_cstr(
         t, (char *)s1.buffer, "hello world!", "s1 contents should be the same"
@@ -112,12 +112,11 @@ void test_slice_from_cstr_unsafe(test *t) {
     char str[] = "hello world!";
     jp_slice slice = jp_slice_from_cstr_unsafe(str);
 
-    assert_eq(t, slice.len, 12L, "%ld", "slice len must match string length");
-    assert_eq(
+    assert_eq_uint(t, slice.len, 12L, "slice len must match string length");
+    assert_eq_uint(
         t,
         (uintptr_t)slice.buffer,
         (uintptr_t)str,
-        "%lu",
         "slice and str pointers must match"
     );
 }

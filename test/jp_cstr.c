@@ -23,28 +23,25 @@ void test_cstr_eq_unsafe(test *t) {
 }
 
 void test_cstr_len(test *t) {
-    assert_eq(
+    assert_eq_uint(
         t,
         jp_cstr_len("hello", 6),
         5L,
-        "%ld",
         "length should be counted until null terminator"
     );
-    assert_eq(
+    assert_eq_uint(
         t,
         jp_cstr_len("hello", 3),
         3L,
-        "%ld",
         "length should be up to the capacity"
     );
 }
 
 void test_cstr_len_unsafe(test *t) {
-    assert_eq(
+    assert_eq_uint(
         t,
         jp_cstr_len_unsafe("hello"),
         5L,
-        "%ld",
         "length should be counted until null terminator"
     );
 }
@@ -63,28 +60,28 @@ void test_cstr_split(test *t) {
     // first word
     {
         jp_slice slice = jp_cstr_split_next(&split);
-        assert_eq(t, slice.len, 4L, "%ld", "1 - length");
+        assert_eq_uint(t, slice.len, 4L, "1 - length");
         assert_eq_bytes(t, slice.buffer, "this", slice.len, "1 - contents");
     }
 
     // second word
     {
         jp_slice slice = jp_cstr_split_next(&split);
-        assert_eq(t, slice.len, 2L, "%ld", "2 - length");
+        assert_eq_uint(t, slice.len, 2L, "2 - length");
         assert_eq_bytes(t, slice.buffer, "is", slice.len, "2 - contents");
     }
 
     // third word
     {
         jp_slice slice = jp_cstr_split_next(&split);
-        assert_eq(t, slice.len, 1L, "%ld", "3 - length");
+        assert_eq_uint(t, slice.len, 1L, "3 - length");
         assert_eq_bytes(t, slice.buffer, "a", slice.len, "3 - contents");
     }
 
     // fourth word
     {
         jp_slice slice = jp_cstr_split_next(&split);
-        assert_eq(t, slice.len, 6L, "%ld", "4 - length");
+        assert_eq_uint(t, slice.len, 6L, "4 - length");
         assert_eq_bytes(t, slice.buffer, "string", slice.len, "4 - contents");
     }
 
@@ -113,7 +110,7 @@ void test_cstr_split_collect(test *t) {
     // collect all sub-strings
     {
         size_t len = jp_cstr_split_collect(arr, jp_countof(arr), &split);
-        assert_eq(t, len, 6L, "%ld", "1 - length");
+        assert_eq_uint(t, len, 6L, "1 - length");
         assert_eq_bytes(
             t, arr[0].buffer, "collecting", arr[0].len, "1 index 0 - contents"
         );
@@ -140,7 +137,7 @@ void test_cstr_split_collect(test *t) {
     // collect some sub-strings
     {
         size_t len = jp_cstr_split_collect(arr, 3, &split);
-        assert_eq(t, len, 3L, "%ld", "2 - length");
+        assert_eq_uint(t, len, 3L, "2 - length");
         assert_eq_bytes(
             t, arr[0].buffer, "collecting", arr[0].len, "2 index 0 - contents"
         );
@@ -214,7 +211,7 @@ void test_cstr_split_collect_strings(test *t) {
     {
         size_t len =
             jp_cstr_split_collect_strings(arr, jp_countof(arr), &split);
-        assert_eq(t, len, 6L, "%ld", "1 - length");
+        assert_eq_uint(t, len, 6L, "1 - length");
         assert_eq_cstr(t, arr[0], "collecting", "1 index 0 - contents");
         assert_eq_cstr(t, arr[1], "all", "1 index 1 - contents");
         assert_eq_cstr(t, arr[2], "words", "1 index 2 - contents");
@@ -232,7 +229,7 @@ void test_cstr_split_collect_strings(test *t) {
     // collect some sub-strings
     {
         size_t len = jp_cstr_split_collect_strings(arr, 3, &split);
-        assert_eq(t, len, 3L, "%ld", "2 - length");
+        assert_eq_uint(t, len, 3L, "2 - length");
         assert_eq_cstr(t, arr[0], "collecting", "2 index 0 - contents");
         assert_eq_cstr(t, arr[1], "all", "2 index 1 - contents");
         assert_eq_cstr(t, arr[2], "words", "2 index 2 - contents");

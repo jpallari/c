@@ -11,47 +11,10 @@
 // Panic
 ////////////////////////
 
-#define panic __builtin_unreachable
-
-////////////////////////
-// Breakpoint
-////////////////////////
-
-// Use a builtin for breakpoints if possible
-#if defined(__has_builtin)
-#if __has_builtin(__builtin_debugtrap)
-#define breakpoint() __builtin_debugtrap()
-#elif __has_builtin(__debugbreak)
-#define breakpoint() __debugbreak()
-#endif
-#endif
-
-// ASM based breakpoint
-#if !defined(breakpoint)
-#if defined(__i386__) || defined(__x86_64__)
-static inline void breakpoint(void) {
-    __asm__ __volatile__("int3");
-}
-#elif defined(__aarch64__)
-static inline void breakpoint(void) {
-    __asm__ __volatile__(".inst 0xd4200000");
-}
-#elif defined(__arm__)
-static inline void breakpoint(void) {
-    __asm__ __volatile__(".inst 0xe7f001f0");
-}
-#else
-// Breakpoint using signals
-#if !defined(breakpoint)
-#include <signal.h>
-#if defined(SIGTRAP)
-#define breakpoint() raise(SIGTRAP)
-#else
-#define breakpoint() raise(SIGABRT)
-#endif
-#endif
-#endif
-#endif
+/**
+ * Quit the program immediately
+ */
+#define panic() exit(10)
 
 ////////////////////////
 // Config
@@ -59,6 +22,7 @@ static inline void breakpoint(void) {
 
 static int color_enabled = 1;
 static int trap_on_assert_fail = 0;
+static int print_all_asserts = 0;
 
 ////////////////////////
 // Reporting
@@ -105,20 +69,16 @@ typedef struct {
 
 b32 test_report_append(
     test *t,
-    b32 passed,
+    const b32 passed,
     const char *log_message,
-    size_t log_message_size,
+    const size_t log_message_size,
     const char *file,
-    int line,
-    const char *format,
-    const void *left,
-    const void *right
+    const int line
 ) {
     assert(t && "test report must not be null");
     assert(t->logs_handle && "logs handle must not be null");
     assert(t->logs_handle->logs && "logs storage must not be null");
 
-    char buffer[1024] = {0};
     u64 logs_offset = jp_dynarr_len(t->logs_handle->logs);
 
     test_assert assert_report = {
@@ -136,14 +96,9 @@ b32 test_report_append(
         panic();
     }
 
-    const char *log = log_message;
-    if (format && left && right) {
-        snprintf(buffer, sizeof(buffer), format, left, right, log_message);
-        log = buffer;
-    }
-
-    u8 *next_logs =
-        jp_dynarr_push_grow(t->logs_handle->logs, log, log_message_size, u8);
+    u8 *next_logs = jp_dynarr_push_grow(
+        t->logs_handle->logs, log_message, log_message_size, u8
+    );
     if (next_logs) {
         t->logs_handle->logs = next_logs;
     } else {
@@ -159,6 +114,102 @@ b32 test_report_append(
         breakpoint();
     }
     return passed;
+}
+
+b32 test_report_append_formatted_cstr(
+    test *t,
+    b32 passed,
+    const char *log_message,
+    const char *file,
+    const int line,
+    const char *cmp,
+    const char *left,
+    const char *right
+) {
+    char buffer[1024] = {0};
+    int len = snprintf(
+        buffer, sizeof(buffer), "%s %s %s // %s", left, cmp, right, log_message
+    );
+    if (len < 0) {
+        panic();
+    }
+    buffer[len] = '\0';
+    return test_report_append(t, passed, buffer, (size_t)len + 1, file, line);
+}
+
+b32 test_report_append_formatted_float(
+    test *t,
+    b32 passed,
+    const char *log_message,
+    const char *file,
+    const int line,
+    const char *cmp,
+    const double left,
+    const double right
+) {
+    char buffer[1024] = {0};
+    int len = snprintf(
+        buffer, sizeof(buffer), "%f %s %f // %s", left, cmp, right, log_message
+    );
+    if (len < 0) {
+        panic();
+    }
+    buffer[len] = '\0';
+    return test_report_append(t, passed, buffer, (size_t)len + 1, file, line);
+}
+
+b32 test_report_append_formatted_s64(
+    test *t,
+    b32 passed,
+    const char *log_message,
+    const char *file,
+    int line,
+    const char *cmp,
+    const s64 left,
+    const s64 right
+) {
+    char buffer[1024] = {0};
+    int len = snprintf(
+        buffer,
+        sizeof(buffer),
+        "%ld %s %ld // %s",
+        left,
+        cmp,
+        right,
+        log_message
+    );
+    if (len < 0) {
+        panic();
+    }
+    buffer[len] = '\0';
+    return test_report_append(t, passed, buffer, (size_t)len + 1, file, line);
+}
+
+b32 test_report_append_formatted_u64(
+    test *t,
+    b32 passed,
+    const char *log_message,
+    const char *file,
+    int line,
+    const char *cmp,
+    const u64 left,
+    const u64 right
+) {
+    char buffer[1024] = {0};
+    int len = snprintf(
+        buffer,
+        sizeof(buffer),
+        "%lu %s %lu // %s",
+        left,
+        cmp,
+        right,
+        log_message
+    );
+    if (len < 0) {
+        panic();
+    }
+    buffer[len] = '\0';
+    return test_report_append(t, passed, buffer, (size_t)len + 1, file, line);
 }
 
 void test_suite_report_pretty(test_suite_report *report, FILE *stream) {
@@ -202,7 +253,7 @@ void test_suite_report_pretty(test_suite_report *report, FILE *stream) {
         );
         for (u32 j = 0; j < tr.assert_count; j += 1) {
             test_assert ar = tr.asserts[j];
-            if (!ar.passed) {
+            if (!ar.passed || print_all_asserts) {
                 fprintf(
                     stream,
                     "    %s:%d: %s\n",
@@ -240,6 +291,8 @@ int test_main(
     size_t test_count,
     test_case *test_cases
 ) {
+    (void)argc; // ignore argc and argv for now
+    (void)argv;
     FILE *stream = stderr;
 
     // settings
@@ -250,6 +303,10 @@ int test_main(
     const char *assert_trap = getenv("ASSERT_TRAP");
     if (assert_trap) {
         trap_on_assert_fail = 1;
+    }
+    const char *assert_print_all = getenv("ASSERT_PRINT_ALL");
+    if (assert_print_all) {
+        print_all_asserts = 1;
     }
 
     // buffer to back logs
@@ -345,39 +402,50 @@ int test_main(
 ////////////////////////
 
 #define assert_true(t, c, msg) \
-    test_report_append( \
-        (t), \
-        !!(c), \
-        (msg), \
-        sizeof(msg), \
-        __FILE__, \
-        __LINE__, \
-        NULL, \
-        NULL, \
-        NULL \
-    )
+    test_report_append((t), !!(c), (msg), sizeof(msg), __FILE__, __LINE__)
 
 #define assert_false(t, c, msg) assert_true(t, !(c), msg)
 
-#define __assert_cmp(t, c, l, r, cmp, format, msg) \
-    test_report_append( \
-        (t), \
-        !!(c), \
-        (msg), \
-        sizeof(msg), \
-        __FILE__, \
-        __LINE__, \
-        (format " " #cmp " " format " // %s"), \
-        &(l), \
-        &(r) \
+#define __assert_cmp_uint(t, c, l, r, cmp, msg) \
+    test_report_append_formatted_u64( \
+        (t), !!(c), (msg), __FILE__, __LINE__, #cmp, (l), (r) \
     )
 
-#define assert_eq(t, a, b, f, msg) __assert_cmp(t, (a) == (b), a, b, ==, f, msg)
-#define assert_ne(t, a, b, f, msg) __assert_cmp(t, (a) != (b), a, b, !=, f, msg)
-#define assert_lt(t, a, b, f, msg) __assert_cmp(t, (a) < (b), a, b, <, f, msg)
-#define assert_le(t, a, b, f, msg) __assert_cmp(t, (a) <= (b), a, b, <=, f, msg)
-#define assert_gt(t, a, b, f, msg) __assert_cmp(t, (a) > (b), a, b, >, f, msg)
-#define assert_ge(t, a, b, f, msg) __assert_cmp(t, (a) >= (b), a, b, >=, f, msg)
+#define __assert_cmp_sint(t, c, l, r, cmp, msg) \
+    test_report_append_formatted_s64( \
+        (t), !!(c), (msg), __FILE__, __LINE__, #cmp, (l), (r) \
+    )
+
+#define assert_eq_uint(t, a, b, msg) \
+    __assert_cmp_uint(t, (a) == (b), a, b, ==, msg)
+#define assert_ne_uint(t, a, b, msg) \
+    __assert_cmp_uint(t, (a) != (b), a, b, !=, msg)
+#define assert_lt_uint(t, a, b, msg) \
+    __assert_cmp_uint(t, (a) < (b), a, b, <, msg)
+#define assert_le_uint(t, a, b, msg) \
+    __assert_cmp_uint(t, (a) <= (b), a, b, <=, msg)
+#define assert_gt_uint(t, a, b, msg) \
+    __assert_cmp_uint(t, (a) > (b), a, b, >, msg)
+#define assert_ge_uint(t, a, b, msg) \
+    __assert_cmp_uint(t, (a) >= (b), a, b, >=, msg)
+
+#define assert_eq_sint(t, a, b, msg) \
+    __assert_cmp_sint(t, (a) == (b), a, b, ==, msg)
+#define assert_ne_sint(t, a, b, msg) \
+    __assert_cmp_sint(t, (a) != (b), a, b, !=, msg)
+#define assert_lt_sint(t, a, b, msg) \
+    __assert_cmp_sint(t, (a) < (b), a, b, <, msg)
+#define assert_le_sint(t, a, b, msg) \
+    __assert_cmp_sint(t, (a) <= (b), a, b, <=, msg)
+#define assert_gt_sint(t, a, b, msg) \
+    __assert_cmp_sint(t, (a) > (b), a, b, >, msg)
+#define assert_ge_sint(t, a, b, msg) \
+    __assert_cmp_sint(t, (a) >= (b), a, b, >=, msg)
+
+#define assert_eq_float(t, l, r, eps, msg) \
+    test_report_append_formatted_float( \
+        (t), abs((l) - (r)) < (eps), (msg), __FILE__, __LINE__, "==", (l), (r) \
+    )
 
 #define assert_eq_bytes(t, l, r, capacity, msg) \
     assert_true(t, jp_bytes_eq((l), (r), (capacity)), msg)
@@ -386,9 +454,27 @@ int test_main(
     assert_false(t, jp_bytes_eq((l), (r), (capacity)), msg)
 
 #define assert_eq_cstr(t, l, r, msg) \
-    __assert_cmp(t, jp_cstr_eq_unsafe((l), (r)), l, r, ==, "%s", msg)
+    test_report_append_formatted_cstr( \
+        (t), \
+        jp_cstr_eq_unsafe((l), (r)), \
+        (msg), \
+        __FILE__, \
+        __LINE__, \
+        "==", \
+        (l), \
+        (r) \
+    )
 
 #define assert_ne_cstr(t, l, r, msg) \
-    __assert_cmp(t, !jp_cstr_eq_unsafe((l), (r)), l, r, !=, "%s", msg)
+    test_report_append_formatted_cstr( \
+        (t), \
+        !jp_cstr_eq_unsafe((l), (r)), \
+        (msg), \
+        __FILE__, \
+        __LINE__, \
+        "!=", \
+        (l), \
+        (r) \
+    )
 
 #endif // JP_TESTR_H

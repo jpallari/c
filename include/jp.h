@@ -34,6 +34,42 @@ typedef s32 b32;
 // Debugging
 ////////////////////////
 
+#ifdef JP_DEBUG
+// Breakpoint: Use a builtin if possible
+#if defined(__has_builtin)
+#if __has_builtin(__builtin_debugtrap)
+#define breakpoint() __builtin_debugtrap()
+#elif __has_builtin(__debugbreak)
+#define breakpoint() __debugbreak()
+#endif
+#endif
+
+// Breakpoint: ASM based
+#if !defined(breakpoint)
+#if defined(__i386__) || defined(__x86_64__)
+static inline void breakpoint(void) {
+    __asm__ __volatile__("int3");
+}
+#elif defined(__aarch64__)
+static inline void breakpoint(void) {
+    __asm__ __volatile__(".inst 0xd4200000");
+}
+#elif defined(__arm__)
+static inline void breakpoint(void) {
+    __asm__ __volatile__(".inst 0xe7f001f0");
+}
+#else
+// Breakpoint: Use signals
+#include <signal.h>
+#if defined(SIGTRAP)
+#define breakpoint() raise(SIGTRAP)
+#else
+#define breakpoint() raise(SIGABRT)
+#endif
+#endif
+#endif
+#endif // JP_DEBUG
+
 #ifdef JP_USE_ASSERT_H
 #include <assert.h>
 #elif JP_DEBUG
@@ -54,6 +90,8 @@ typedef s32 b32;
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))
+#define abs(a) (((a) >= 0) ? (a) : -(a))
+#define round_up_to_multiple(n, to) (((n) + (to) - 1) & ~((to) - 1))
 
 ////////////////////////
 // Arrays
