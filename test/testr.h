@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 ////////////////////////
 // Panic
@@ -306,6 +307,8 @@ int test_main(
     // settings
     const char *no_color = getenv("NO_COLOR");
     if (no_color) {
+        color_enabled = 0;
+    } else if (!isatty(2)) {
         color_enabled = 0;
     }
     const char *assert_trap = getenv("ASSERT_TRAP");
