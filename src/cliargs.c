@@ -53,9 +53,9 @@ void cliargs_write_error(cliargs_state state, const char *format, ...) {
     len = snprintf(
         state.args->errors.buffer + state.args->errors.len,
         remaining_len,
-        "Failed to process argument '%s' at %d: ",
-        state.argv[state.index],
-        state.index + 1
+        "Failed to process argument #%d '%s': ",
+        state.index + 1,
+        state.argv[state.index]
     );
     if (len < 0) {
         return;
@@ -220,7 +220,7 @@ cliargs_find_by_name(cliargs_state state, const char *name, size_t name_len) {
         }
     }
 
-    cliargs_write_error(state, "Unknown flag '%.*%s'.\n", name_len, name);
+    cliargs_write_error(state, "Unknown flag.");
     return NULL;
 }
 
@@ -231,7 +231,7 @@ cliargs_error cliargs_add_pos_arg(cliargs_state state) {
     if (state.args->positional.len >= state.args->positional.max_len) {
         cliargs_write_error(
             state,
-            "Too many positional arguments. Expected max %d arguments.\n",
+            "Too many positional arguments. Expected max %d arguments.",
             state.args->positional.max_len
         );
         return cliargs_error_too_many_pos_args;
@@ -250,7 +250,7 @@ cliargs_error cliargs_parse_value_to_opt(
     if (opt->len >= opt->max_len) {
         cliargs_write_error(
             state,
-            "Too many arguments for '%s'. Expected max %d arguments.\n",
+            "Too many arguments for '%s'. Expected max %d arguments.",
             opt->long_name,
             opt->max_len
         );
@@ -265,12 +265,12 @@ cliargs_error cliargs_parse_value_to_opt(
     case cliargs_error_parse_fail:
         cliargs_write_error(
             state,
-            "Could not parse value of type %s",
+            "Could not parse value of type %s.",
             cliargs_type_to_name(opt->type)
         );
         return err;
     case cliargs_error_unknown_type:
-        cliargs_write_error(state, "Unexpected type");
+        cliargs_write_error(state, "Unexpected type.");
         return err;
     case cliargs_error_unknown_flag:
     case cliargs_error_too_many_flag_args:
@@ -290,7 +290,7 @@ cliargs_opt_add_value(cliargs_state state, cliargs_opt *opt, cliargs_val v) {
     if (opt->len >= opt->max_len) {
         cliargs_write_error(
             state,
-            "Too many arguments for '%s'. Expected max %d arguments.\n",
+            "Too many arguments for '%s'. Expected max %d arguments.",
             opt->long_name,
             opt->max_len
         );
@@ -340,7 +340,7 @@ cliargs_error cliargs_parse(cliargs *args, int argc, char **argv) {
             // awaiting val for an opt
             if (!a.val_len) {
                 cliargs_write_error(
-                    state, "Expected a value for option '%s'.\n", opt->long_name
+                    state, "Expected a value for option '%s'.", opt->long_name
                 );
                 return cliargs_error_value_expected;
             }
