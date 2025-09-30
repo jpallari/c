@@ -217,11 +217,13 @@ void test_suite_report_pretty(test_suite_report *report, FILE *stream) {
 
     const char *color_ok = "\x1B[32m";
     const char *color_fail = "\x1B[31m";
+    const char *color_skip = "\x1B[33m";
     const char *color_reset = "\x1B[0m";
     const char *color_info = "\x1B[1;30m";
     if (!color_enabled) {
         color_ok = "";
         color_fail = "";
+        color_skip = "";
         color_reset = "";
         color_info = "";
     }
@@ -235,10 +237,18 @@ void test_suite_report_pretty(test_suite_report *report, FILE *stream) {
 
     for (u64 i = 0; i < report->test_count; i += 1) {
         test_report tr = report->test_reports[i];
-        const char *prefix =
-            tr.assert_count > tr.asserts_passed ? "FAIL" : " OK ";
-        const char *color =
-            tr.assert_count > tr.asserts_passed ? color_fail : color_ok;
+        const char *prefix = "";
+        const char *color = "";
+        if (tr.assert_count == 0) {
+            prefix = "SKIP";
+            color = color_skip;
+        } else if (tr.assert_count > tr.asserts_passed) {
+            prefix = "FAIL";
+            color = color_fail;
+        } else {
+            prefix = " OK ";
+            color = color_ok;
+        }
         fprintf(
             stream,
             "%s[%s]%s %s %s(%d/%d passed)%s\n",
@@ -291,8 +301,6 @@ int test_main(
     size_t test_count,
     test_case *test_cases
 ) {
-    (void)argc; // ignore argc and argv for now
-    (void)argv;
     FILE *stream = stderr;
 
     // settings
@@ -346,25 +354,39 @@ int test_main(
 
     for (size_t i = 0; i < test_count; i += 1) {
         test_case test_case = test_cases[i];
+        test_report *tr = &report.test_reports[i];
+        tr->name = test_case.name;
+        tr->asserts =
+            &asserts_handle.asserts[jp_dynarr_len(asserts_handle.asserts)];
+
         test t = {
             .logs_handle = &logs_handle,
             .asserts_handle = &asserts_handle,
             .assert_count = 0,
             .asserts_passed = 0,
         };
-        test_report *tr = &report.test_reports[i];
-        tr->name = test_case.name;
-        tr->asserts =
-            &asserts_handle.asserts[jp_dynarr_len(asserts_handle.asserts)];
 
-        if (setup && setup->before) {
-            setup->before();
+        b32 run_test = argc < 2;
+        for (int i = 1; i < argc; i++) {
+            if (run_test) {
+                break;
+            }
+            if (jp_cstr_len_unsafe(argv[i])) {
+                run_test |=
+                    jp_cstr_match_wild_ascii_unsafe(test_case.name, argv[i]);
+            }
         }
 
-        test_case.test_code(&t);
+        if (run_test) {
+            if (setup && setup->before) {
+                setup->before();
+            }
 
-        if (setup && setup->after) {
-            setup->after();
+            test_case.test_code(&t);
+
+            if (setup && setup->after) {
+                setup->after();
+            }
         }
 
         tr->assert_count += t.assert_count;

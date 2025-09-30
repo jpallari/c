@@ -56,12 +56,6 @@ typedef enum {
     cliargs_type_bool, // boolean value (true/false)
 } cliargs_type;
 
-const char *cliargs_type_s64_name = "signed integer";
-const char *cliargs_type_u64_name = "unsigned integer";
-const char *cliargs_type_f64_name = "real number";
-const char *cliargs_type_str_name = "string";
-const char *cliargs_type_bool_name = "boolean";
-
 /**
  * Types of data stored from parsed CLI arguments.
  */

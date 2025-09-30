@@ -20,13 +20,19 @@ typedef struct {
     u16 prefix_dash_count;
 } cliargs_arg;
 
+const char *cliargs_type_s64_tname = "signed integer";
+const char *cliargs_type_u64_tname = "unsigned integer";
+const char *cliargs_type_f64_tname = "real number";
+const char *cliargs_type_str_tname = "string";
+const char *cliargs_type_bool_tname = "boolean";
+
 const char *cliargs_type_to_name(cliargs_type type) {
     switch (type) {
-    case cliargs_type_s64: return cliargs_type_s64_name;
-    case cliargs_type_u64: return cliargs_type_u64_name;
-    case cliargs_type_f64: return cliargs_type_f64_name;
-    case cliargs_type_str: return cliargs_type_str_name;
-    case cliargs_type_bool: return cliargs_type_bool_name;
+    case cliargs_type_s64: return cliargs_type_s64_tname;
+    case cliargs_type_u64: return cliargs_type_u64_tname;
+    case cliargs_type_f64: return cliargs_type_f64_tname;
+    case cliargs_type_str: return cliargs_type_str_tname;
+    case cliargs_type_bool: return cliargs_type_bool_tname;
     default: assert(0 && "unexpected type"); return "";
     }
 }

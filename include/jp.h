@@ -823,6 +823,26 @@ size_t jp_cstr_split_collect_strings(
     char **strings, size_t len, jp_cstr_split_iter *split
 );
 
+/**
+ * Wildcard match for ASCII C strings.
+ *
+ * @param txt text to match
+ * @param txt_len length of the text
+ * @param pat pattern to match against
+ * @param pat_len length of the pattern
+ */
+b32 jp_cstr_match_wild_ascii(
+    const char *txt, size_t txt_len, const char *pat, size_t pat_len
+);
+
+/**
+ * Unsafe wildcard match for ASCII C strings.
+ *
+ * @param txt text to match
+ * @param pat pattern to match against
+ */
+b32 jp_cstr_match_wild_ascii_unsafe(const char *txt, const char *pat);
+
 ////////////////////////
 // File I/O (blocking)
 ////////////////////////

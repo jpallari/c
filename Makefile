@@ -1,6 +1,7 @@
 CC = gcc
 LANG_STD = c11
 SAN_FLAGS = -fsanitize=address,leak,undefined
+TEST_FILTERS =
 
 # Directories
 INCLUDE_DIR = include
@@ -150,7 +151,7 @@ $(TEST_BIN_FILES): $(TEST_BIN_DIR)/%: $(TEST_BIN_DIR)/%.o $(DEBUG_OBJ_FILES)
 	$(CC) $(LDFLAGS) $(DEBUG_LDFLAGS) $^ -o $@
 
 $(TEST_TARGET_PREFIX)%: $(TEST_BIN_DIR)/%
-	./$<
+	./$< $(TEST_FILTERS)
 
 lint: $(SRC_FILES) $(HEADER_FILES) $(CMD_FILES) $(TEST_FILES)
 	cppcheck -DJP_USE_ASSERT_H --check-level=exhaustive $^

@@ -497,6 +497,41 @@ size_t jp_cstr_split_collect_strings(
     return i;
 }
 
+b32 jp_cstr_match_wild_ascii(
+    const char *txt, size_t txt_len, const char *pat, size_t pat_len
+) {
+    size_t i = 0, j = 0, start_index = 0, match = 0;
+    b32 start_index_set = 0;
+
+    while (i < txt_len) {
+        if (j < pat_len && (pat[j] == '?' || pat[j] == txt[i])) {
+            i += 1;
+            j += 1;
+        } else if (j < pat_len && pat[j] == '*') {
+            start_index = j;
+            start_index_set = 1;
+            match = i;
+            j += 1;
+        } else if (start_index_set) {
+            j = start_index + 1;
+            match += 1;
+            i = match;
+        } else {
+            return 0;
+        }
+    }
+
+    while (j < pat_len && pat[j] == '*') { j += 1; }
+
+    return j == pat_len;
+}
+
+b32 jp_cstr_match_wild_ascii_unsafe(const char *txt, const char *pat) {
+    size_t txt_len = jp_cstr_len_unsafe(txt);
+    size_t pat_len = jp_cstr_len_unsafe(pat);
+    return jp_cstr_match_wild_ascii(txt, txt_len, pat, pat_len);
+}
+
 ////////////////////////
 // File I/O (blocking)
 ////////////////////////
