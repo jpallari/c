@@ -1,4 +1,4 @@
-#include "jp.h"
+#include "std.h"
 #include "testr.h"
 
 void test_dynarr_push(test *t) {
@@ -6,7 +6,7 @@ void test_dynarr_push(test *t) {
     int value = 0;
 
     // initialize an array
-    int *arr = jp_dynarr_new(capacity, int, &jp_std_allocator);
+    int *arr = dynarr_new(capacity, int, &std_allocator);
     if (!assert_true(t, arr, "array must not be null")) {
         return;
     }
@@ -14,35 +14,35 @@ void test_dynarr_push(test *t) {
     // check initial values
     assert_eq_uint(
         t,
-        jp_dynarr_capacity(arr),
+        dynarr_capacity(arr),
         capacity,
         "capacity must remain the same"
     );
-    assert_eq_uint(t, jp_dynarr_len(arr), 0L, "length must start at zero");
+    assert_eq_uint(t, dynarr_len(arr), 0L, "length must start at zero");
 
     // fill the array
     for (u64 i = 0; i < capacity; i += 1) {
         value = 100 + (int)i;
         assert_true(
             t,
-            jp_dynarr_push(arr, &value, 1),
+            dynarr_push(arr, &value, 1),
             "push must succeed when there is capacity left"
         );
         assert_eq_uint(
             t,
-            jp_dynarr_capacity(arr),
+            dynarr_capacity(arr),
             capacity,
             "capacity must remain the same"
         );
         assert_eq_uint(
-            t, jp_dynarr_len(arr), (u64)(i + 1), "length must update"
+            t, dynarr_len(arr), (u64)(i + 1), "length must update"
         );
         assert_eq_sint(t, arr[i], value, "value must be found from the array");
     }
     assert_eq_uint(
         t,
-        jp_dynarr_capacity(arr),
-        jp_dynarr_len(arr),
+        dynarr_capacity(arr),
+        dynarr_len(arr),
         "capacity and count are the same after last push"
     );
 
@@ -50,19 +50,19 @@ void test_dynarr_push(test *t) {
     value = 200;
     assert_false(
         t,
-        jp_dynarr_push(arr, &value, 1),
+        dynarr_push(arr, &value, 1),
         "push does not succeed when capacity is met"
     );
     assert_eq_uint(
         t,
-        jp_dynarr_capacity(arr),
+        dynarr_capacity(arr),
         capacity,
         "capacity must remain the same"
     );
     assert_eq_uint(
         t,
-        jp_dynarr_capacity(arr),
-        jp_dynarr_len(arr),
+        dynarr_capacity(arr),
+        dynarr_len(arr),
         "capacity and count are the same after failed push"
     );
 
@@ -74,7 +74,7 @@ void test_dynarr_push(test *t) {
     }
 
     // exit
-    jp_dynarr_free(arr);
+    dynarr_free(arr);
 }
 
 void test_dynarr_push_grow(test *t) {
@@ -83,7 +83,7 @@ void test_dynarr_push_grow(test *t) {
     int arr_after_fill[] = {100, 101, 102, 103, 104};
 
     // initialize an array
-    int *arr = jp_dynarr_new(capacity, int, &jp_std_allocator);
+    int *arr = dynarr_new(capacity, int, &std_allocator);
     if (!assert_true(t, arr, "array must not be null")) {
         return;
     };
@@ -91,15 +91,15 @@ void test_dynarr_push_grow(test *t) {
     // fill the array
     for (u64 i = 0; i < capacity; i += 1) {
         value = 100 + (int)i;
-        jp_dynarr_push(arr, &value, 1);
+        dynarr_push(arr, &value, 1);
     }
 
     // push one more over the capacity
     value = 1000;
-    arr = jp_dynarr_push_grow(arr, &value, 1, int);
+    arr = dynarr_push_grow(arr, &value, 1, int);
     assert_true(t, arr, "allocation must succeed");
-    assert_eq_uint(t, jp_dynarr_len(arr), 6L, "count must increase");
-    assert_ge_uint(t, jp_dynarr_capacity(arr), 10L, "capacity must increase");
+    assert_eq_uint(t, dynarr_len(arr), 6L, "count must increase");
+    assert_ge_uint(t, dynarr_capacity(arr), 10L, "capacity must increase");
     assert_eq_bytes(
         t,
         arr,
@@ -109,13 +109,13 @@ void test_dynarr_push_grow(test *t) {
     );
     assert_eq_sint(
         t,
-        arr[jp_dynarr_len(arr) - 1],
+        arr[dynarr_len(arr) - 1],
         1000,
         "last value must exist in the array"
     );
 
     // exit
-    jp_dynarr_free(arr);
+    dynarr_free(arr);
 }
 
 void test_dynarr_clone(test *t) {
@@ -123,7 +123,7 @@ void test_dynarr_clone(test *t) {
     u64 capacity_increase = 3;
 
     // initialize an array
-    int *arr = jp_dynarr_new(capacity, int, &jp_std_allocator);
+    int *arr = dynarr_new(capacity, int, &std_allocator);
     if (!assert_true(t, arr, "array must not be null")) {
         return;
     };
@@ -131,25 +131,25 @@ void test_dynarr_clone(test *t) {
     // fill the array
     for (u64 i = 0; i < capacity; i += 1) {
         int value = 100 + (int)i;
-        jp_dynarr_push(arr, &value, 1);
+        dynarr_push(arr, &value, 1);
     }
 
     // clone array
-    int *arr_clone = jp_dynarr_clone(arr, capacity_increase, int);
+    int *arr_clone = dynarr_clone(arr, capacity_increase, int);
     if (!assert_true(t, arr, "cloned array must not be null")) {
         return;
     };
 
     assert_eq_uint(
         t,
-        jp_dynarr_capacity(arr_clone),
+        dynarr_capacity(arr_clone),
         capacity + capacity_increase,
         "capacity must be increased"
     );
     assert_eq_uint(
         t,
-        jp_dynarr_len(arr),
-        jp_dynarr_len(arr_clone),
+        dynarr_len(arr),
+        dynarr_len(arr_clone),
         "lengths must be same"
     );
 
@@ -158,8 +158,8 @@ void test_dynarr_clone(test *t) {
     );
 
     // exit
-    jp_dynarr_free(arr);
-    jp_dynarr_free(arr_clone);
+    dynarr_free(arr);
+    dynarr_free(arr_clone);
 }
 
 void test_dynarr_pop(test *t) {
@@ -167,35 +167,35 @@ void test_dynarr_pop(test *t) {
     int value = 0;
 
     // initialize an array
-    int *arr = jp_dynarr_new(capacity, int, &jp_std_allocator);
+    int *arr = dynarr_new(capacity, int, &std_allocator);
     if (!assert_true(t, arr, "array must not be null")) {
         return;
     };
 
     // prepare array of 2 values
     value = 10;
-    assert_true(t, jp_dynarr_push(arr, &value, 1), "push must succeed");
+    assert_true(t, dynarr_push(arr, &value, 1), "push must succeed");
     value = 20;
-    assert_true(t, jp_dynarr_push(arr, &value, 1), "push must succeed");
-    assert_eq_uint(t, jp_dynarr_len(arr), 2L, "expect 2 items");
+    assert_true(t, dynarr_push(arr, &value, 1), "push must succeed");
+    assert_eq_uint(t, dynarr_len(arr), 2L, "expect 2 items");
 
     // 1st pop
-    assert_true(t, jp_dynarr_pop(arr, value), "pop must succeed");
+    assert_true(t, dynarr_pop(arr, value), "pop must succeed");
     assert_eq_sint(t, value, 20, "first pop value must be 20");
-    assert_eq_uint(t, jp_dynarr_len(arr), 1L, "expect 1 item remaining");
+    assert_eq_uint(t, dynarr_len(arr), 1L, "expect 1 item remaining");
 
     // 2nd pop
-    assert_true(t, jp_dynarr_pop(arr, value), "pop must succeed");
+    assert_true(t, dynarr_pop(arr, value), "pop must succeed");
     assert_eq_sint(t, value, 10, "second pop value must be 10");
-    assert_eq_uint(t, jp_dynarr_len(arr), 0L, "expect 0 items remaining");
+    assert_eq_uint(t, dynarr_len(arr), 0L, "expect 0 items remaining");
 
     // 3rd pop
-    assert_false(t, jp_dynarr_pop(arr, value), "pop must fail");
+    assert_false(t, dynarr_pop(arr, value), "pop must fail");
     assert_eq_sint(t, value, 10, "previous value must still be present");
-    assert_eq_uint(t, jp_dynarr_len(arr), 0L, "expect 0 items remaining");
+    assert_eq_uint(t, dynarr_len(arr), 0L, "expect 0 items remaining");
 
     // exit
-    jp_dynarr_free(arr);
+    dynarr_free(arr);
 }
 
 void test_dynarr_remove(test *t) {
@@ -204,7 +204,7 @@ void test_dynarr_remove(test *t) {
     int arr_after_fill[] = {100, 101, 102, 103, 104};
 
     // initialize an array
-    int *arr = jp_dynarr_new(capacity, int, &jp_std_allocator);
+    int *arr = dynarr_new(capacity, int, &std_allocator);
     if (!assert_true(t, arr, "array must not be null")) {
         return;
     };
@@ -212,13 +212,13 @@ void test_dynarr_remove(test *t) {
     // fill the array
     for (u64 i = 0; i < capacity; i += 1) {
         value = 100 + (int)i;
-        jp_dynarr_push(arr, &value, 1);
+        dynarr_push(arr, &value, 1);
     }
 
     // remove element from out of bounds
-    assert_false(t, jp_dynarr_remove(arr, 5), "OOB removal must fail");
+    assert_false(t, dynarr_remove(arr, 5), "OOB removal must fail");
     assert_eq_uint(
-        t, jp_dynarr_len(arr), 5L, "array count must remain the same"
+        t, dynarr_len(arr), 5L, "array count must remain the same"
     );
     assert_eq_bytes(
         t,
@@ -230,17 +230,17 @@ void test_dynarr_remove(test *t) {
 
     // remove element from the middle
     assert_true(
-        t, jp_dynarr_remove(arr, 2), "removing from the middle must succeed"
+        t, dynarr_remove(arr, 2), "removing from the middle must succeed"
     );
     assert_eq_uint(
-        t, jp_dynarr_len(arr), 4L, "array must have one element less"
+        t, dynarr_len(arr), 4L, "array must have one element less"
     );
     assert_eq_sint(t, arr[0], 100, "0: remain the same");
     assert_eq_sint(t, arr[1], 101, "1: remain the same");
     assert_eq_sint(t, arr[2], 103, "2: shift left");
     assert_eq_sint(t, arr[3], 104, "3: shift left");
 
-    jp_dynarr_free(arr);
+    dynarr_free(arr);
 }
 
 void test_dynarr_remove_uo(test *t) {
@@ -249,7 +249,7 @@ void test_dynarr_remove_uo(test *t) {
     int arr_after_fill[] = {100, 101, 102, 103, 104};
 
     // initialize an array
-    int *arr = jp_dynarr_new(capacity, int, &jp_std_allocator);
+    int *arr = dynarr_new(capacity, int, &std_allocator);
     if (!assert_true(t, arr, "array must not be null")) {
         return;
     };
@@ -257,13 +257,13 @@ void test_dynarr_remove_uo(test *t) {
     // fill the array
     for (u64 i = 0; i < capacity; i += 1) {
         value = 100 + (int)i;
-        jp_dynarr_push(arr, &value, 1);
+        dynarr_push(arr, &value, 1);
     }
 
     // remove element from out of bounds
-    assert_false(t, jp_dynarr_remove_uo(arr, 5), "OOB removal must fail");
+    assert_false(t, dynarr_remove_uo(arr, 5), "OOB removal must fail");
     assert_eq_uint(
-        t, jp_dynarr_len(arr), 5L, "array count must remain the same"
+        t, dynarr_len(arr), 5L, "array count must remain the same"
     );
     assert_eq_bytes(
         t,
@@ -275,37 +275,37 @@ void test_dynarr_remove_uo(test *t) {
 
     // remove element from the middle
     assert_true(
-        t, jp_dynarr_remove_uo(arr, 2), "removing from the middle must succeed"
+        t, dynarr_remove_uo(arr, 2), "removing from the middle must succeed"
     );
     assert_eq_uint(
-        t, jp_dynarr_len(arr), 4L, "array must have one element less"
+        t, dynarr_len(arr), 4L, "array must have one element less"
     );
     assert_eq_sint(t, arr[0], 100, "0: remain the same");
     assert_eq_sint(t, arr[1], 101, "1: remain the same");
     assert_eq_sint(t, arr[2], 104, "2: swapped");
     assert_eq_sint(t, arr[3], 103, "3: remain the same");
 
-    jp_dynarr_free(arr);
+    dynarr_free(arr);
 }
 
 void test_dynarr_grow_in_arena(test *t) {
-    u8 buffer[100] = {0};
-    jp_arena arena = jp_arena_new(buffer, sizeof(buffer));
-    jp_allocator alloc = jp_arena_allocator_new(&arena);
+    _Alignas(max_align_t) u8 buffer[100] = {0};
+    arena arena = arena_new(buffer, sizeof(buffer));
+    allocator alloc = arena_allocator_new(&arena);
 
     // prepare array
-    char *arr = jp_dynarr_new(5, char, &alloc);
+    char *arr = dynarr_new(5, char, &alloc);
     if (!assert_true(t, arr, "array must not be null")) {
         return;
     }
     const char *items = "hello";
-    assert_true(t, jp_dynarr_push(arr, items, 5), "push must succeed");
+    assert_true(t, dynarr_push(arr, items, 5), "push must succeed");
 
     // grow array
-    char *new_arr = jp_dynarr_grow(arr, 10, char);
+    char *new_arr = dynarr_grow(arr, 10, char);
     assert_eq_uint(
         t,
-        jp_dynarr_capacity(arr),
+        dynarr_capacity(arr),
         20L,
         "existing capacity must double and add 10"
     );
@@ -318,10 +318,10 @@ void test_dynarr_grow_in_arena(test *t) {
 
     // push more stuff to array
     items = " world!";
-    assert_true(t, jp_dynarr_push(arr, items, 8), "push must succeed");
+    assert_true(t, dynarr_push(arr, items, 8), "push must succeed");
 
     // check backing buffer
-    jp_dynarr_header *buf_head = (jp_dynarr_header *)buffer;
+    dynarr_header *buf_head = (dynarr_header *)buffer;
     assert_eq_uint(
         t,
         buf_head->capacity,
@@ -336,7 +336,7 @@ void test_dynarr_grow_in_arena(test *t) {
     );
     assert_eq_cstr(
         t,
-        (char *)buffer + sizeof(jp_dynarr_header),
+        (char *)buffer + sizeof(dynarr_header),
         "hello world!",
         "backing buffer must have the array contents"
     );

@@ -1,10 +1,10 @@
 #include "cliargs.h"
-#include "jp.h"
+#include "std.h"
 #include "testr.h"
 
 size_t
 split_args(char *argv_str, size_t argv_str_len, char **argv, size_t argv_len) {
-    jp_cstr_split_iter split = {
+    cstr_split_iter split = {
         .str = argv_str,
         .str_len = argv_str_len,
         .split_chars = " ",
@@ -12,7 +12,7 @@ split_args(char *argv_str, size_t argv_str_len, char **argv, size_t argv_len) {
         .index = 0,
         .null_terminate = 1,
     };
-    return jp_cstr_split_collect_strings(argv, argv_len, &split);
+    return cstr_split_collect_strings(argv, argv_len, &split);
 }
 
 void test_parse_all_args(test *t) {
@@ -24,11 +24,11 @@ void test_parse_all_args(test *t) {
     cliargs_init(
         &args,
         named_opts,
-        jp_countof(named_opts),
+        countof(named_opts),
         positional_vals,
-        jp_countof(positional_vals),
+        countof(positional_vals),
         errors,
-        jp_countof(errors)
+        countof(errors)
     );
 
     u64 flag_help[1] = {0};
@@ -38,7 +38,7 @@ void test_parse_all_args(test *t) {
             .long_name = "help",
             .short_name = "h",
             .help_text = "Display help",
-            .max_len = jp_countof(flag_help),
+            .max_len = countof(flag_help),
             .type = cliargs_type_bool,
 
         },
@@ -52,7 +52,7 @@ void test_parse_all_args(test *t) {
             .long_name = "greeting",
             .short_name = "g",
             .help_text = "Greeting message",
-            .max_len = jp_countof(flag_greeting),
+            .max_len = countof(flag_greeting),
             .type = cliargs_type_str,
 
         },
@@ -66,7 +66,7 @@ void test_parse_all_args(test *t) {
             .long_name = "percentage",
             .short_name = "p",
             .help_text = "Percentage number between 0..1",
-            .max_len = jp_countof(flag_percentage),
+            .max_len = countof(flag_percentage),
             .type = cliargs_type_f64,
         },
         flag_percentage
@@ -79,7 +79,7 @@ void test_parse_all_args(test *t) {
             .long_name = "count",
             .short_name = "c",
             .help_text = "Count of things",
-            .max_len = jp_countof(flag_count),
+            .max_len = countof(flag_count),
             .type = cliargs_type_u64,
         },
         flag_count
@@ -92,7 +92,7 @@ void test_parse_all_args(test *t) {
             .long_name = "diff",
             .short_name = "d",
             .help_text = "Difference",
-            .max_len = jp_countof(flag_diff),
+            .max_len = countof(flag_diff),
             .type = cliargs_type_s64,
 
         },
@@ -104,7 +104,7 @@ void test_parse_all_args(test *t) {
         "pos2 pos3";
     char *argv[20] = {0};
     size_t argc =
-        split_args(argv_str, jp_countof(argv_str), argv, jp_countof(argv));
+        split_args(argv_str, countof(argv_str), argv, countof(argv));
     if (!assert_eq_uint(t, argc, 13, "must parse enough args")) {
         return;
     }
@@ -112,7 +112,7 @@ void test_parse_all_args(test *t) {
     // parse
     if (!assert_false(
             t,
-            cliargs_parse(&args, jp_countof(argv), argv),
+            cliargs_parse(&args, countof(argv), argv),
             "cli args must be parsed w/o errors"
         )) {
         return;
@@ -149,11 +149,11 @@ void test_parse_rest(test *t) {
     cliargs_init(
         &args,
         named_opts,
-        jp_countof(named_opts),
+        countof(named_opts),
         positional_vals,
-        jp_countof(positional_vals),
+        countof(positional_vals),
         errors,
-        jp_countof(errors)
+        countof(errors)
     );
 
     char *flag_greeting[3] = {0};
@@ -163,7 +163,7 @@ void test_parse_rest(test *t) {
             .long_name = "greeting",
             .short_name = "g",
             .help_text = "Greeting message",
-            .max_len = jp_countof(flag_greeting),
+            .max_len = countof(flag_greeting),
             .type = cliargs_type_str,
 
         },
@@ -174,7 +174,7 @@ void test_parse_rest(test *t) {
         "-g hello pos1 --greeting world pos2 pos3 -- --greeting hi";
     char *argv[20] = {0};
     size_t argc =
-        split_args(argv_str, jp_countof(argv_str), argv, jp_countof(argv));
+        split_args(argv_str, countof(argv_str), argv, countof(argv));
     if (!assert_eq_uint(t, argc, 10, "must parse enough args")) {
         return;
     }
@@ -182,7 +182,7 @@ void test_parse_rest(test *t) {
     // parse
     if (!assert_false(
             t,
-            cliargs_parse(&args, jp_countof(argv), argv),
+            cliargs_parse(&args, countof(argv), argv),
             "cli args must be parsed w/o errors"
         )) {
         return;
@@ -214,11 +214,11 @@ void test_parse_fail_on_parse(test *t) {
     cliargs_init(
         &args,
         named_opts,
-        jp_countof(named_opts),
+        countof(named_opts),
         positional_vals,
-        jp_countof(positional_vals),
+        countof(positional_vals),
         errors,
-        jp_countof(errors)
+        countof(errors)
     );
 
     u64 flag_count[4] = {0};
@@ -228,7 +228,7 @@ void test_parse_fail_on_parse(test *t) {
             .long_name = "count",
             .short_name = "c",
             .help_text = "Count of things",
-            .max_len = jp_countof(flag_count),
+            .max_len = countof(flag_count),
             .type = cliargs_type_u64,
         },
         flag_count
@@ -236,8 +236,8 @@ void test_parse_fail_on_parse(test *t) {
 
     char argv_str[] = "-c fail";
     char *argv[20] = {0};
-    split_args(argv_str, jp_countof(argv_str), argv, jp_countof(argv));
-    cliargs_error err = cliargs_parse(&args, jp_countof(argv), argv);
+    split_args(argv_str, countof(argv_str), argv, countof(argv));
+    cliargs_error err = cliargs_parse(&args, countof(argv), argv);
 
     assert_true(t, err, "cli args must contain errors");
     assert_eq_uint(
@@ -261,11 +261,11 @@ void test_parse_fail_on_unknown_flag(test *t) {
     cliargs_init(
         &args,
         named_opts,
-        jp_countof(named_opts),
+        countof(named_opts),
         positional_vals,
-        jp_countof(positional_vals),
+        countof(positional_vals),
         errors,
-        jp_countof(errors)
+        countof(errors)
     );
 
     u64 flag_count[4] = {0};
@@ -275,7 +275,7 @@ void test_parse_fail_on_unknown_flag(test *t) {
             .long_name = "count",
             .short_name = "c",
             .help_text = "Count of things",
-            .max_len = jp_countof(flag_count),
+            .max_len = countof(flag_count),
             .type = cliargs_type_u64,
         },
         flag_count
@@ -283,8 +283,8 @@ void test_parse_fail_on_unknown_flag(test *t) {
 
     char argv_str[] = "--not-count 3";
     char *argv[20] = {0};
-    split_args(argv_str, jp_countof(argv_str), argv, jp_countof(argv));
-    cliargs_error err = cliargs_parse(&args, jp_countof(argv), argv);
+    split_args(argv_str, countof(argv_str), argv, countof(argv));
+    cliargs_error err = cliargs_parse(&args, countof(argv), argv);
 
     assert_true(t, err, "cli args must contain errors");
     assert_eq_uint(
@@ -310,11 +310,11 @@ void test_parse_fail_on_expecting_value(test *t) {
     cliargs_init(
         &args,
         named_opts,
-        jp_countof(named_opts),
+        countof(named_opts),
         positional_vals,
-        jp_countof(positional_vals),
+        countof(positional_vals),
         errors,
-        jp_countof(errors)
+        countof(errors)
     );
 
     u64 flag_count[4] = {0};
@@ -324,7 +324,7 @@ void test_parse_fail_on_expecting_value(test *t) {
             .long_name = "count",
             .short_name = "c",
             .help_text = "Count of things",
-            .max_len = jp_countof(flag_count),
+            .max_len = countof(flag_count),
             .type = cliargs_type_u64,
         },
         flag_count
@@ -337,7 +337,7 @@ void test_parse_fail_on_expecting_value(test *t) {
             .long_name = "diff",
             .short_name = "d",
             .help_text = "Difference",
-            .max_len = jp_countof(flag_diff),
+            .max_len = countof(flag_diff),
             .type = cliargs_type_s64,
 
         },
@@ -346,8 +346,8 @@ void test_parse_fail_on_expecting_value(test *t) {
 
     char argv_str[] = "--count 3 --diff --count 1";
     char *argv[20] = {0};
-    split_args(argv_str, jp_countof(argv_str), argv, jp_countof(argv));
-    cliargs_error err = cliargs_parse(&args, jp_countof(argv), argv);
+    split_args(argv_str, countof(argv_str), argv, countof(argv));
+    cliargs_error err = cliargs_parse(&args, countof(argv), argv);
 
     assert_true(t, err, "cli args must contain errors");
     assert_eq_uint(

@@ -1,5 +1,5 @@
 #include "cliargs.h"
-#include "jp.h"
+#include "std.h"
 #include <errno.h>
 #include <limits.h>
 #include <stdarg.h>
@@ -19,12 +19,6 @@ typedef struct {
     u16 val_len;
     u16 prefix_dash_count;
 } cliargs_arg;
-
-const char *cliargs_type_s64_tname = "signed integer";
-const char *cliargs_type_u64_tname = "unsigned integer";
-const char *cliargs_type_f64_tname = "real number";
-const char *cliargs_type_str_tname = "string";
-const char *cliargs_type_bool_tname = "boolean";
 
 const char *cliargs_type_to_name(cliargs_type type) {
     switch (type) {
@@ -91,9 +85,9 @@ cliargs_parse_value(cliargs_type t, const char *arg, cliargs_val *value) {
 
     switch (t) {
     case cliargs_type_bool:
-        if (jp_cstr_eq_unsafe(arg, "true")) {
+        if (cstr_eq_unsafe(arg, "true")) {
             v.uint = 1;
-        } else if (jp_cstr_eq_unsafe(arg, "false")) {
+        } else if (cstr_eq_unsafe(arg, "false")) {
             v.uint = 0;
         } else {
             return cliargs_error_parse_fail;
@@ -208,13 +202,11 @@ cliargs_find_by_name(cliargs_state state, const char *name, size_t name_len) {
 
     for (size_t i = 0; i < state.args->named.len; i += 1) {
         cliargs_opt *opt = &state.args->named.opts[i];
-        size_t opt_short_name_len = jp_cstr_len_unsafe(opt->short_name);
-        size_t opt_long_name_len = jp_cstr_len_unsafe(opt->long_name);
+        size_t opt_short_name_len = cstr_len_unsafe(opt->short_name);
+        size_t opt_long_name_len = cstr_len_unsafe(opt->long_name);
         b32 found =
-            jp_cstr_eq(opt->short_name, name, min(opt_short_name_len, name_len))
-            || jp_cstr_eq(
-                opt->long_name, name, min(opt_long_name_len, name_len)
-            );
+            cstr_eq(opt->short_name, name, min(opt_short_name_len, name_len))
+            || cstr_eq(opt->long_name, name, min(opt_long_name_len, name_len));
         if (found) {
             return opt;
         }
@@ -410,6 +402,7 @@ void cliargs_init(
     );
     assert((!errors_max_len || errors_buffer) && "named opts must not be null");
 
+    bytes_set(args, 0, sizeof(*args));
     args->named.len = 0;
     args->named.max_len = named_opts_max_len;
     args->named.opts = named_opts_storage;

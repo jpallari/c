@@ -1,15 +1,12 @@
 /**
  * Library of common C utilities i.e. "personal standard library".
- * Naming convention copied from stb.h. :^)
  */
-#ifndef JP_H
-#define JP_H
+#ifndef JP_STD_H
+#define JP_STD_H
 
-#include <fcntl.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <sys/stat.h>
 #include <unistd.h>
 
 #ifdef JP_USE_STRING_H
@@ -91,7 +88,6 @@ static inline void breakpoint(void) {
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define abs(a) (((a) >= 0) ? (a) : -(a))
-#define round_up_to_multiple(n, to) (((n) + (to) - 1) & ~((to) - 1))
 
 ////////////////////////
 // Arrays
@@ -100,12 +96,12 @@ static inline void breakpoint(void) {
 /**
  * Count number of items in an array or a static string
  */
-#define jp_countof(x) (sizeof(x) / sizeof(*(x)))
+#define countof(x) (sizeof(x) / sizeof(*(x)))
 
 /**
  * Length of an array or a static string
  */
-#define jp_lengthof(x) (jp_countof(x) - 1)
+#define lengthof(x) (countof(x) - 1)
 
 ////////////////////////
 // Bytes
@@ -116,17 +112,17 @@ static inline void breakpoint(void) {
 /**
  * Basically memcpy
  */
-#define jp_bytes_copy memcpy
+#define bytes_copy memcpy
 
 /**
  * Basically memmove
  */
-#define jp_bytes_move memmove
+#define bytes_move memmove
 
 /**
  * Basically memset
  */
-#define jp_bytes_set(s, c, n) memset(s, c, n)
+#define bytes_set(s, c, n) memset(s, c, n)
 
 #else
 
@@ -140,7 +136,7 @@ static inline void breakpoint(void) {
  * @returns pointer to area of memory where bytes were copied to
  */
 static inline void *
-jp_bytes_copy(void *restrict dest, const void *restrict src, size_t n) {
+bytes_copy(void *restrict dest, const void *restrict src, size_t n) {
     assert(dest && "dest must not be null");
     assert(src && "src must not be null");
 
@@ -159,7 +155,7 @@ jp_bytes_copy(void *restrict dest, const void *restrict src, size_t n) {
  * @param[in] n number of bytes to copy
  * @returns pointer to area of memory where bytes were copied to
  */
-static inline void *jp_bytes_move(void *dest, const void *src, size_t n) {
+static inline void *bytes_move(void *dest, const void *src, size_t n) {
     assert(dest && "dest must not be null");
     assert(src && "src must not be null");
 
@@ -169,7 +165,7 @@ static inline void *jp_bytes_move(void *dest, const void *src, size_t n) {
     uintptr_t diff = dest < src ? (uintptr_t)src - (uintptr_t)dest
                                 : (uintptr_t)dest - (uintptr_t)src;
     if ((size_t)diff > n) {
-        jp_bytes_copy(dest, src, n);
+        bytes_copy(dest, src, n);
     }
 
     char *d = dest;
@@ -191,7 +187,7 @@ static inline void *jp_bytes_move(void *dest, const void *src, size_t n) {
  * @param[in] n number of bytes to fill
  * @returns pointer to the memory area that was filled
  */
-static inline void *jp_bytes_set(void *dest, int c, size_t n) {
+static inline void *bytes_set(void *dest, int c, size_t n) {
     if (!n) {
         return dest;
     }
@@ -202,22 +198,19 @@ static inline void *jp_bytes_set(void *dest, int c, size_t n) {
 
 #endif // JP_USE_STRING_H
 
-#define jp_copy_n(dest, src, n) \
-    jp_bytes_copy((dest), (src), (n) * sizeof(*(src)))
+#define copy_n(dest, src, n) bytes_copy((dest), (src), (n) * sizeof(*(src)))
 
-#define jp_move_n(dest, src, n) \
-    jp_bytes_move((dest), (src), (n) * sizeof(*(src)))
+#define move_n(dest, src, n) bytes_move((dest), (src), (n) * sizeof(*(src)))
 
-#define jp_set_n(dest, c, n) jp_bytes_set((dest), (c), (n) * sizeof(*(dest)))
+#define set_n(dest, c, n) bytes_set((dest), (c), (n) * sizeof(*(dest)))
 
-#define jp_copy_nt(dest, src, n, type) \
-    jp_bytes_copy((dest), (src), (n) * sizeof(type))
+#define copy_nt(dest, src, n, type) \
+    bytes_copy((dest), (src), (n) * sizeof(type))
 
-#define jp_move_nt(dest, src, n, type) \
-    jp_bytes_move((dest), (src), (n) * sizeof(type))
+#define move_nt(dest, src, n, type) \
+    bytes_move((dest), (src), (n) * sizeof(type))
 
-#define jp_set_nt(dest, c, n, type) \
-    jp_bytes_set((dest), (c), (n) * sizeof(type))
+#define set_nt(dest, c, n, type) bytes_set((dest), (c), (n) * sizeof(type))
 
 /**
  * Check which index the given two buffers differ starting from given index
@@ -228,7 +221,7 @@ static inline void *jp_bytes_set(void *dest, int c, size_t n) {
  * @returns -1 when the buffers contain the same bytes, and the index of the
  * differing byte otherwise
  */
-int jp_bytes_diff_index(
+int bytes_diff_index(
     const void *a, const void *b, size_t start, size_t capacity
 );
 
@@ -239,7 +232,7 @@ int jp_bytes_diff_index(
  * @param capacity the capacity of the buffers
  * @returns true when bytes contain the same bytes and false otherwise
  */
-b32 jp_bytes_eq(const void *a, const void *b, size_t capacity);
+b32 bytes_eq(const void *a, const void *b, size_t capacity);
 
 /**
  * Write bytes as a hex string.
@@ -252,7 +245,7 @@ b32 jp_bytes_eq(const void *a, const void *b, size_t capacity);
  * @param[in] n number of bytes to convert to a hex string
  * @returns number of bytes written
  */
-size_t jp_bytes_to_hex(char *dest, const char *src, size_t n);
+size_t bytes_to_hex(char *dest, const char *src, size_t n);
 
 ////////////////////////
 // Allocator
@@ -284,7 +277,7 @@ typedef struct {
      * Custom data to provide context for the allocator.
      */
     void *ctx;
-} jp_allocator;
+} allocator;
 
 /**
  * Standard memory allocation (stdlib malloc) compatible with the custom memory
@@ -295,7 +288,7 @@ typedef struct {
  * @param ctx additional data to provide context for the allocation (unused)
  * @returns pointer to area of memory that was allocated
  */
-static void *jp_std_malloc(size_t size, size_t alignment, void *ctx) {
+static void *std_malloc(size_t size, size_t alignment, void *ctx) {
     (void)ctx;
     (void)alignment;
     return malloc(size);
@@ -308,7 +301,7 @@ static void *jp_std_malloc(size_t size, size_t alignment, void *ctx) {
  * @param ptr pointer to area of memory to free
  * @param ctx additional data to provide context for freeing memory (unused)
  */
-static void jp_std_free(void *ptr, void *ctx) {
+static void std_free(void *ptr, void *ctx) {
     (void)ctx;
     free(ptr);
 }
@@ -317,39 +310,39 @@ static void jp_std_free(void *ptr, void *ctx) {
  * Standard memory allocation compatible with the custom memory
  * allocation interface.
  */
-__attribute__((unused)) static jp_allocator jp_std_allocator = {
-    jp_std_malloc, jp_std_free, NULL
+__attribute__((unused)) static allocator std_allocator = {
+    std_malloc, std_free, NULL
 };
 
 /**
  * Create given amount of new items of given type using an allocator.
  *
+ * @param allocator allocator to use for acquiring memory
  * @param t type of the objects to allocate
  * @param n number of objects to allocate
- * @param allocator allocator to use for acquiring memory
  * @returns pointer to area of memory that was allocated
  */
-#define jp_new(t, n, allocator) \
-    (t *)jp_malloc(sizeof(t) * (n), _Alignof(t), allocator)
+#define alloc_new(allocator, t, n) \
+    (t *)alloc_malloc(allocator, sizeof(t) * (n), _Alignof(t))
 
 /**
  * Call malloc on a custom memory allocation interface.
  *
+ * @param allocator allocator to use for acquiring memory
  * @param size amount of memory in bytes to allocate
  * @param alignment memory alignment to use for the allocation
- * @param allocator allocator to use for acquiring memory
  * @returns pointer to area of memory that was allocated
  */
-#define jp_malloc(size, alignment, allocator) \
+#define alloc_malloc(allocator, size, alignment) \
     (allocator)->malloc((size), (alignment), (allocator)->ctx)
 
 /**
  * Call free on a custom memory allocation interface.
  *
- * @param ptr pointer to area of memory to free
  * @param allocator allocator to use for freeing memory
+ * @param ptr pointer to area of memory to free
  */
-#define jp_free(ptr, allocator) (allocator)->free((ptr), (allocator)->ctx)
+#define alloc_free(allocator, ptr) (allocator)->free((ptr), (allocator)->ctx)
 
 ////////////////////////
 // Slices
@@ -368,7 +361,7 @@ typedef struct {
      * Length of the slice in bytes
      */
     size_t len;
-} jp_slice;
+} slice;
 
 /**
  * Create a slice from an array or a static string
@@ -376,8 +369,8 @@ typedef struct {
  * @param x an array or a static string
  * @returns a new slice
  */
-#define jp_slice_from(x) \
-    (jp_slice) { \
+#define slice_from(x) \
+    (slice) { \
         (u8 *)(x), sizeof(x) \
     }
 
@@ -388,7 +381,7 @@ typedef struct {
  * @param end pointer where the data ends
  * @returns slice of data between the given pointers
  */
-jp_slice jp_slice_span(u8 *start, u8 *end);
+slice slice_span(u8 *start, u8 *end);
 
 /**
  * Check if two slices are equal
@@ -396,7 +389,7 @@ jp_slice jp_slice_span(u8 *start, u8 *end);
  * @param a,b slices to compare
  * @returns true when the slices are equal and false otherwise
  */
-s32 jp_slice_eq(const jp_slice a, const jp_slice b);
+s32 slice_eq(const slice a, const slice b);
 
 /**
  * Copy slice contents to another slice where the slices do not overlap.
@@ -404,7 +397,7 @@ s32 jp_slice_eq(const jp_slice a, const jp_slice b);
  * @param[out] dest slice to copy data to
  * @param[in] src slice to copy data from
  */
-void jp_slice_copy(jp_slice dest, const jp_slice src);
+void slice_copy(slice dest, const slice src);
 
 /**
  * Copy slice contents to another slice where the slices may overlap.
@@ -412,7 +405,7 @@ void jp_slice_copy(jp_slice dest, const jp_slice src);
  * @param[out] dest slice to copy data to
  * @param[in] src slice to copy data from
  */
-void jp_slice_move(jp_slice dest, const jp_slice src);
+void slice_move(slice dest, const slice src);
 
 /**
  * Create a slice from a null terminated string
@@ -420,7 +413,7 @@ void jp_slice_move(jp_slice dest, const jp_slice src);
  * @param str null terminated string
  * @returns a new slice pointing to the given string
  */
-jp_slice jp_slice_from_cstr_unsafe(char *str);
+slice slice_from_cstr_unsafe(char *str);
 
 ////////////////////////
 // Arena allocator
@@ -444,49 +437,49 @@ typedef struct {
      * Amount of memory used in the arena.
      */
     u64 used;
-} jp_arena;
+} arena;
 
 /**
  * Create a new arena for a backing buffer.
  */
-jp_arena jp_arena_new(u8 *buffer, u64 size);
+arena arena_new(u8 *buffer, u64 size);
 
 /**
  * Calculate used bytes based on desired usage and alignment.
  */
-#define jp_arena_aligned_used(used, alignment) \
+#define arena_aligned_used(used, alignment) \
     ((used) + (alignment) - 1) & ~((alignment) - 1)
 
 /**
  * Allocate bytes from the given arena.
  */
-void *jp_arena_alloc_bytes(jp_arena *arena, u64 size, u64 alignment);
+void *arena_alloc_bytes(arena *arena, u64 size, u64 alignment);
 
 /**
  * Allocate a number of items of type t from the given arena.
  */
-#define jp_arena_alloc(arena, t, count) \
-    ((t *)jp_arena_alloc_bytes((arena), sizeof(t) * (count), _Alignof(t)))
+#define arena_alloc(arena, t, count) \
+    ((t *)arena_alloc_bytes((arena), sizeof(t) * (count), _Alignof(t)))
 
 /**
  * Clear the arena usage.
  */
-void jp_arena_clear(jp_arena *arena);
+void arena_clear(arena *arena);
 
 /**
  * Custom allocator malloc function for the arena
  */
-void *jp_arena_malloc(size_t size, size_t alignment, void *ctx);
+void *arena_malloc(size_t size, size_t alignment, void *ctx);
 
 /**
  * Custom allocator free function for the arena
  */
-void jp_arena_free(void *ptr, void *ctx);
+void arena_free(void *ptr, void *ctx);
 
 /**
  * Custom allocator for a memory arena
  */
-jp_allocator jp_arena_allocator_new(jp_arena *arena);
+allocator arena_allocator_new(arena *arena);
 
 ////////////////////////
 // Dynamic array
@@ -509,50 +502,48 @@ typedef struct {
     /**
      * Memory allocator used for growing
      */
-    jp_allocator *allocator;
-} jp_dynarr_header;
+    allocator *allocator;
+} dynarr_header;
 
 /**
  * Convert item count and size to byte size (incl. header)
  */
-#define jp_dynarr_count_to_bytes(n, item_size) \
-    (((size_t)(n)) * item_size + sizeof(jp_dynarr_header))
+#define dynarr_count_to_bytes(n, item_size) \
+    (((size_t)(n)) * item_size + sizeof(dynarr_header))
 
 /**
  * Create a new dynamic array
  */
-void *jp_dynarr_new_sized(
-    u64 capacity, size_t item_size, size_t alignment, jp_allocator *allocator
+void *dynarr_new_sized(
+    u64 capacity, size_t item_size, size_t alignment, allocator *allocator
 );
 
 /**
  * Create a new dynamic array
  */
-#define jp_dynarr_new(capacity, t, allocator) \
-    ((t *)jp_dynarr_new_sized((capacity), sizeof(t), _Alignof(t), (allocator)))
+#define dynarr_new(capacity, t, allocator) \
+    ((t *)dynarr_new_sized((capacity), sizeof(t), _Alignof(t), (allocator)))
 
 /**
  * Get the header for given array
  */
-#define jp_dynarr_get_header(array) \
-    (array ? ((jp_dynarr_header *)(array)) - 1 : NULL)
+#define dynarr_get_header(array) (array ? ((dynarr_header *)(array)) - 1 : NULL)
 
 /**
  * Get the count for given array
  */
-#define jp_dynarr_len(array) \
-    (array ? (((jp_dynarr_header *)(array)) - 1)->len : 0)
+#define dynarr_len(array) (array ? (((dynarr_header *)(array)) - 1)->len : 0)
 
 /**
  * Get the capacity for given array
  */
-#define jp_dynarr_capacity(array) \
-    (array ? (((jp_dynarr_header *)(array)) - 1)->capacity : 0)
+#define dynarr_capacity(array) \
+    (array ? (((dynarr_header *)(array)) - 1)->capacity : 0)
 
 /**
  * Free the given array
  */
-void jp_dynarr_free(void *array);
+void dynarr_free(void *array);
 
 /**
  * Grow an existing array with a capacity increase.
@@ -568,7 +559,7 @@ void jp_dynarr_free(void *array);
  * @param alignment the memory alignment of an item
  * @returns an array with increased capacity
  */
-void *jp_dynarr_grow_ut(
+void *dynarr_grow_ut(
     void *array, u64 capacity_increase, size_t item_size, size_t alignment
 );
 
@@ -585,8 +576,8 @@ void *jp_dynarr_grow_ut(
  * @param t type of the item to hold in the array
  * @returns an array with increased capacity
  */
-#define jp_dynarr_grow(array, capacity_increase, t) \
-    jp_dynarr_grow_ut((array), (capacity_increase), sizeof(t), _Alignof(t))
+#define dynarr_grow(array, capacity_increase, t) \
+    dynarr_grow_ut((array), (capacity_increase), sizeof(t), _Alignof(t))
 
 /**
  * Clone a given array with new capacity.
@@ -594,15 +585,15 @@ void *jp_dynarr_grow_ut(
  * @returns new array with the original array contents or null when the memory
  * allocation fails
  */
-void *jp_dynarr_clone_ut(
+void *dynarr_clone_ut(
     void *array, u64 capacity_increase, size_t item_size, size_t alignment
 );
 
 /**
  * Clone a given array with new capacity.
  */
-#define jp_dynarr_clone(array, capacity_increase, type) \
-    (type *)jp_dynarr_clone_ut( \
+#define dynarr_clone(array, capacity_increase, type) \
+    (type *)dynarr_clone_ut( \
         (array), (capacity_increase), sizeof(*(array)), _Alignof(type) \
     )
 
@@ -610,9 +601,7 @@ void *jp_dynarr_clone_ut(
  * Push items to given array. Returns true when the operation succeeded (i.e.
  * there's capacity).
  */
-b32 jp_dynarr_push_ut(
-    void *array, const void *items, u64 count, size_t item_size
-);
+b32 dynarr_push_ut(void *array, const void *items, u64 count, size_t item_size);
 
 /**
  * Push items to given array.
@@ -623,8 +612,8 @@ b32 jp_dynarr_push_ut(
  *
  * @returns false when the operation succeeds and false otherwise
  */
-#define jp_dynarr_push(array, items, count) \
-    jp_dynarr_push_ut((array), (items), (count), sizeof(*(items)))
+#define dynarr_push(array, items, count) \
+    dynarr_push_ut((array), (items), (count), sizeof(*(items)))
 
 /**
  * Push items to given array and grow the array automatically.
@@ -635,7 +624,7 @@ b32 jp_dynarr_push_ut(
  *
  * @returns array containing the new contents or null when push fails
  */
-void *jp_dynarr_push_grow_ut(
+void *dynarr_push_grow_ut(
     void *array,
     const void *items,
     u64 count,
@@ -652,8 +641,8 @@ void *jp_dynarr_push_grow_ut(
  *
  * @returns array containing the new contents or null when push fails
  */
-#define jp_dynarr_push_grow(array, items, count, type) \
-    (type *)jp_dynarr_push_grow_ut( \
+#define dynarr_push_grow(array, items, count, type) \
+    (type *)dynarr_push_grow_ut( \
         (array), (items), (count), sizeof(type), _Alignof(type) \
     )
 
@@ -665,13 +654,12 @@ void *jp_dynarr_push_grow_ut(
  * @param[in] item_size size of an array item
  * @returns true when an item was popped and false otherwise
  */
-b32 jp_dynarr_pop_ut(void *array, void *out, size_t item_size);
+b32 dynarr_pop_ut(void *array, void *out, size_t item_size);
 
 /**
  * Pop an element from the tail of the array
  */
-#define jp_dynarr_pop(array, out) \
-    jp_dynarr_pop_ut((array), &(out), sizeof(*(array)))
+#define dynarr_pop(array, out) dynarr_pop_ut((array), &(out), sizeof(*(array)))
 
 /**
  * Remove an element by index from given array.
@@ -681,7 +669,7 @@ b32 jp_dynarr_pop_ut(void *array, void *out, size_t item_size);
  * @param item_size size of an array item
  * @returns true when an item was removed and false otherwise
  */
-b32 jp_dynarr_remove_ut(void *array, u64 index, size_t item_size);
+b32 dynarr_remove_ut(void *array, u64 index, size_t item_size);
 
 /**
  * Remove an element by index from given array.
@@ -690,8 +678,8 @@ b32 jp_dynarr_remove_ut(void *array, u64 index, size_t item_size);
  * @param index the index of the element to remove
  * @returns true when an item was removed and false otherwise
  */
-#define jp_dynarr_remove(array, index) \
-    jp_dynarr_remove_ut((array), (index), sizeof(*(array)))
+#define dynarr_remove(array, index) \
+    dynarr_remove_ut((array), (index), sizeof(*(array)))
 
 /**
  * Remove an element by index from given array, but do not guarantee array
@@ -702,7 +690,7 @@ b32 jp_dynarr_remove_ut(void *array, u64 index, size_t item_size);
  * @param item_size size of an array item
  * @returns true when an item was removed and false otherwise
  */
-b32 jp_dynarr_remove_uo_ut(void *array, u64 index, size_t item_size);
+b32 dynarr_remove_uo_ut(void *array, u64 index, size_t item_size);
 
 /**
  * Remove an element by index from given array, but do not guarantee array
@@ -712,8 +700,8 @@ b32 jp_dynarr_remove_uo_ut(void *array, u64 index, size_t item_size);
  * @param index the index of the element to remove
  * @returns true when an item was removed and false otherwise
  */
-#define jp_dynarr_remove_uo(array, index) \
-    jp_dynarr_remove_uo_ut((array), (index), sizeof(*(array)))
+#define dynarr_remove_uo(array, index) \
+    dynarr_remove_uo_ut((array), (index), sizeof(*(array)))
 
 ////////////////////////
 // C strings
@@ -725,7 +713,7 @@ b32 jp_dynarr_remove_uo_ut(void *array, u64 index, size_t item_size);
  * @param s1,s2 strings to compare
  * @returns true when strings are equal and false otherwise
  */
-b32 jp_cstr_eq_unsafe(const char *s1, const char *s2);
+b32 cstr_eq_unsafe(const char *s1, const char *s2);
 
 /**
  * Equality comparison of two strings with max bound.
@@ -734,7 +722,7 @@ b32 jp_cstr_eq_unsafe(const char *s1, const char *s2);
  * @param len length of the two strings
  * @returns true when strings are equal and false otherwise
  */
-b32 jp_cstr_eq(const char *s1, const char *s2, size_t len);
+b32 cstr_eq(const char *s1, const char *s2, size_t len);
 
 /**
  * Unsafe get length of string.
@@ -742,7 +730,7 @@ b32 jp_cstr_eq(const char *s1, const char *s2, size_t len);
  * @param str string to get length for
  * @returns the length of the string
  */
-size_t jp_cstr_len_unsafe(const char *str);
+size_t cstr_len_unsafe(const char *str);
 
 /**
  * Get length of string with a bound check.
@@ -751,7 +739,7 @@ size_t jp_cstr_len_unsafe(const char *str);
  * @param capacity the capacity of the string
  * @returns the length of the string
  */
-size_t jp_cstr_len(const char *str, size_t capacity);
+size_t cstr_len(const char *str, size_t capacity);
 
 /**
  * String split iterator
@@ -786,7 +774,7 @@ typedef struct {
      * Flag: whether or not to null-terminate on split characters
      */
     u32 null_terminate : 1;
-} jp_cstr_split_iter;
+} cstr_split_iter;
 
 /**
  * Get a slice to the next sub-string from a split iterator.
@@ -795,7 +783,7 @@ typedef struct {
  * @returns slice to the next sub-string or empty slice when there are no
  * sub-strings left
  */
-jp_slice jp_cstr_split_next(jp_cstr_split_iter *split);
+slice cstr_split_next(cstr_split_iter *split);
 
 /**
  * Collect all sub-strings from a split iterator to an array of slices.
@@ -805,8 +793,7 @@ jp_slice jp_cstr_split_next(jp_cstr_split_iter *split);
  * @param split the split iterator to advance
  * @returns number of sub-strings captured from the split iterator
  */
-size_t
-jp_cstr_split_collect(jp_slice *arr, size_t len, jp_cstr_split_iter *split);
+size_t cstr_split_collect(slice *arr, size_t len, cstr_split_iter *split);
 
 /**
  * Collect all sub-strings from a split iterator to an array of C strings.
@@ -819,9 +806,8 @@ jp_cstr_split_collect(jp_slice *arr, size_t len, jp_cstr_split_iter *split);
  * @param split the split iterator to advance
  * @returns number of sub-strings captured from the split iterator
  */
-size_t jp_cstr_split_collect_strings(
-    char **strings, size_t len, jp_cstr_split_iter *split
-);
+size_t
+cstr_split_collect_strings(char **strings, size_t len, cstr_split_iter *split);
 
 /**
  * Wildcard match for ASCII C strings.
@@ -831,7 +817,7 @@ size_t jp_cstr_split_collect_strings(
  * @param pat pattern to match against
  * @param pat_len length of the pattern
  */
-b32 jp_cstr_match_wild_ascii(
+b32 cstr_match_wild_ascii(
     const char *txt, size_t txt_len, const char *pat, size_t pat_len
 );
 
@@ -841,19 +827,6 @@ b32 jp_cstr_match_wild_ascii(
  * @param txt text to match
  * @param pat pattern to match against
  */
-b32 jp_cstr_match_wild_ascii_unsafe(const char *txt, const char *pat);
+b32 cstr_match_wild_ascii_unsafe(const char *txt, const char *pat);
 
-////////////////////////
-// File I/O (blocking)
-////////////////////////
-
-typedef struct {
-    u8 *data;
-    u64 size;
-    s32 err_code;
-} jp_file_result;
-
-jp_file_result jp_read_file(const char *filename, jp_allocator *allocator);
-s64 jp_write_file(char *filename, void *data, u64 size);
-
-#endif // JP_H
+#endif // JP_STD_H

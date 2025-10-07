@@ -1,37 +1,37 @@
-#include "jp.h"
+#include "std.h"
 #include "testr.h"
 
 void test_cstr_eq(test *t) {
-    assert_true(t, jp_cstr_eq("hello", "hello", 5), "same C strings are equal");
+    assert_true(t, cstr_eq("hello", "hello", 5), "same C strings are equal");
     assert_false(
-        t, jp_cstr_eq("foo", "bar", 3), "different C strings are not equal"
+        t, cstr_eq("foo", "bar", 3), "different C strings are not equal"
     );
     assert_true(
         t,
-        jp_cstr_eq("hello", "hello world", 5),
+        cstr_eq("hello", "hello world", 5),
         "C strings are equal when their prefixes match until the given length"
     );
 }
 
 void test_cstr_eq_unsafe(test *t) {
     assert_true(
-        t, jp_cstr_eq_unsafe("hello", "hello"), "same C strings are equal"
+        t, cstr_eq_unsafe("hello", "hello"), "same C strings are equal"
     );
     assert_false(
-        t, jp_cstr_eq_unsafe("foo", "bar"), "different C strings are not equal"
+        t, cstr_eq_unsafe("foo", "bar"), "different C strings are not equal"
     );
 }
 
 void test_cstr_len(test *t) {
     assert_eq_uint(
         t,
-        jp_cstr_len("hello", 6),
+        cstr_len("hello", 6),
         5L,
         "length should be counted until null terminator"
     );
     assert_eq_uint(
         t,
-        jp_cstr_len("hello", 3),
+        cstr_len("hello", 3),
         3L,
         "length should be up to the capacity"
     );
@@ -40,7 +40,7 @@ void test_cstr_len(test *t) {
 void test_cstr_len_unsafe(test *t) {
     assert_eq_uint(
         t,
-        jp_cstr_len_unsafe("hello"),
+        cstr_len_unsafe("hello"),
         5L,
         "length should be counted until null terminator"
     );
@@ -48,7 +48,7 @@ void test_cstr_len_unsafe(test *t) {
 
 void test_cstr_split(test *t) {
     char str[] = "this is a string";
-    jp_cstr_split_iter split = {
+    cstr_split_iter split = {
         .str = str,
         .str_len = sizeof(str),
         .split_chars = " ",
@@ -59,35 +59,35 @@ void test_cstr_split(test *t) {
 
     // first word
     {
-        jp_slice slice = jp_cstr_split_next(&split);
+        slice slice = cstr_split_next(&split);
         assert_eq_uint(t, slice.len, 4L, "1 - length");
         assert_eq_bytes(t, slice.buffer, "this", slice.len, "1 - contents");
     }
 
     // second word
     {
-        jp_slice slice = jp_cstr_split_next(&split);
+        slice slice = cstr_split_next(&split);
         assert_eq_uint(t, slice.len, 2L, "2 - length");
         assert_eq_bytes(t, slice.buffer, "is", slice.len, "2 - contents");
     }
 
     // third word
     {
-        jp_slice slice = jp_cstr_split_next(&split);
+        slice slice = cstr_split_next(&split);
         assert_eq_uint(t, slice.len, 1L, "3 - length");
         assert_eq_bytes(t, slice.buffer, "a", slice.len, "3 - contents");
     }
 
     // fourth word
     {
-        jp_slice slice = jp_cstr_split_next(&split);
+        slice slice = cstr_split_next(&split);
         assert_eq_uint(t, slice.len, 6L, "4 - length");
         assert_eq_bytes(t, slice.buffer, "string", slice.len, "4 - contents");
     }
 
     // fifth iteration
     {
-        jp_slice slice = jp_cstr_split_next(&split);
+        slice slice = cstr_split_next(&split);
         assert_false(t, slice.len, "5 - length");
         assert_false(t, slice.buffer, "4 - contents");
     }
@@ -96,7 +96,7 @@ void test_cstr_split(test *t) {
 void test_cstr_split_collect(test *t) {
     char str[] = "collecting all words to an array";
 
-    jp_cstr_split_iter split = {
+    cstr_split_iter split = {
         .str = str,
         .str_len = sizeof(str),
         .split_chars = " ",
@@ -105,11 +105,11 @@ void test_cstr_split_collect(test *t) {
         .null_terminate = 0,
     };
 
-    jp_slice arr[10] = {0};
+    slice arr[10] = {0};
 
     // collect all sub-strings
     {
-        size_t len = jp_cstr_split_collect(arr, jp_countof(arr), &split);
+        size_t len = cstr_split_collect(arr, countof(arr), &split);
         assert_eq_uint(t, len, 6L, "1 - length");
         assert_eq_bytes(
             t, arr[0].buffer, "collecting", arr[0].len, "1 index 0 - contents"
@@ -131,12 +131,12 @@ void test_cstr_split_collect(test *t) {
         );
     }
 
-    jp_bytes_set(arr, 0, sizeof(arr));
+    bytes_set(arr, 0, sizeof(arr));
     split.index = 0;
 
     // collect some sub-strings
     {
-        size_t len = jp_cstr_split_collect(arr, 3, &split);
+        size_t len = cstr_split_collect(arr, 3, &split);
         assert_eq_uint(t, len, 3L, "2 - length");
         assert_eq_bytes(
             t, arr[0].buffer, "collecting", arr[0].len, "2 index 0 - contents"
@@ -152,7 +152,7 @@ void test_cstr_split_collect(test *t) {
 
 void test_cstr_split_null_terminate(test *t) {
     char str[] = "null terminate these words";
-    jp_cstr_split_iter split = {
+    cstr_split_iter split = {
         .str = str,
         .str_len = sizeof(str),
         .split_chars = " ",
@@ -163,31 +163,31 @@ void test_cstr_split_null_terminate(test *t) {
 
     // first word
     {
-        jp_slice slice = jp_cstr_split_next(&split);
+        slice slice = cstr_split_next(&split);
         assert_eq_cstr(t, (char *)slice.buffer, "null", "1 - contents");
     }
 
     // second word
     {
-        jp_slice slice = jp_cstr_split_next(&split);
+        slice slice = cstr_split_next(&split);
         assert_eq_cstr(t, (char *)slice.buffer, "terminate", "2 - contents");
     }
 
     // third word
     {
-        jp_slice slice = jp_cstr_split_next(&split);
+        slice slice = cstr_split_next(&split);
         assert_eq_cstr(t, (char *)slice.buffer, "these", "3 - contents");
     }
 
     // fourth word
     {
-        jp_slice slice = jp_cstr_split_next(&split);
+        slice slice = cstr_split_next(&split);
         assert_eq_cstr(t, (char *)slice.buffer, "words", "4 - contents");
     }
 
     // fifth iteration
     {
-        jp_slice slice = jp_cstr_split_next(&split);
+        slice slice = cstr_split_next(&split);
         assert_false(t, slice.len, "5 - length");
         assert_false(t, slice.buffer, "4 - contents");
     }
@@ -196,7 +196,7 @@ void test_cstr_split_null_terminate(test *t) {
 void test_cstr_split_collect_strings(test *t) {
     char str[] = "collecting all words to an array";
 
-    jp_cstr_split_iter split = {
+    cstr_split_iter split = {
         .str = str,
         .str_len = sizeof(str),
         .split_chars = " ",
@@ -210,7 +210,7 @@ void test_cstr_split_collect_strings(test *t) {
     // collect all sub-strings
     {
         size_t len =
-            jp_cstr_split_collect_strings(arr, jp_countof(arr), &split);
+            cstr_split_collect_strings(arr, countof(arr), &split);
         assert_eq_uint(t, len, 6L, "1 - length");
         assert_eq_cstr(t, arr[0], "collecting", "1 index 0 - contents");
         assert_eq_cstr(t, arr[1], "all", "1 index 1 - contents");
@@ -223,12 +223,12 @@ void test_cstr_split_collect_strings(test *t) {
     assert_false(
         t, split.null_terminate, "null termination flag is toggled back"
     );
-    jp_bytes_set(arr, 0, sizeof(arr));
+    bytes_set(arr, 0, sizeof(arr));
     split.index = 0;
 
     // collect some sub-strings
     {
-        size_t len = jp_cstr_split_collect_strings(arr, 3, &split);
+        size_t len = cstr_split_collect_strings(arr, 3, &split);
         assert_eq_uint(t, len, 3L, "2 - length");
         assert_eq_cstr(t, arr[0], "collecting", "2 index 0 - contents");
         assert_eq_cstr(t, arr[1], "all", "2 index 1 - contents");

@@ -1,7 +1,7 @@
 #ifndef JP_TESTR_H
 #define JP_TESTR_H
 
-#include "jp.h"
+#include "std.h"
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -80,7 +80,7 @@ b32 test_report_append(
     assert(t->logs_handle && "logs handle must not be null");
     assert(t->logs_handle->logs && "logs storage must not be null");
 
-    u64 logs_offset = jp_dynarr_len(t->logs_handle->logs);
+    u64 logs_offset = dynarr_len(t->logs_handle->logs);
 
     test_assert assert_report = {
         .logs_offset = logs_offset,
@@ -88,7 +88,7 @@ b32 test_report_append(
         .file = file,
         .line = line,
     };
-    test_assert *next_ar = jp_dynarr_push_grow(
+    test_assert *next_ar = dynarr_push_grow(
         t->asserts_handle->asserts, &assert_report, 1, test_assert
     );
     if (next_ar) {
@@ -97,7 +97,7 @@ b32 test_report_append(
         panic();
     }
 
-    u8 *next_logs = jp_dynarr_push_grow(
+    u8 *next_logs = dynarr_push_grow(
         t->logs_handle->logs, log_message, log_message_size, u8
     );
     if (next_logs) {
@@ -322,7 +322,7 @@ int test_main(
 
     // buffer to back logs
     logs_handle logs_handle = {
-        .logs = jp_dynarr_new(4096, u8, &jp_std_allocator),
+        .logs = dynarr_new(4096, u8, &std_allocator),
     };
     if (!logs_handle.logs) {
         panic();
@@ -330,7 +330,7 @@ int test_main(
 
     // buffer to back assert data
     asserts_handle asserts_handle = {
-        .asserts = jp_dynarr_new(1000, test_assert, &jp_std_allocator),
+        .asserts = dynarr_new(1000, test_assert, &std_allocator),
     };
     if (!asserts_handle.asserts) {
         panic();
@@ -340,7 +340,7 @@ int test_main(
     test_suite_report report = {
         .logs_handle = &logs_handle,
         .asserts_handle = &asserts_handle,
-        .test_reports = jp_new(test_report, test_count, &jp_std_allocator),
+        .test_reports = alloc_new(&std_allocator, test_report, test_count),
         .test_count = test_count,
         .tests_passed = 0,
         .assert_count = 0,
@@ -349,7 +349,7 @@ int test_main(
     if (!report.test_reports) {
         panic();
     }
-    jp_set_n(report.test_reports, 0, test_count);
+    set_n(report.test_reports, 0, test_count);
 
     if (setup && setup->before_all) {
         setup->before_all();
@@ -360,7 +360,7 @@ int test_main(
         test_report *tr = &report.test_reports[i];
         tr->name = test_case.name;
         tr->asserts =
-            &asserts_handle.asserts[jp_dynarr_len(asserts_handle.asserts)];
+            &asserts_handle.asserts[dynarr_len(asserts_handle.asserts)];
 
         test t = {
             .logs_handle = &logs_handle,
@@ -374,9 +374,9 @@ int test_main(
             if (run_test) {
                 break;
             }
-            if (jp_cstr_len_unsafe(argv[i])) {
+            if (cstr_len_unsafe(argv[i])) {
                 run_test |=
-                    jp_cstr_match_wild_ascii_unsafe(test_case.name, argv[i]);
+                    cstr_match_wild_ascii_unsafe(test_case.name, argv[i]);
             }
         }
 
@@ -407,9 +407,9 @@ int test_main(
 
     test_suite_report_pretty(&report, stream);
 
-    free(report.test_reports);
-    jp_dynarr_free(asserts_handle.asserts);
-    jp_dynarr_free(logs_handle.logs);
+    alloc_free(&std_allocator, report.test_reports);
+    dynarr_free(asserts_handle.asserts);
+    dynarr_free(logs_handle.logs);
 
     u64 fail_count = report.test_count - report.tests_passed;
     return (int)fail_count;
@@ -473,15 +473,15 @@ int test_main(
     )
 
 #define assert_eq_bytes(t, l, r, capacity, msg) \
-    assert_true(t, jp_bytes_eq((l), (r), (capacity)), msg)
+    assert_true(t, bytes_eq((l), (r), (capacity)), msg)
 
 #define assert_ne_bytes(t, l, r, capacity, msg) \
-    assert_false(t, jp_bytes_eq((l), (r), (capacity)), msg)
+    assert_false(t, bytes_eq((l), (r), (capacity)), msg)
 
 #define assert_eq_cstr(t, l, r, msg) \
     test_report_append_formatted_cstr( \
         (t), \
-        jp_cstr_eq_unsafe((l), (r)), \
+        cstr_eq_unsafe((l), (r)), \
         (msg), \
         __FILE__, \
         __LINE__, \
@@ -493,7 +493,7 @@ int test_main(
 #define assert_ne_cstr(t, l, r, msg) \
     test_report_append_formatted_cstr( \
         (t), \
-        !jp_cstr_eq_unsafe((l), (r)), \
+        !cstr_eq_unsafe((l), (r)), \
         (msg), \
         __FILE__, \
         __LINE__, \

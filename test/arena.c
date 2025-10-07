@@ -1,21 +1,21 @@
-#include "jp.h"
+#include "std.h"
 #include "testr.h"
 
 void test_arena(test *t) {
-    int buffer[10] = {0};
+    _Alignas(max_align_t) int buffer[10] = {0};
     size_t buf1_count = 5, buf2_count = 4;
-    jp_arena arena = jp_arena_new((u8 *)buffer, sizeof(buffer));
-    jp_allocator alloc = jp_arena_allocator_new(&arena);
+    arena arena = arena_new((u8 *)buffer, sizeof(buffer));
+    allocator alloc = arena_allocator_new(&arena);
     size_t buffer_size = sizeof(buffer);
     assert_eq_uint(t, arena.size, buffer_size, "arena size");
 
     // allocate 1st arena buffer
-    int *buf1 = jp_new(int, buf1_count, &alloc);
+    int *buf1 = alloc_new(&alloc, int, buf1_count);
     size_t buf1_size = sizeof(int) * buf1_count;
     assert_eq_uint(t, arena.used, buf1_size, "arena used after first alloc");
 
     // allocate 2nd arena buffer
-    int *buf2 = jp_new(int, buf2_count, &alloc);
+    int *buf2 = alloc_new(&alloc, int, buf2_count);
     size_t buf2_size = sizeof(int) * (buf1_count + buf2_count);
     assert_eq_uint(t, arena.used, buf2_size, "arena used after second alloc");
 
@@ -34,7 +34,7 @@ void test_arena(test *t) {
     );
 
     // try to overallocate
-    int *buf3 = jp_new(int, 3, &alloc);
+    int *buf3 = alloc_new(&alloc, int, 3);
     assert_false(t, buf3, "overallocation must fail");
 }
 

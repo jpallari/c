@@ -1,7 +1,7 @@
 #ifndef CLIARGS_H
 #define CLIARGS_H
 
-#include "jp.h"
+#include "std.h"
 
 /**
  * Error code from CLI args parsing
@@ -55,6 +55,12 @@ typedef enum {
     cliargs_type_str, // (null-terminated) string
     cliargs_type_bool, // boolean value (true/false)
 } cliargs_type;
+
+#define cliargs_type_s64_tname "signed integer"
+#define cliargs_type_u64_tname "unsigned integer"
+#define cliargs_type_f64_tname "real number"
+#define cliargs_type_str_tname "string"
+#define cliargs_type_bool_tname "boolean"
 
 /**
  * Types of data stored from parsed CLI arguments.
