@@ -1,3 +1,4 @@
 main
 build/
 config.mk
+.gdb_bps
