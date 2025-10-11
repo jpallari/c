@@ -240,6 +240,50 @@ void test_cstr_split_collect_strings(test *t) {
     );
 }
 
+void test_cstr_to_s8(test *t) {
+    s8 v = 0;
+    assert_true(t, cstr_to_s8("127", 3, &v), "convert exact length");
+    assert_eq_sint(t, v, 127, "value after conversion");
+    assert_true(t, cstr_to_s8("1279", 3, &v), "convert short length");
+    assert_eq_sint(t, v, 127, "value after conversion");
+    assert_true(t, cstr_to_s8("12\0 123", 4, &v), "convert null terminated");
+    assert_eq_sint(t, v, 12, "value after conversion");
+    assert_true(t, cstr_to_s8("-127", 4, &v), "convert negative");
+    assert_eq_sint(t, v, -127, "value after conversion");
+    assert_true(t, cstr_to_s8("0", 1, &v), "convert 0");
+    assert_eq_sint(t, v, 0, "value after conversion");
+
+    v = 0;
+    assert_false(t, cstr_to_s8("128", 3, &v), "convert too long int");
+    assert_false(t, v, "value remains unchanged");
+    assert_false(t, cstr_to_s8("a110", 4, &v), "convert invalid chars");
+    assert_false(t, v, "value remains unchanged");
+    assert_false(t, cstr_to_s8("102a", 4, &v), "convert invalid chars");
+    assert_false(t, v, "value remains unchanged");
+}
+
+void test_cstr_to_u8(test *t) {
+    u8 v = 0;
+    assert_true(t, cstr_to_u8("255", 3, &v), "convert exact length");
+    assert_eq_sint(t, v, 255, "value after conversion");
+    assert_true(t, cstr_to_u8("2559", 3, &v), "convert short length");
+    assert_eq_sint(t, v, 255, "value after conversion");
+    assert_true(t, cstr_to_u8("24\0 123", 4, &v), "convert null terminated");
+    assert_eq_sint(t, v, 24, "value after conversion");
+    assert_true(t, cstr_to_u8("0", 1, &v), "convert 0");
+    assert_eq_sint(t, v, 0, "value after conversion");
+
+    v = 0;
+    assert_false(t, cstr_to_u8("256", 3, &v), "convert too long int");
+    assert_false(t, v, "value remains unchanged");
+    assert_false(t, cstr_to_u8("-1", 4, &v), "convert negative number");
+    assert_false(t, v, "value remains unchanged");
+    assert_false(t, cstr_to_u8("a110", 4, &v), "convert invalid chars");
+    assert_false(t, v, "value remains unchanged");
+    assert_false(t, cstr_to_u8("102a", 4, &v), "convert invalid chars");
+    assert_false(t, v, "value remains unchanged");
+}
+
 static test_case tests[] = {
     {"C string equals", test_cstr_eq},
     {"C string equals (unsafe)", test_cstr_eq_unsafe},
@@ -248,7 +292,9 @@ static test_case tests[] = {
     {"C string split", test_cstr_split},
     {"C string split collect", test_cstr_split_collect},
     {"C string split null-terminate", test_cstr_split_null_terminate},
-    {"C string split collect strings", test_cstr_split_collect_strings}
+    {"C string split collect strings", test_cstr_split_collect_strings},
+    {"C string to s8", test_cstr_to_s8},
+    {"C string to u8", test_cstr_to_u8}
 };
 
 setup_tests(NULL, tests)

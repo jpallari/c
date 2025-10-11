@@ -1,10 +1,7 @@
 #include "cliargs.h"
 #include "std.h"
-#include <errno.h>
-#include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 typedef struct {
     cliargs *args;
@@ -75,49 +72,43 @@ void cliargs_write_error(cliargs_state state, const char *format, ...) {
     state.args->errors.buffer[last_index] = '\0';
 }
 
-cliargs_error
-cliargs_parse_value(cliargs_type t, const char *arg, cliargs_val *value) {
+cliargs_error cliargs_parse_value(
+    cliargs_type t, const char *arg, size_t arg_len, cliargs_val *value
+) {
     assert(arg && "arg must not be null");
     assert(value && "value must not be null");
-
-    cliargs_val v;
-    char *end = NULL;
+    b32 ok = 0;
 
     switch (t) {
     case cliargs_type_bool:
-        if (cstr_eq_unsafe(arg, "true")) {
-            v.uint = 1;
-        } else if (cstr_eq_unsafe(arg, "false")) {
-            v.uint = 0;
+        if (cstr_eq(arg, "true", arg_len)) {
+            value->uint = 1;
+        } else if (cstr_eq(arg, "false", arg_len)) {
+            value->uint = 0;
         } else {
             return cliargs_error_parse_fail;
         }
-        *value = v;
         return cliargs_error_none;
     case cliargs_type_f64:
-        v.real = strtod(arg, &end);
-        if (errno == ERANGE || *end != '\0') {
+        ok = cstr_to_double(arg, arg_len, &value->real);
+        if (!ok) {
             return cliargs_error_parse_fail;
         }
-        *value = v;
         return cliargs_error_none;
     case cliargs_type_s64:
-        v.sint = strtoll(arg, &end, 10);
-        if (errno == ERANGE || *end != '\0') {
+        ok = cstr_to_s64(arg, arg_len, &value->sint);
+        if (!ok) {
             return cliargs_error_parse_fail;
         }
-        *value = v;
         return cliargs_error_none;
     case cliargs_type_u64:
-        v.uint = strtoull(arg, &end, 10);
-        if (errno == ERANGE || *end != '\0') {
+        ok = cstr_to_u64(arg, arg_len, &value->uint);
+        if (!ok) {
             return cliargs_error_parse_fail;
         }
-        *value = v;
         return cliargs_error_none;
     case cliargs_type_str:
-        v.str = arg;
-        *value = v;
+        value->str = arg;
         return cliargs_error_none;
     default: return cliargs_error_unknown_type;
     }
@@ -234,7 +225,7 @@ cliargs_error cliargs_add_pos_arg(cliargs_state state) {
 }
 
 cliargs_error cliargs_parse_value_to_opt(
-    cliargs_state state, cliargs_opt *opt, const char *value
+    cliargs_state state, cliargs_opt *opt, const char *arg, size_t arg_len
 ) {
     assert(state.args && "args must not be null");
     assert(opt && "opt must not be null");
@@ -250,7 +241,7 @@ cliargs_error cliargs_parse_value_to_opt(
     }
 
     cliargs_error err =
-        cliargs_parse_value(opt->type, value, (opt->vals + opt->len));
+        cliargs_parse_value(opt->type, arg, arg_len, (opt->vals + opt->len));
 
     switch (err) {
     case cliargs_error_none: break;
@@ -336,7 +327,8 @@ cliargs_error cliargs_parse(cliargs *args, int argc, char **argv) {
                 );
                 return cliargs_error_value_expected;
             }
-            cliargs_error err = cliargs_parse_value_to_opt(state, opt, a.val);
+            cliargs_error err =
+                cliargs_parse_value_to_opt(state, opt, a.val, a.val_len);
             if (err) {
                 return err;
             }
@@ -352,7 +344,8 @@ cliargs_error cliargs_parse(cliargs *args, int argc, char **argv) {
                 return cliargs_error_unknown_flag;
             }
 
-            cliargs_error err = cliargs_parse_value_to_opt(state, opt, a.val);
+            cliargs_error err =
+                cliargs_parse_value_to_opt(state, opt, a.val, a.val_len);
             if (err) {
                 return err;
             }

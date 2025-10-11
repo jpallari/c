@@ -829,4 +829,15 @@ b32 cstr_match_wild_ascii(
  */
 b32 cstr_match_wild_ascii_unsafe(const char *txt, const char *pat);
 
+b32 cstr_to_s8(const char *s, size_t len, s8 *v);
+b32 cstr_to_u8(const char *s, size_t len, u8 *v);
+b32 cstr_to_s16(const char *s, size_t len, s16 *v);
+b32 cstr_to_u16(const char *s, size_t len, u16 *v);
+b32 cstr_to_s32(const char *s, size_t len, s32 *v);
+b32 cstr_to_u32(const char *s, size_t len, u32 *v);
+b32 cstr_to_s64(const char *s, size_t len, s64 *v);
+b32 cstr_to_u64(const char *s, size_t len, u64 *v);
+b32 cstr_to_float(const char *s, size_t len, float *v);
+b32 cstr_to_double(const char *s, size_t len, double *v);
+
 #endif // JP_STD_H
