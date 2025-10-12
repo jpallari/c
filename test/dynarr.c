@@ -13,10 +13,7 @@ void test_dynarr_push(test *t) {
 
     // check initial values
     assert_eq_uint(
-        t,
-        dynarr_capacity(arr),
-        capacity,
-        "capacity must remain the same"
+        t, dynarr_capacity(arr), capacity, "capacity must remain the same"
     );
     assert_eq_uint(t, dynarr_len(arr), 0L, "length must start at zero");
 
@@ -29,14 +26,9 @@ void test_dynarr_push(test *t) {
             "push must succeed when there is capacity left"
         );
         assert_eq_uint(
-            t,
-            dynarr_capacity(arr),
-            capacity,
-            "capacity must remain the same"
+            t, dynarr_capacity(arr), capacity, "capacity must remain the same"
         );
-        assert_eq_uint(
-            t, dynarr_len(arr), (u64)(i + 1), "length must update"
-        );
+        assert_eq_uint(t, dynarr_len(arr), (u64)(i + 1), "length must update");
         assert_eq_sint(t, arr[i], value, "value must be found from the array");
     }
     assert_eq_uint(
@@ -54,10 +46,7 @@ void test_dynarr_push(test *t) {
         "push does not succeed when capacity is met"
     );
     assert_eq_uint(
-        t,
-        dynarr_capacity(arr),
-        capacity,
-        "capacity must remain the same"
+        t, dynarr_capacity(arr), capacity, "capacity must remain the same"
     );
     assert_eq_uint(
         t,
@@ -108,10 +97,7 @@ void test_dynarr_push_grow(test *t) {
         "array must remain the same"
     );
     assert_eq_sint(
-        t,
-        arr[dynarr_len(arr) - 1],
-        1000,
-        "last value must exist in the array"
+        t, arr[dynarr_len(arr) - 1], 1000, "last value must exist in the array"
     );
 
     // exit
@@ -147,10 +133,7 @@ void test_dynarr_clone(test *t) {
         "capacity must be increased"
     );
     assert_eq_uint(
-        t,
-        dynarr_len(arr),
-        dynarr_len(arr_clone),
-        "lengths must be same"
+        t, dynarr_len(arr), dynarr_len(arr_clone), "lengths must be same"
     );
 
     assert_eq_bytes(
@@ -217,9 +200,7 @@ void test_dynarr_remove(test *t) {
 
     // remove element from out of bounds
     assert_false(t, dynarr_remove(arr, 5), "OOB removal must fail");
-    assert_eq_uint(
-        t, dynarr_len(arr), 5L, "array count must remain the same"
-    );
+    assert_eq_uint(t, dynarr_len(arr), 5L, "array count must remain the same");
     assert_eq_bytes(
         t,
         arr,
@@ -232,9 +213,7 @@ void test_dynarr_remove(test *t) {
     assert_true(
         t, dynarr_remove(arr, 2), "removing from the middle must succeed"
     );
-    assert_eq_uint(
-        t, dynarr_len(arr), 4L, "array must have one element less"
-    );
+    assert_eq_uint(t, dynarr_len(arr), 4L, "array must have one element less");
     assert_eq_sint(t, arr[0], 100, "0: remain the same");
     assert_eq_sint(t, arr[1], 101, "1: remain the same");
     assert_eq_sint(t, arr[2], 103, "2: shift left");
@@ -262,9 +241,7 @@ void test_dynarr_remove_uo(test *t) {
 
     // remove element from out of bounds
     assert_false(t, dynarr_remove_uo(arr, 5), "OOB removal must fail");
-    assert_eq_uint(
-        t, dynarr_len(arr), 5L, "array count must remain the same"
-    );
+    assert_eq_uint(t, dynarr_len(arr), 5L, "array count must remain the same");
     assert_eq_bytes(
         t,
         arr,
@@ -277,9 +254,7 @@ void test_dynarr_remove_uo(test *t) {
     assert_true(
         t, dynarr_remove_uo(arr, 2), "removing from the middle must succeed"
     );
-    assert_eq_uint(
-        t, dynarr_len(arr), 4L, "array must have one element less"
-    );
+    assert_eq_uint(t, dynarr_len(arr), 4L, "array must have one element less");
     assert_eq_sint(t, arr[0], 100, "0: remain the same");
     assert_eq_sint(t, arr[1], 101, "1: remain the same");
     assert_eq_sint(t, arr[2], 104, "2: swapped");
@@ -304,10 +279,7 @@ void test_dynarr_grow_in_arena(test *t) {
     // grow array
     char *new_arr = dynarr_grow(arr, 10, char);
     assert_eq_uint(
-        t,
-        dynarr_capacity(arr),
-        20L,
-        "existing capacity must double and add 10"
+        t, dynarr_capacity(arr), 20L, "existing capacity must double and add 10"
     );
     assert_eq_uint(
         t,
@@ -329,10 +301,7 @@ void test_dynarr_grow_in_arena(test *t) {
         "array head on backing buffer start: capacity"
     );
     assert_eq_uint(
-        t,
-        buf_head->len,
-        13L,
-        "array head on backing buffer start: length"
+        t, buf_head->len, 13L, "array head on backing buffer start: length"
     );
     assert_eq_cstr(
         t,

@@ -28,9 +28,7 @@ void test_slice_equal(test *t) {
 
     assert_true(t, slice_eq(s1_1, s1_1), "equals with itself");
     assert_false(t, slice_eq(s1_1, s1_2), "not equals with shifted");
-    assert_false(
-        t, slice_eq(s1_1, s1_3), "not equals with different length"
-    );
+    assert_false(t, slice_eq(s1_1, s1_3), "not equals with different length");
     assert_true(t, slice_eq(s1_1, s2_1), "equals with similar");
 }
 
@@ -41,9 +39,7 @@ void test_slice_from(test *t) {
     slice s2 = slice_from(arr);
 
     assert_eq_uint(t, s1.len, 13L, "s1 len must be size of string");
-    assert_eq_uint(
-        t, s2.len, sizeof(int) * 4, "s2 len must be size of array"
-    );
+    assert_eq_uint(t, s2.len, sizeof(int) * 4, "s2 len must be size of array");
     assert_eq_cstr(
         t, (char *)s1.buffer, "hello world!", "s1 contents should be the same"
     );

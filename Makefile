@@ -137,7 +137,7 @@ $(CMD_RELEASE_BIN_FILES): $(RELEASE_DIR)/%: $(RELEASE_CMD_OBJ_DIR)/%.o $(RELEASE
 # Build and run tests
 #
 
-.PHONY: lint test test-build
+.PHONY: lint test test-build format
 
 test: $(TEST_TARGETS)
 test-build: $(TEST_BIN_FILES)
@@ -155,6 +155,9 @@ $(TEST_TARGET_PREFIX)%: $(TEST_BIN_DIR)/%
 
 lint: $(SRC_FILES) $(HEADER_FILES) $(CMD_FILES) $(TEST_FILES)
 	cppcheck -DJP_USE_ASSERT_H --check-level=exhaustive $^
+
+format: $(SRC_FILES) $(HEADER_FILES)
+	clang-format -i $^
 
 #
 # Cleaning build artefacts

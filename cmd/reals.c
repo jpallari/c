@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
         } else {
             printf("fail: %s\n", s.buffer);
         }
-    } while(s.buffer);
+    } while (s.buffer);
 
     alloc_free(&std_allocator, res.data);
     return 0;

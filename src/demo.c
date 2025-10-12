@@ -1,5 +1,5 @@
-#include "std.h"
 #include "io.h"
+#include "std.h"
 #include <stdio.h>
 
 int array_demo(void) {

@@ -32,10 +32,7 @@ void test_bytes_copy(test *t) {
     }
     int expected_mismatches = 0;
     assert_eq_sint(
-        t,
-        mismatches,
-        expected_mismatches,
-        "no mismatches should be found"
+        t, mismatches, expected_mismatches, "no mismatches should be found"
     );
 
     alloc_free(&std_allocator, arr1);
@@ -73,10 +70,7 @@ void test_bytes_move_no_overlap(test *t) {
     }
     int expected_mismatches = 0;
     assert_eq_sint(
-        t,
-        mismatches,
-        expected_mismatches,
-        "no mismatches should be found"
+        t, mismatches, expected_mismatches, "no mismatches should be found"
     );
 
     alloc_free(&std_allocator, arr1);

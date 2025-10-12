@@ -30,10 +30,7 @@ void test_cstr_len(test *t) {
         "length should be counted until null terminator"
     );
     assert_eq_uint(
-        t,
-        cstr_len("hello", 3),
-        3L,
-        "length should be up to the capacity"
+        t, cstr_len("hello", 3), 3L, "length should be up to the capacity"
     );
 }
 
@@ -209,8 +206,7 @@ void test_cstr_split_collect_strings(test *t) {
 
     // collect all sub-strings
     {
-        size_t len =
-            cstr_split_collect_strings(arr, countof(arr), &split);
+        size_t len = cstr_split_collect_strings(arr, countof(arr), &split);
         assert_eq_uint(t, len, 6L, "1 - length");
         assert_eq_cstr(t, arr[0], "collecting", "1 index 0 - contents");
         assert_eq_cstr(t, arr[1], "all", "1 index 1 - contents");

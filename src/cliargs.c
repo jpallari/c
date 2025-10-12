@@ -107,9 +107,7 @@ cliargs_error cliargs_parse_value(
             return cliargs_error_parse_fail;
         }
         return cliargs_error_none;
-    case cliargs_type_str:
-        value->str = arg;
-        return cliargs_error_none;
+    case cliargs_type_str: value->str = arg; return cliargs_error_none;
     default: return cliargs_error_unknown_type;
     }
 }

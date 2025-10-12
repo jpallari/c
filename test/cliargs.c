@@ -103,8 +103,7 @@ void test_parse_all_args(test *t) {
         "--help -g hello -c 2 -p=0.2 pos1 --greeting world --count=5 -diff=-4 "
         "pos2 pos3";
     char *argv[20] = {0};
-    size_t argc =
-        split_args(argv_str, countof(argv_str), argv, countof(argv));
+    size_t argc = split_args(argv_str, countof(argv_str), argv, countof(argv));
     if (!assert_eq_uint(t, argc, 13, "must parse enough args")) {
         return;
     }
@@ -173,8 +172,7 @@ void test_parse_rest(test *t) {
     char argv_str[] =
         "-g hello pos1 --greeting world pos2 pos3 -- --greeting hi";
     char *argv[20] = {0};
-    size_t argc =
-        split_args(argv_str, countof(argv_str), argv, countof(argv));
+    size_t argc = split_args(argv_str, countof(argv_str), argv, countof(argv));
     if (!assert_eq_uint(t, argc, 10, "must parse enough args")) {
         return;
     }
