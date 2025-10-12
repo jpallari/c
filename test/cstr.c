@@ -280,6 +280,80 @@ void test_cstr_to_u8(test *t) {
     assert_false(t, v, "value remains unchanged");
 }
 
+void test_cstr_from_s8(test *t) {
+    char buffer[100];
+    bytes_set(buffer, 0xce, sizeof(buffer));
+
+    assert_eq_uint(
+        t, cstr_from_s8(buffer, sizeof(buffer), 120), 4, "write all chars"
+    );
+    assert_eq_cstr(t, buffer, "120", "expected number as string");
+
+    bytes_set(buffer, 0xce, sizeof(buffer));
+    assert_eq_uint(
+        t, cstr_from_s8(buffer, sizeof(buffer), 89), 3, "write all chars"
+    );
+    assert_eq_cstr(t, buffer, "89", "expected number as string");
+
+    bytes_set(buffer, 0xce, sizeof(buffer));
+    assert_eq_uint(
+        t, cstr_from_s8(buffer, sizeof(buffer), 1), 2, "write all chars"
+    );
+    assert_eq_cstr(t, buffer, "1", "expected number as string");
+
+    bytes_set(buffer, 0xce, sizeof(buffer));
+    assert_eq_uint(
+        t, cstr_from_s8(buffer, sizeof(buffer), 0), 2, "write all chars"
+    );
+    assert_eq_cstr(t, buffer, "0", "expected number as string");
+
+    bytes_set(buffer, 0xce, sizeof(buffer));
+    assert_eq_uint(
+        t, cstr_from_s8(buffer, sizeof(buffer), -127), 5, "write all chars"
+    );
+    assert_eq_cstr(t, buffer, "-127", "expected number as string");
+
+    bytes_set(buffer, 0xce, sizeof(buffer));
+    assert_eq_uint(t, cstr_from_s8(buffer, 2, 123), 2, "write some chars");
+    assert_eq_bytes(
+        t, buffer, "12", 2, "expected prefix of the number as string"
+    );
+}
+
+void test_cstr_from_u8(test *t) {
+    char buffer[100];
+    bytes_set(buffer, 0xce, sizeof(buffer));
+
+    assert_eq_uint(
+        t, cstr_from_u8(buffer, sizeof(buffer), 254), 4, "write all chars"
+    );
+    assert_eq_cstr(t, buffer, "254", "expected number as string");
+
+    bytes_set(buffer, 0xce, sizeof(buffer));
+    assert_eq_uint(
+        t, cstr_from_u8(buffer, sizeof(buffer), 89), 3, "write all chars"
+    );
+    assert_eq_cstr(t, buffer, "89", "expected number as string");
+
+    bytes_set(buffer, 0xce, sizeof(buffer));
+    assert_eq_uint(
+        t, cstr_from_u8(buffer, sizeof(buffer), 1), 2, "write all chars"
+    );
+    assert_eq_cstr(t, buffer, "1", "expected number as string");
+
+    bytes_set(buffer, 0xce, sizeof(buffer));
+    assert_eq_uint(
+        t, cstr_from_u8(buffer, sizeof(buffer), 0), 2, "write all chars"
+    );
+    assert_eq_cstr(t, buffer, "0", "expected number as string");
+
+    bytes_set(buffer, 0xce, sizeof(buffer));
+    assert_eq_uint(t, cstr_from_u8(buffer, 2, 123), 2, "write some chars");
+    assert_eq_bytes(
+        t, buffer, "12", 2, "expected prefix of the number as string"
+    );
+}
+
 static test_case tests[] = {
     {"C string equals", test_cstr_eq},
     {"C string equals (unsafe)", test_cstr_eq_unsafe},
@@ -290,7 +364,9 @@ static test_case tests[] = {
     {"C string split null-terminate", test_cstr_split_null_terminate},
     {"C string split collect strings", test_cstr_split_collect_strings},
     {"C string to s8", test_cstr_to_s8},
-    {"C string to u8", test_cstr_to_u8}
+    {"C string to u8", test_cstr_to_u8},
+    {"C string from s8", test_cstr_from_s8},
+    {"C string from u8", test_cstr_from_u8}
 };
 
 setup_tests(NULL, tests)

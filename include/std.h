@@ -840,4 +840,15 @@ b32 cstr_to_u64(const char *s, size_t len, u64 *v);
 b32 cstr_to_float(const char *s, size_t len, float *v);
 b32 cstr_to_double(const char *s, size_t len, double *v);
 
+size_t cstr_from_s8(char *dest, size_t len, s8 src);
+size_t cstr_from_u8(char *dest, size_t len, u8 src);
+size_t cstr_from_s16(char *dest, size_t len, s16 src);
+size_t cstr_from_u16(char *dest, size_t len, u16 src);
+size_t cstr_from_s32(char *dest, size_t len, s32 src);
+size_t cstr_from_u32(char *dest, size_t len, u32 src);
+size_t cstr_from_s64(char *dest, size_t len, s64 src);
+size_t cstr_from_u64(char *dest, size_t len, u64 src);
+size_t cstr_from_float(char *dest, size_t len, float src, u8 decimals);
+size_t cstr_from_double(char *dest, size_t len, double src, u8 decimals);
+
 #endif // JP_STD_H

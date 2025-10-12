@@ -39,6 +39,7 @@ int main(int argc, char **argv) {
             break;
         }
 
+        char buf[1000] = {0};
         double d = 0.0;
         float f = 0.0;
         b32 ok = 0;
@@ -50,9 +51,11 @@ int main(int argc, char **argv) {
         }
 
         if (ok && mode == 2) {
-            printf("%s %g %.9f\n", s.buffer, f, f);
+            cstr_from_float(buf, sizeof(buf), f, 6);
+            printf("%s %g %s\n", s.buffer, f, buf);
         } else if (ok) {
-            printf("%s %g %.9f\n", s.buffer, d, d);
+            cstr_from_double(buf, sizeof(buf), d, 18);
+            printf("%s %g %s\n", s.buffer, d, buf);
         } else {
             printf("fail: %s\n", s.buffer);
         }

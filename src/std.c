@@ -778,7 +778,7 @@ b32 cstr_to_u64(const char *s, size_t len, u64 *v) {
     return 1;
 }
 
-static const double pow10[] = {
+static const double pow10d[] = {
     1e0,   1e1,   1e2,   1e3,   1e4,   1e5,   1e6,   1e7,   1e8,   1e9,   1e10,
     1e11,  1e12,  1e13,  1e14,  1e15,  1e16,  1e17,  1e18,  1e19,  1e20,  1e21,
     1e22,  1e23,  1e24,  1e25,  1e26,  1e27,  1e28,  1e29,  1e30,  1e31,  1e32,
@@ -808,6 +808,28 @@ static const double pow10[] = {
     1e286, 1e287, 1e288, 1e289, 1e290, 1e291, 1e292, 1e293, 1e294, 1e295, 1e296,
     1e297, 1e298, 1e299, 1e300, 1e301, 1e302, 1e303, 1e304, 1e305, 1e306, 1e307,
     1e308
+};
+
+static const u64 pow10u64[] = {
+    1e0L,
+    1e1L,
+    1e2L,
+    1e3L,
+    1e4L,
+    1e5L,
+    1e6L,
+    1e7L,
+    1e8L,
+    1e9L,
+    1e10L,
+    1e11L,
+    1e12L,
+    1e13L,
+    1e14L,
+    1e15L,
+    1e16L,
+    1e17L,
+    1e18L
 };
 
 b32 cstr_to_float(const char *s, size_t len, float *v) {
@@ -910,12 +932,12 @@ b32 cstr_to_float(const char *s, size_t len, float *v) {
 
     // collect results
     float v_ = (float)integer;
-    if (v_ > FLT_MAX / (float)pow10[exp]) {
+    if (v_ > FLT_MAX / (float)pow10d[exp]) {
         // exceeds float max
         return 0;
     }
-    v_ *= (float)pow10[exp];
-    v_ /= (float)pow10[decimals];
+    v_ *= (float)pow10d[exp];
+    v_ /= (float)pow10d[decimals];
     if (v_ > FLT_MAX - fraction) {
         // exceeds float max
         return 0;
@@ -1027,12 +1049,12 @@ b32 cstr_to_double(const char *s, size_t len, double *v) {
 
     // collect results
     double v_ = (double)integer;
-    if (v_ > DBL_MAX / pow10[exp]) {
+    if (v_ > DBL_MAX / pow10d[exp]) {
         // exceeds double max
         return 0;
     }
-    v_ *= pow10[exp];
-    v_ /= pow10[decimals];
+    v_ *= pow10d[exp];
+    v_ /= pow10d[decimals];
     if (v_ > DBL_MAX - fraction) {
         // exceeds double max
         return 0;
@@ -1042,4 +1064,312 @@ b32 cstr_to_double(const char *s, size_t len, double *v) {
 
     *v = v_;
     return 1;
+}
+
+size_t cstr_from_s8(char *dest, size_t len, s8 src) {
+    assert(dest && "dest must not be null");
+    assert(len > 0 && "len must be more than 0");
+    char tmp[8] = {0};
+    char *end = tmp + sizeof(tmp);
+    char *cursor = end - 1;
+    b32 is_neg = src < 0;
+    if (is_neg) {
+        src = -src;
+    }
+
+    do {
+        cursor -= 1;
+        *cursor = '0' + (char)(src % 10);
+        src /= 10;
+    } while (src > 0);
+    if (is_neg) {
+        cursor -= 1;
+        *cursor = '-';
+    }
+
+    size_t tmp_len = (size_t)((uintptr_t)end - (uintptr_t)cursor);
+    size_t bytes_to_copy = min(len, tmp_len);
+    bytes_copy(dest, cursor, bytes_to_copy);
+    return bytes_to_copy;
+}
+
+size_t cstr_from_u8(char *dest, size_t len, u8 src) {
+    assert(dest && "dest must not be null");
+    assert(len > 0 && "len must be more than 0");
+    char tmp[8] = {0};
+    char *end = tmp + sizeof(tmp);
+    char *cursor = end - 1;
+
+    do {
+        cursor -= 1;
+        *cursor = '0' + (char)(src % 10);
+        src /= 10;
+    } while (src > 0);
+
+    size_t tmp_len = (size_t)((uintptr_t)end - (uintptr_t)cursor);
+    size_t bytes_to_copy = min(len, tmp_len);
+    bytes_copy(dest, cursor, bytes_to_copy);
+    return bytes_to_copy;
+}
+
+size_t cstr_from_s16(char *dest, size_t len, s16 src) {
+    assert(dest && "dest must not be null");
+    assert(len > 0 && "len must be more than 0");
+    char tmp[8] = {0};
+    char *end = tmp + sizeof(tmp);
+    char *cursor = end - 1;
+    b32 is_neg = src < 0;
+    if (is_neg) {
+        src = -src;
+    }
+
+    do {
+        cursor -= 1;
+        *cursor = '0' + (char)(src % 10);
+        src /= 10;
+    } while (src > 0);
+    if (is_neg) {
+        cursor -= 1;
+        *cursor = '-';
+    }
+
+    size_t tmp_len = (size_t)((uintptr_t)end - (uintptr_t)cursor);
+    size_t bytes_to_copy = min(len, tmp_len);
+    bytes_copy(dest, cursor, bytes_to_copy);
+    return bytes_to_copy;
+}
+
+size_t cstr_from_u16(char *dest, size_t len, u16 src) {
+    assert(dest && "dest must not be null");
+    assert(len > 0 && "len must be more than 0");
+    char tmp[8] = {0};
+    char *end = tmp + sizeof(tmp);
+    char *cursor = end - 1;
+
+    do {
+        cursor -= 1;
+        *cursor = '0' + (char)(src % 10);
+        src /= 10;
+    } while (src > 0);
+
+    size_t tmp_len = (size_t)((uintptr_t)end - (uintptr_t)cursor);
+    size_t bytes_to_copy = min(len, tmp_len);
+    bytes_copy(dest, cursor, bytes_to_copy);
+    return bytes_to_copy;
+}
+
+size_t cstr_from_s32(char *dest, size_t len, s32 src) {
+    assert(dest && "dest must not be null");
+    assert(len > 0 && "len must be more than 0");
+    char tmp[16] = {0};
+    char *end = tmp + sizeof(tmp);
+    char *cursor = end - 1;
+    b32 is_neg = src < 0;
+    if (is_neg) {
+        src = -src;
+    }
+
+    do {
+        cursor -= 1;
+        *cursor = '0' + (char)(src % 10);
+        src /= 10;
+    } while (src > 0);
+    if (is_neg) {
+        cursor -= 1;
+        *cursor = '-';
+    }
+
+    size_t tmp_len = (size_t)((uintptr_t)end - (uintptr_t)cursor);
+    size_t bytes_to_copy = min(len, tmp_len);
+    bytes_copy(dest, cursor, bytes_to_copy);
+    return bytes_to_copy;
+}
+
+size_t cstr_from_u32(char *dest, size_t len, u32 src) {
+    assert(dest && "dest must not be null");
+    assert(len > 0 && "len must be more than 0");
+    char tmp[16] = {0};
+    char *end = tmp + sizeof(tmp);
+    char *cursor = end - 1;
+
+    do {
+        cursor -= 1;
+        *cursor = '0' + (char)(src % 10);
+        src /= 10;
+    } while (src > 0);
+
+    size_t tmp_len = (size_t)((uintptr_t)end - (uintptr_t)cursor);
+    size_t bytes_to_copy = min(len, tmp_len);
+    bytes_copy(dest, cursor, bytes_to_copy);
+    return bytes_to_copy;
+}
+
+size_t cstr_from_s64(char *dest, size_t len, s64 src) {
+    assert(dest && "dest must not be null");
+    assert(len > 0 && "len must be more than 0");
+    char tmp[32] = {0};
+    char *end = tmp + sizeof(tmp);
+    char *cursor = end - 1;
+    b32 is_neg = src < 0;
+    if (is_neg) {
+        src = -src;
+    }
+
+    do {
+        cursor -= 1;
+        *cursor = '0' + (char)(src % 10);
+        src /= 10;
+    } while (src > 0);
+    if (is_neg) {
+        cursor -= 1;
+        *cursor = '-';
+    }
+
+    size_t tmp_len = (size_t)((uintptr_t)end - (uintptr_t)cursor);
+    size_t bytes_to_copy = min(len, tmp_len);
+    bytes_copy(dest, cursor, bytes_to_copy);
+    return bytes_to_copy;
+}
+
+size_t cstr_from_u64(char *dest, size_t len, u64 src) {
+    assert(dest && "dest must not be null");
+    assert(len > 0 && "len must be more than 0");
+    char tmp[32] = {0};
+    char *end = tmp + sizeof(tmp);
+    char *cursor = end - 1;
+
+    do {
+        cursor -= 1;
+        *cursor = '0' + (char)(src % 10);
+        src /= 10;
+    } while (src > 0);
+
+    size_t tmp_len = (size_t)((uintptr_t)end - (uintptr_t)cursor);
+    size_t bytes_to_copy = min(len, tmp_len);
+    bytes_copy(dest, cursor, bytes_to_copy);
+    return bytes_to_copy;
+}
+
+size_t cstr_from_float(char *dest, size_t len, float src, u8 decimals) {
+    assert(dest && "dest must not be null");
+    assert(len > 0 && "len must be more than 0");
+    assert(decimals < 19 && "decimals up to 18 are supported");
+    if (len == 0) {
+        return 0;
+    }
+
+    size_t bytes_written = 0;
+    if (src < 0) {
+        dest[bytes_written] = '-';
+        bytes_written += 1;
+        src = -src;
+    }
+    if (bytes_written == len) {
+        return bytes_written;
+    }
+
+    double precision_d = pow10d[decimals];
+
+    src += 0.5f / (float)precision_d;
+    if (src >= (float)(-1UL >> 1)) {
+        // necessary?
+        size_t bytes_to_copy = min(len, sizeof("inf"));
+        bytes_copy(dest + bytes_written, "inf", bytes_to_copy);
+        bytes_written += bytes_to_copy;
+        return bytes_written;
+    }
+
+    // integer part
+    u64 integer = (u64)src;
+    bytes_written +=
+        cstr_from_u64(dest + bytes_written, len - bytes_written, integer) - 1;
+    if (bytes_written == len) {
+        return bytes_written;
+    }
+
+    // decimal point
+    dest[bytes_written] = '.';
+    bytes_written += 1;
+    if (bytes_written == len) {
+        return bytes_written;
+    }
+
+    // fractional part
+    u64 fractional = (u64)((src - (double)integer) * precision_d);
+    u64 precision_u64 = pow10u64[decimals];
+    for (u64 i = precision_u64 / 10; i > 1; i /= 10) {
+        if (i > fractional) {
+            dest[bytes_written] = '0';
+            bytes_written += 1;
+            if (bytes_written == len) {
+                return bytes_written;
+            }
+        }
+    }
+    bytes_written +=
+        cstr_from_u64(dest + bytes_written, len - bytes_written, fractional);
+
+    return bytes_written;
+}
+
+size_t cstr_from_double(char *dest, size_t len, double src, u8 decimals) {
+    assert(dest && "dest must not be null");
+    assert(len > 0 && "len must be more than 0");
+    assert(decimals < 19 && "decimals up to 19 are supported");
+    if (len == 0) {
+        return 0;
+    }
+
+    size_t bytes_written = 0;
+    if (src < 0) {
+        dest[bytes_written] = '-';
+        bytes_written += 1;
+        src = -src;
+    }
+    if (bytes_written == len) {
+        return bytes_written;
+    }
+
+    double precision_d = pow10d[decimals];
+
+    src += 0.5 / precision_d;
+    if (src >= (double)(-1UL >> 1)) {
+        // necessary?
+        size_t bytes_to_copy = min(len, sizeof("inf"));
+        bytes_copy(dest + bytes_written, "inf", bytes_to_copy);
+        bytes_written += bytes_to_copy;
+        return bytes_written;
+    }
+
+    // integer part
+    u64 integer = (u64)src;
+    bytes_written +=
+        cstr_from_u64(dest + bytes_written, len - bytes_written, integer) - 1;
+    if (bytes_written == len) {
+        return bytes_written;
+    }
+
+    // decimal point
+    dest[bytes_written] = '.';
+    bytes_written += 1;
+    if (bytes_written == len) {
+        return bytes_written;
+    }
+
+    // fractional part
+    u64 fractional = (u64)((src - (double)integer) * precision_d);
+    u64 precision_u64 = pow10u64[decimals];
+    for (u64 i = precision_u64 / 10; i > 1; i /= 10) {
+        if (i > fractional) {
+            dest[bytes_written] = '0';
+            bytes_written += 1;
+            if (bytes_written == len) {
+                return bytes_written;
+            }
+        }
+    }
+    bytes_written +=
+        cstr_from_u64(dest + bytes_written, len - bytes_written, fractional);
+
+    return bytes_written;
 }
