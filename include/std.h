@@ -67,9 +67,9 @@ static inline void breakpoint(void) {
 #endif
 #endif // JP_DEBUG
 
-#ifdef JP_USE_ASSERT_H
+#if defined(JP_USE_ASSERT_H)
 #include <assert.h>
-#elif JP_DEBUG
+#elif defined(JP_DEBUG)
 
 /**
  * Assert: fail when condition does not hold
