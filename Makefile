@@ -93,7 +93,8 @@ TEST_TARGET_PREFIX = test-
 TEST_TARGETS = $(TEST_FILES:$(TEST_DIR)/%.c=$(TEST_TARGET_PREFIX)%)
 
 # Main targets
-.PHONY: debug release
+.PHONY: debug release all
+all: debug release test
 debug: $(CMD_DEBUG_BIN_FILES)
 release: $(CMD_RELEASE_BIN_FILES)
 
