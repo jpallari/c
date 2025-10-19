@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
         char buf[1000] = {0};
         double d = 0.0;
         float f = 0.0;
-        b32 ok = 0;
+        bool ok = 0;
 
         if (mode == 2) {
             ok = cstr_to_float((char *)s.buffer, s.len, &f);

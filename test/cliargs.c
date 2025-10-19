@@ -31,8 +31,8 @@ void test_parse_all_args(test *t) {
         countof(errors)
     );
 
-    u64 flag_help[1] = {0};
-    u32 *flag_help_len = cliargs_add_named(
+    ullong flag_help[1] = {0};
+    uint *flag_help_len = cliargs_add_named(
         &args,
         (cliargs_opt_spec) {
             .long_name = "help",
@@ -46,7 +46,7 @@ void test_parse_all_args(test *t) {
     );
 
     char *flag_greeting[3] = {0};
-    u32 *flag_greeting_len = cliargs_add_named(
+    uint *flag_greeting_len = cliargs_add_named(
         &args,
         (cliargs_opt_spec) {
             .long_name = "greeting",
@@ -60,40 +60,40 @@ void test_parse_all_args(test *t) {
     );
 
     double flag_percentage[1] = {0};
-    u32 *flag_percentage_len = cliargs_add_named(
+    uint *flag_percentage_len = cliargs_add_named(
         &args,
         (cliargs_opt_spec) {
             .long_name = "percentage",
             .short_name = "p",
             .help_text = "Percentage number between 0..1",
             .max_len = countof(flag_percentage),
-            .type = cliargs_type_f64,
+            .type = cliargs_type_float,
         },
         flag_percentage
     );
 
-    u64 flag_count[4] = {0};
-    u32 *flag_count_len = cliargs_add_named(
+    ullong flag_count[4] = {0};
+    uint *flag_count_len = cliargs_add_named(
         &args,
         (cliargs_opt_spec) {
             .long_name = "count",
             .short_name = "c",
             .help_text = "Count of things",
             .max_len = countof(flag_count),
-            .type = cliargs_type_u64,
+            .type = cliargs_type_uint,
         },
         flag_count
     );
 
-    s64 flag_diff[1] = {0};
-    u32 *flag_diff_len = cliargs_add_named(
+    llong flag_diff[1] = {0};
+    uint *flag_diff_len = cliargs_add_named(
         &args,
         (cliargs_opt_spec) {
             .long_name = "diff",
             .short_name = "d",
             .help_text = "Difference",
             .max_len = countof(flag_diff),
-            .type = cliargs_type_s64,
+            .type = cliargs_type_int,
 
         },
         flag_diff
@@ -156,7 +156,7 @@ void test_parse_rest(test *t) {
     );
 
     char *flag_greeting[3] = {0};
-    u32 *flag_greeting_len = cliargs_add_named(
+    uint *flag_greeting_len = cliargs_add_named(
         &args,
         (cliargs_opt_spec) {
             .long_name = "greeting",
@@ -219,7 +219,7 @@ void test_parse_fail_on_parse(test *t) {
         countof(errors)
     );
 
-    u64 flag_count[4] = {0};
+    ullong flag_count[4] = {0};
     cliargs_add_named(
         &args,
         (cliargs_opt_spec) {
@@ -227,7 +227,7 @@ void test_parse_fail_on_parse(test *t) {
             .short_name = "c",
             .help_text = "Count of things",
             .max_len = countof(flag_count),
-            .type = cliargs_type_u64,
+            .type = cliargs_type_uint,
         },
         flag_count
     );
@@ -266,7 +266,7 @@ void test_parse_fail_on_unknown_flag(test *t) {
         countof(errors)
     );
 
-    u64 flag_count[4] = {0};
+    ullong flag_count[4] = {0};
     cliargs_add_named(
         &args,
         (cliargs_opt_spec) {
@@ -274,7 +274,7 @@ void test_parse_fail_on_unknown_flag(test *t) {
             .short_name = "c",
             .help_text = "Count of things",
             .max_len = countof(flag_count),
-            .type = cliargs_type_u64,
+            .type = cliargs_type_uint,
         },
         flag_count
     );
@@ -315,7 +315,7 @@ void test_parse_fail_on_expecting_value(test *t) {
         countof(errors)
     );
 
-    u64 flag_count[4] = {0};
+    ullong flag_count[4] = {0};
     cliargs_add_named(
         &args,
         (cliargs_opt_spec) {
@@ -323,12 +323,12 @@ void test_parse_fail_on_expecting_value(test *t) {
             .short_name = "c",
             .help_text = "Count of things",
             .max_len = countof(flag_count),
-            .type = cliargs_type_u64,
+            .type = cliargs_type_uint,
         },
         flag_count
     );
 
-    s64 flag_diff[1] = {0};
+    llong flag_diff[1] = {0};
     cliargs_add_named(
         &args,
         (cliargs_opt_spec) {
@@ -336,7 +336,7 @@ void test_parse_fail_on_expecting_value(test *t) {
             .short_name = "d",
             .help_text = "Difference",
             .max_len = countof(flag_diff),
-            .type = cliargs_type_s64,
+            .type = cliargs_type_int,
 
         },
         flag_diff

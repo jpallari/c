@@ -4,7 +4,7 @@
 void test_arena(test *t) {
     _Alignas(max_align_t) int buffer[10] = {0};
     size_t buf1_count = 5, buf2_count = 4;
-    arena arena = arena_new((u8 *)buffer, sizeof(buffer));
+    arena arena = arena_new((uchar *)buffer, sizeof(buffer));
     allocator alloc = arena_allocator_new(&arena);
     size_t buffer_size = sizeof(buffer);
     assert_eq_uint(t, arena.size, buffer_size, "arena size");
@@ -27,8 +27,8 @@ void test_arena(test *t) {
     int expected_buffer[] = {100, 101, 102, 103, 104, 200, 201, 202, 203, 0};
     assert_eq_bytes(
         t,
-        (u8 *)buffer,
-        (u8 *)expected_buffer,
+        (uchar *)buffer,
+        (uchar *)expected_buffer,
         sizeof(buffer),
         "buffer must contain stored values"
     );

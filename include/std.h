@@ -4,7 +4,6 @@
 #ifndef JP_STD_H
 #define JP_STD_H
 
-#include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -17,15 +16,12 @@
 // Scalar types
 ////////////////////////
 
-typedef uint8_t u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
-typedef uint64_t u64;
-typedef int8_t s8;
-typedef int16_t s16;
-typedef int32_t s32;
-typedef int64_t s64;
-typedef s32 b32;
+typedef unsigned char uchar;
+typedef unsigned short ushort;
+typedef unsigned int uint;
+typedef long long llong;
+typedef unsigned long long ullong;
+typedef int bool;
 
 ////////////////////////
 // Debugging
@@ -140,8 +136,8 @@ bytes_copy(void *restrict dest, const void *restrict src, size_t n) {
     assert(dest && "dest must not be null");
     assert(src && "src must not be null");
 
-    char *d = dest;
-    const char *s = src;
+    uchar *d = dest;
+    const uchar *s = src;
     for (size_t i = 0; i < n; i += 1) { d[i] = s[i]; }
     return d;
 }
@@ -191,8 +187,9 @@ static inline void *bytes_set(void *dest, int c, size_t n) {
     if (!n) {
         return dest;
     }
-    u8 *d = dest;
-    for (size_t i = 0; i < n; i += 1) { d[i] = (u8)c; }
+    uchar *d = dest;
+    uchar c_ = (uchar)c;
+    for (size_t i = 0; i < n; i += 1) { d[i] = c_; }
     return d;
 }
 
@@ -232,7 +229,7 @@ int bytes_diff_index(
  * @param capacity the capacity of the buffers
  * @returns true when bytes contain the same bytes and false otherwise
  */
-b32 bytes_eq(const void *a, const void *b, size_t capacity);
+bool bytes_eq(const void *a, const void *b, size_t capacity);
 
 /**
  * Write bytes as a hex string.
@@ -245,7 +242,7 @@ b32 bytes_eq(const void *a, const void *b, size_t capacity);
  * @param[in] n number of bytes to convert to a hex string
  * @returns number of bytes written
  */
-size_t bytes_to_hex(char *dest, const char *src, size_t n);
+size_t bytes_to_hex(uchar *dest, const uchar *src, size_t n);
 
 ////////////////////////
 // Allocator
@@ -355,7 +352,7 @@ typedef struct {
     /**
      * Buffer containing the data
      */
-    u8 *buffer;
+    uchar *buffer;
 
     /**
      * Length of the slice in bytes
@@ -371,7 +368,7 @@ typedef struct {
  */
 #define slice_from(x) \
     (slice) { \
-        (u8 *)(x), sizeof(x) \
+        (uchar *)(x), sizeof(x) \
     }
 
 /**
@@ -381,7 +378,7 @@ typedef struct {
  * @param end pointer where the data ends
  * @returns slice of data between the given pointers
  */
-slice slice_span(u8 *start, u8 *end);
+slice slice_span(uchar *start, uchar *end);
 
 /**
  * Check if two slices are equal
@@ -389,7 +386,7 @@ slice slice_span(u8 *start, u8 *end);
  * @param a,b slices to compare
  * @returns true when the slices are equal and false otherwise
  */
-s32 slice_eq(const slice a, const slice b);
+bool slice_eq(const slice a, const slice b);
 
 /**
  * Copy slice contents to another slice where the slices do not overlap.
@@ -426,23 +423,23 @@ typedef struct {
     /**
      * Buffer to back the arena.
      */
-    u8 *buffer;
+    uchar *buffer;
 
     /**
      * Current size of the arena.
      */
-    u64 size;
+    size_t size;
 
     /**
      * Amount of memory used in the arena.
      */
-    u64 used;
+    size_t used;
 } arena;
 
 /**
  * Create a new arena for a backing buffer.
  */
-arena arena_new(u8 *buffer, u64 size);
+arena arena_new(uchar *buffer, size_t size);
 
 /**
  * Calculate used bytes based on desired usage and alignment.
@@ -453,7 +450,7 @@ arena arena_new(u8 *buffer, u64 size);
 /**
  * Allocate bytes from the given arena.
  */
-void *arena_alloc_bytes(arena *arena, u64 size, u64 alignment);
+void *arena_alloc_bytes(arena *arena, size_t size, size_t alignment);
 
 /**
  * Allocate a number of items of type t from the given arena.
@@ -492,12 +489,12 @@ typedef struct {
     /**
      * Number of existing items
      */
-    u64 len;
+    ullong len;
 
     /**
      * Number of items the array can hold
      */
-    u64 capacity;
+    ullong capacity;
 
     /**
      * Memory allocator used for growing
@@ -515,7 +512,7 @@ typedef struct {
  * Create a new dynamic array
  */
 void *dynarr_new_sized(
-    u64 capacity, size_t item_size, size_t alignment, allocator *allocator
+    ullong capacity, size_t item_size, size_t alignment, allocator *allocator
 );
 
 /**
@@ -560,7 +557,7 @@ void dynarr_free(void *array);
  * @returns an array with increased capacity
  */
 void *dynarr_grow_ut(
-    void *array, u64 capacity_increase, size_t item_size, size_t alignment
+    void *array, ullong capacity_increase, size_t item_size, size_t alignment
 );
 
 /**
@@ -586,7 +583,7 @@ void *dynarr_grow_ut(
  * allocation fails
  */
 void *dynarr_clone_ut(
-    void *array, u64 capacity_increase, size_t item_size, size_t alignment
+    void *array, ullong capacity_increase, size_t item_size, size_t alignment
 );
 
 /**
@@ -601,7 +598,9 @@ void *dynarr_clone_ut(
  * Push items to given array. Returns true when the operation succeeded (i.e.
  * there's capacity).
  */
-b32 dynarr_push_ut(void *array, const void *items, u64 count, size_t item_size);
+bool dynarr_push_ut(
+    void *array, const void *items, ullong count, size_t item_size
+);
 
 /**
  * Push items to given array.
@@ -627,7 +626,7 @@ b32 dynarr_push_ut(void *array, const void *items, u64 count, size_t item_size);
 void *dynarr_push_grow_ut(
     void *array,
     const void *items,
-    u64 count,
+    ullong count,
     size_t item_size,
     size_t alignment
 );
@@ -654,7 +653,7 @@ void *dynarr_push_grow_ut(
  * @param[in] item_size size of an array item
  * @returns true when an item was popped and false otherwise
  */
-b32 dynarr_pop_ut(void *array, void *out, size_t item_size);
+bool dynarr_pop_ut(void *array, void *out, size_t item_size);
 
 /**
  * Pop an element from the tail of the array
@@ -669,7 +668,7 @@ b32 dynarr_pop_ut(void *array, void *out, size_t item_size);
  * @param item_size size of an array item
  * @returns true when an item was removed and false otherwise
  */
-b32 dynarr_remove_ut(void *array, u64 index, size_t item_size);
+bool dynarr_remove_ut(void *array, ullong index, size_t item_size);
 
 /**
  * Remove an element by index from given array.
@@ -690,7 +689,7 @@ b32 dynarr_remove_ut(void *array, u64 index, size_t item_size);
  * @param item_size size of an array item
  * @returns true when an item was removed and false otherwise
  */
-b32 dynarr_remove_uo_ut(void *array, u64 index, size_t item_size);
+bool dynarr_remove_uo_ut(void *array, ullong index, size_t item_size);
 
 /**
  * Remove an element by index from given array, but do not guarantee array
@@ -704,6 +703,31 @@ b32 dynarr_remove_uo_ut(void *array, u64 index, size_t item_size);
     dynarr_remove_uo_ut((array), (index), sizeof(*(array)))
 
 ////////////////////////
+// Byte buffer
+////////////////////////
+
+typedef struct {
+    uchar *buffer;
+    size_t len;
+    size_t cap;
+    allocator *allocator;
+} bytebuf;
+
+bytebuf bytebuf_new(size_t capacity, allocator *allocator);
+
+void bytebuf_free(bytebuf *bbuf);
+
+bool bytebuf_grow(bytebuf *bbuf, size_t capacity_increase);
+
+bytebuf bytebuf_clone(bytebuf *bbuf, size_t capacity_increase);
+
+bool bytebuf_write(bytebuf *bbuf, uchar *src, size_t len);
+
+bool bytebuf_write_grow(bytebuf *bbuf, uchar *src, size_t len);
+
+void bytebuf_clear(bytebuf *bbuf);
+
+////////////////////////
 // C strings
 ////////////////////////
 
@@ -713,7 +737,7 @@ b32 dynarr_remove_uo_ut(void *array, u64 index, size_t item_size);
  * @param s1,s2 strings to compare
  * @returns true when strings are equal and false otherwise
  */
-b32 cstr_eq_unsafe(const char *s1, const char *s2);
+bool cstr_eq_unsafe(const char *s1, const char *s2);
 
 /**
  * Equality comparison of two strings with max bound.
@@ -722,7 +746,7 @@ b32 cstr_eq_unsafe(const char *s1, const char *s2);
  * @param len length of the two strings
  * @returns true when strings are equal and false otherwise
  */
-b32 cstr_eq(const char *s1, const char *s2, size_t len);
+bool cstr_eq(const char *s1, const char *s2, size_t len);
 
 /**
  * Unsafe get length of string.
@@ -773,7 +797,7 @@ typedef struct {
     /**
      * Flag: whether or not to null-terminate on split characters
      */
-    u32 null_terminate : 1;
+    uint null_terminate : 1;
 } cstr_split_iter;
 
 /**
@@ -817,7 +841,7 @@ cstr_split_collect_strings(char **strings, size_t len, cstr_split_iter *split);
  * @param pat pattern to match against
  * @param pat_len length of the pattern
  */
-b32 cstr_match_wild_ascii(
+bool cstr_match_wild_ascii(
     const char *txt, size_t txt_len, const char *pat, size_t pat_len
 );
 
@@ -827,28 +851,20 @@ b32 cstr_match_wild_ascii(
  * @param txt text to match
  * @param pat pattern to match against
  */
-b32 cstr_match_wild_ascii_unsafe(const char *txt, const char *pat);
+bool cstr_match_wild_ascii_unsafe(const char *txt, const char *pat);
 
-b32 cstr_to_s8(const char *s, size_t len, s8 *v);
-b32 cstr_to_u8(const char *s, size_t len, u8 *v);
-b32 cstr_to_s16(const char *s, size_t len, s16 *v);
-b32 cstr_to_u16(const char *s, size_t len, u16 *v);
-b32 cstr_to_s32(const char *s, size_t len, s32 *v);
-b32 cstr_to_u32(const char *s, size_t len, u32 *v);
-b32 cstr_to_s64(const char *s, size_t len, s64 *v);
-b32 cstr_to_u64(const char *s, size_t len, u64 *v);
-b32 cstr_to_float(const char *s, size_t len, float *v);
-b32 cstr_to_double(const char *s, size_t len, double *v);
+bool cstr_to_int(const char *s, size_t len, int *v);
+bool cstr_to_uint(const char *s, size_t len, uint *v);
+bool cstr_to_llong(const char *s, size_t len, llong *v);
+bool cstr_to_ullong(const char *s, size_t len, ullong *v);
+bool cstr_to_float(const char *s, size_t len, float *v);
+bool cstr_to_double(const char *s, size_t len, double *v);
 
-size_t cstr_from_s8(char *dest, size_t len, s8 src);
-size_t cstr_from_u8(char *dest, size_t len, u8 src);
-size_t cstr_from_s16(char *dest, size_t len, s16 src);
-size_t cstr_from_u16(char *dest, size_t len, u16 src);
-size_t cstr_from_s32(char *dest, size_t len, s32 src);
-size_t cstr_from_u32(char *dest, size_t len, u32 src);
-size_t cstr_from_s64(char *dest, size_t len, s64 src);
-size_t cstr_from_u64(char *dest, size_t len, u64 src);
-size_t cstr_from_float(char *dest, size_t len, float src, u8 decimals);
-size_t cstr_from_double(char *dest, size_t len, double src, u8 decimals);
+size_t cstr_from_int(char *dest, size_t len, int src);
+size_t cstr_from_uint(char *dest, size_t len, uint src);
+size_t cstr_from_llong(char *dest, size_t len, llong src);
+size_t cstr_from_ullong(char *dest, size_t len, ullong src);
+size_t cstr_from_float(char *dest, size_t len, float src, uint decimals);
+size_t cstr_from_double(char *dest, size_t len, double src, uint decimals);
 
 #endif // JP_STD_H

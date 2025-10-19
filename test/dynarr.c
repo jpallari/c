@@ -2,7 +2,7 @@
 #include "testr.h"
 
 void test_dynarr_push(test *t) {
-    u64 capacity = 5;
+    ullong capacity = 5;
     int value = 0;
 
     // initialize an array
@@ -18,7 +18,7 @@ void test_dynarr_push(test *t) {
     assert_eq_uint(t, dynarr_len(arr), 0L, "length must start at zero");
 
     // fill the array
-    for (u64 i = 0; i < capacity; i += 1) {
+    for (ullong i = 0; i < capacity; i += 1) {
         value = 100 + (int)i;
         assert_true(
             t,
@@ -28,7 +28,7 @@ void test_dynarr_push(test *t) {
         assert_eq_uint(
             t, dynarr_capacity(arr), capacity, "capacity must remain the same"
         );
-        assert_eq_uint(t, dynarr_len(arr), (u64)(i + 1), "length must update");
+        assert_eq_uint(t, dynarr_len(arr), i + 1, "length must update");
         assert_eq_sint(t, arr[i], value, "value must be found from the array");
     }
     assert_eq_uint(
@@ -56,7 +56,7 @@ void test_dynarr_push(test *t) {
     );
 
     // verify contents remain the same
-    for (u64 i = 0; i < capacity; i += 1) {
+    for (ullong i = 0; i < capacity; i += 1) {
         assert_eq_sint(
             t, arr[i], 100 + (int)i, "array contents must remain the same"
         );
@@ -67,7 +67,7 @@ void test_dynarr_push(test *t) {
 }
 
 void test_dynarr_push_grow(test *t) {
-    u64 capacity = 5;
+    ullong capacity = 5;
     int value = 0;
     int arr_after_fill[] = {100, 101, 102, 103, 104};
 
@@ -78,7 +78,7 @@ void test_dynarr_push_grow(test *t) {
     };
 
     // fill the array
-    for (u64 i = 0; i < capacity; i += 1) {
+    for (ullong i = 0; i < capacity; i += 1) {
         value = 100 + (int)i;
         dynarr_push(arr, &value, 1);
     }
@@ -105,8 +105,8 @@ void test_dynarr_push_grow(test *t) {
 }
 
 void test_dynarr_clone(test *t) {
-    u64 capacity = 5;
-    u64 capacity_increase = 3;
+    ullong capacity = 5;
+    ullong capacity_increase = 3;
 
     // initialize an array
     int *arr = dynarr_new(capacity, int, &std_allocator);
@@ -115,7 +115,7 @@ void test_dynarr_clone(test *t) {
     };
 
     // fill the array
-    for (u64 i = 0; i < capacity; i += 1) {
+    for (ullong i = 0; i < capacity; i += 1) {
         int value = 100 + (int)i;
         dynarr_push(arr, &value, 1);
     }
@@ -146,7 +146,7 @@ void test_dynarr_clone(test *t) {
 }
 
 void test_dynarr_pop(test *t) {
-    u64 capacity = 5;
+    ullong capacity = 5;
     int value = 0;
 
     // initialize an array
@@ -182,7 +182,7 @@ void test_dynarr_pop(test *t) {
 }
 
 void test_dynarr_remove(test *t) {
-    u64 capacity = 5;
+    ullong capacity = 5;
     int value = 0;
     int arr_after_fill[] = {100, 101, 102, 103, 104};
 
@@ -193,7 +193,7 @@ void test_dynarr_remove(test *t) {
     };
 
     // fill the array
-    for (u64 i = 0; i < capacity; i += 1) {
+    for (ullong i = 0; i < capacity; i += 1) {
         value = 100 + (int)i;
         dynarr_push(arr, &value, 1);
     }
@@ -223,7 +223,7 @@ void test_dynarr_remove(test *t) {
 }
 
 void test_dynarr_remove_uo(test *t) {
-    u64 capacity = 5;
+    ullong capacity = 5;
     int value = 0;
     int arr_after_fill[] = {100, 101, 102, 103, 104};
 
@@ -234,7 +234,7 @@ void test_dynarr_remove_uo(test *t) {
     };
 
     // fill the array
-    for (u64 i = 0; i < capacity; i += 1) {
+    for (ullong i = 0; i < capacity; i += 1) {
         value = 100 + (int)i;
         dynarr_push(arr, &value, 1);
     }
@@ -264,7 +264,7 @@ void test_dynarr_remove_uo(test *t) {
 }
 
 void test_dynarr_grow_in_arena(test *t) {
-    _Alignas(max_align_t) u8 buffer[100] = {0};
+    _Alignas(max_align_t) uchar buffer[100] = {0};
     arena arena = arena_new(buffer, sizeof(buffer));
     allocator alloc = arena_allocator_new(&arena);
 

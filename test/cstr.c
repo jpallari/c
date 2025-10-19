@@ -1,5 +1,6 @@
 #include "std.h"
 #include "testr.h"
+#include <limits.h>
 
 void test_cstr_eq(test *t) {
     assert_true(t, cstr_eq("hello", "hello", 5), "same C strings are equal");
@@ -236,119 +237,125 @@ void test_cstr_split_collect_strings(test *t) {
     );
 }
 
-void test_cstr_to_s8(test *t) {
-    s8 v = 0;
-    assert_true(t, cstr_to_s8("127", 3, &v), "convert exact length");
+void test_cstr_to_int(test *t) {
+    int v = 0;
+    assert_true(t, cstr_to_int("127", 3, &v), "convert exact length");
     assert_eq_sint(t, v, 127, "value after conversion");
-    assert_true(t, cstr_to_s8("1279", 3, &v), "convert short length");
+    assert_true(t, cstr_to_int("1279", 3, &v), "convert short length");
     assert_eq_sint(t, v, 127, "value after conversion");
-    assert_true(t, cstr_to_s8("12\0 123", 4, &v), "convert null terminated");
+    assert_true(t, cstr_to_int("12\0 123", 4, &v), "convert null terminated");
     assert_eq_sint(t, v, 12, "value after conversion");
-    assert_true(t, cstr_to_s8("-127", 4, &v), "convert negative");
+    assert_true(t, cstr_to_int("-127", 4, &v), "convert negative");
     assert_eq_sint(t, v, -127, "value after conversion");
-    assert_true(t, cstr_to_s8("0", 1, &v), "convert 0");
+    assert_true(t, cstr_to_int("0", 1, &v), "convert 0");
     assert_eq_sint(t, v, 0, "value after conversion");
+    assert_true(t, cstr_to_int("2147483647", 11, &v), "convert max int");
+    assert_eq_sint(t, v, 2147483647, "value after conversion");
+    assert_true(t, cstr_to_int("-2147483647", 12, &v), "convert min int");
+    assert_eq_sint(t, v, -2147483647, "value after conversion");
 
     v = 0;
-    assert_false(t, cstr_to_s8("128", 3, &v), "convert too long int");
+    assert_false(t, cstr_to_int("2147483648", 11, &v), "convert too long int");
     assert_false(t, v, "value remains unchanged");
-    assert_false(t, cstr_to_s8("a110", 4, &v), "convert invalid chars");
+    assert_false(t, cstr_to_int("a110", 4, &v), "convert invalid chars");
     assert_false(t, v, "value remains unchanged");
-    assert_false(t, cstr_to_s8("102a", 4, &v), "convert invalid chars");
+    assert_false(t, cstr_to_int("102a", 4, &v), "convert invalid chars");
     assert_false(t, v, "value remains unchanged");
 }
 
-void test_cstr_to_u8(test *t) {
-    u8 v = 0;
-    assert_true(t, cstr_to_u8("255", 3, &v), "convert exact length");
+void test_cstr_to_uint(test *t) {
+    uint v = 0;
+    assert_true(t, cstr_to_uint("255", 3, &v), "convert exact length");
     assert_eq_sint(t, v, 255, "value after conversion");
-    assert_true(t, cstr_to_u8("2559", 3, &v), "convert short length");
+    assert_true(t, cstr_to_uint("2559", 3, &v), "convert short length");
     assert_eq_sint(t, v, 255, "value after conversion");
-    assert_true(t, cstr_to_u8("24\0 123", 4, &v), "convert null terminated");
+    assert_true(t, cstr_to_uint("24\0 123", 4, &v), "convert null terminated");
     assert_eq_sint(t, v, 24, "value after conversion");
-    assert_true(t, cstr_to_u8("0", 1, &v), "convert 0");
+    assert_true(t, cstr_to_uint("0", 1, &v), "convert 0");
     assert_eq_sint(t, v, 0, "value after conversion");
+    assert_true(t, cstr_to_uint("4294967295", 11, &v), "convert max int");
+    assert_eq_sint(t, v, 4294967295, "value after conversion");
 
     v = 0;
-    assert_false(t, cstr_to_u8("256", 3, &v), "convert too long int");
+    assert_false(t, cstr_to_uint("4294967296", 11, &v), "convert too long int");
     assert_false(t, v, "value remains unchanged");
-    assert_false(t, cstr_to_u8("-1", 4, &v), "convert negative number");
+    assert_false(t, cstr_to_uint("-1", 4, &v), "convert negative number");
     assert_false(t, v, "value remains unchanged");
-    assert_false(t, cstr_to_u8("a110", 4, &v), "convert invalid chars");
+    assert_false(t, cstr_to_uint("a110", 4, &v), "convert invalid chars");
     assert_false(t, v, "value remains unchanged");
-    assert_false(t, cstr_to_u8("102a", 4, &v), "convert invalid chars");
+    assert_false(t, cstr_to_uint("102a", 4, &v), "convert invalid chars");
     assert_false(t, v, "value remains unchanged");
 }
 
-void test_cstr_from_s8(test *t) {
+void test_cstr_from_int(test *t) {
     char buffer[100];
     bytes_set(buffer, 0xce, sizeof(buffer));
 
     assert_eq_uint(
-        t, cstr_from_s8(buffer, sizeof(buffer), 120), 4, "write all chars"
+        t, cstr_from_int(buffer, sizeof(buffer), 120), 4, "write all chars"
     );
     assert_eq_cstr(t, buffer, "120", "expected number as string");
 
     bytes_set(buffer, 0xce, sizeof(buffer));
     assert_eq_uint(
-        t, cstr_from_s8(buffer, sizeof(buffer), 89), 3, "write all chars"
+        t, cstr_from_int(buffer, sizeof(buffer), 89), 3, "write all chars"
     );
     assert_eq_cstr(t, buffer, "89", "expected number as string");
 
     bytes_set(buffer, 0xce, sizeof(buffer));
     assert_eq_uint(
-        t, cstr_from_s8(buffer, sizeof(buffer), 1), 2, "write all chars"
+        t, cstr_from_int(buffer, sizeof(buffer), 1), 2, "write all chars"
     );
     assert_eq_cstr(t, buffer, "1", "expected number as string");
 
     bytes_set(buffer, 0xce, sizeof(buffer));
     assert_eq_uint(
-        t, cstr_from_s8(buffer, sizeof(buffer), 0), 2, "write all chars"
+        t, cstr_from_int(buffer, sizeof(buffer), 0), 2, "write all chars"
     );
     assert_eq_cstr(t, buffer, "0", "expected number as string");
 
     bytes_set(buffer, 0xce, sizeof(buffer));
     assert_eq_uint(
-        t, cstr_from_s8(buffer, sizeof(buffer), -127), 5, "write all chars"
+        t, cstr_from_int(buffer, sizeof(buffer), -127), 5, "write all chars"
     );
     assert_eq_cstr(t, buffer, "-127", "expected number as string");
 
     bytes_set(buffer, 0xce, sizeof(buffer));
-    assert_eq_uint(t, cstr_from_s8(buffer, 2, 123), 2, "write some chars");
+    assert_eq_uint(t, cstr_from_int(buffer, 2, 123), 2, "write some chars");
     assert_eq_bytes(
         t, buffer, "12", 2, "expected prefix of the number as string"
     );
 }
 
-void test_cstr_from_u8(test *t) {
+void test_cstr_from_uint(test *t) {
     char buffer[100];
     bytes_set(buffer, 0xce, sizeof(buffer));
 
     assert_eq_uint(
-        t, cstr_from_u8(buffer, sizeof(buffer), 254), 4, "write all chars"
+        t, cstr_from_uint(buffer, sizeof(buffer), 254), 4, "write all chars"
     );
     assert_eq_cstr(t, buffer, "254", "expected number as string");
 
     bytes_set(buffer, 0xce, sizeof(buffer));
     assert_eq_uint(
-        t, cstr_from_u8(buffer, sizeof(buffer), 89), 3, "write all chars"
+        t, cstr_from_uint(buffer, sizeof(buffer), 89), 3, "write all chars"
     );
     assert_eq_cstr(t, buffer, "89", "expected number as string");
 
     bytes_set(buffer, 0xce, sizeof(buffer));
     assert_eq_uint(
-        t, cstr_from_u8(buffer, sizeof(buffer), 1), 2, "write all chars"
+        t, cstr_from_uint(buffer, sizeof(buffer), 1), 2, "write all chars"
     );
     assert_eq_cstr(t, buffer, "1", "expected number as string");
 
     bytes_set(buffer, 0xce, sizeof(buffer));
     assert_eq_uint(
-        t, cstr_from_u8(buffer, sizeof(buffer), 0), 2, "write all chars"
+        t, cstr_from_uint(buffer, sizeof(buffer), 0), 2, "write all chars"
     );
     assert_eq_cstr(t, buffer, "0", "expected number as string");
 
     bytes_set(buffer, 0xce, sizeof(buffer));
-    assert_eq_uint(t, cstr_from_u8(buffer, 2, 123), 2, "write some chars");
+    assert_eq_uint(t, cstr_from_uint(buffer, 2, 123), 2, "write some chars");
     assert_eq_bytes(
         t, buffer, "12", 2, "expected prefix of the number as string"
     );
@@ -363,10 +370,10 @@ static test_case tests[] = {
     {"C string split collect", test_cstr_split_collect},
     {"C string split null-terminate", test_cstr_split_null_terminate},
     {"C string split collect strings", test_cstr_split_collect_strings},
-    {"C string to s8", test_cstr_to_s8},
-    {"C string to u8", test_cstr_to_u8},
-    {"C string from s8", test_cstr_from_s8},
-    {"C string from u8", test_cstr_from_u8}
+    {"C string to int", test_cstr_to_int},
+    {"C string to uint", test_cstr_to_uint},
+    {"C string from int", test_cstr_from_int},
+    {"C string from uint", test_cstr_from_uint}
 };
 
 setup_tests(NULL, tests)

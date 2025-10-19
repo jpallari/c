@@ -3,13 +3,13 @@
 #include <stdio.h>
 
 int array_demo(void) {
-    u8 *buffer = alloc_new(&std_allocator, u8, 1024 * 1024);
+    uchar *buffer = alloc_new(&std_allocator, uchar, 1024 * 1024);
     arena arena = arena_new(buffer, 1024 * 1024);
     allocator allocator = arena_allocator_new(&arena);
 
     float *arr = dynarr_new(10, float, &allocator);
     float last = 0.0;
-    u64 i;
+    ullong i;
 
     for (i = 0; i < 20; i += 1) {
         float v = ((float)i) / 10;
@@ -27,7 +27,7 @@ int array_demo(void) {
     dynarr_pop(arr, last);
 
     for (i = 0; i < dynarr_len(arr); i += 1) {
-        printf("data %ld: %f\n", i, arr[i]);
+        printf("data %lld: %f\n", i, arr[i]);
     }
 
     printf("2: %f, 15: %f, last: %f\n", arr[2], arr[15], last);

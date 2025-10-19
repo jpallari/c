@@ -13,7 +13,7 @@ file_result read_file(const char *filename, allocator *allocator) {
 
     int fd = 0, io_res = 0;
     ssize_t read_res = 0;
-    u8 *data = NULL, *cursor = NULL;
+    uchar *data = NULL, *cursor = NULL;
     file_result result = {0};
     struct stat file_stat = {0};
     size_t bs_remaining = 0, chunk_size = 0;
@@ -38,7 +38,7 @@ file_result read_file(const char *filename, allocator *allocator) {
     }
     size_t block_size = (size_t)file_stat.st_blksize;
 
-    data = alloc_new(allocator, u8, (u64)file_stat.st_size);
+    data = alloc_new(allocator, uchar, (size_t)file_stat.st_size);
     if (!data) {
         result.err_code = -2;
         goto end;
@@ -49,7 +49,7 @@ file_result read_file(const char *filename, allocator *allocator) {
          bs_remaining > 0;
          bs_remaining -= (size_t)read_res,
         cursor += read_res,
-        result.size += (u64)read_res) {
+        result.size += (size_t)read_res) {
         chunk_size = min(bs_remaining, block_size);
         read_res = read(fd, cursor, chunk_size);
         if (read_res == 0) { // EOF
@@ -70,12 +70,12 @@ end:
     return result;
 }
 
-s64 write_file(char *filename, void *data, u64 size) {
+ssize_t write_file(char *filename, void *data, size_t size) {
     assert(filename && "filename must not be null");
     assert(data && "data must not be null");
 
     int fd = 0, io_res = 0, close_res = 0;
-    u8 *cursor = data;
+    uchar *cursor = data;
     struct stat file_stat = {0};
     size_t bs_remaining = 0, chunk_size = 0;
     ssize_t write_res = 0;
@@ -90,6 +90,10 @@ s64 write_file(char *filename, void *data, u64 size) {
     }
     io_res = fstat(fd, &file_stat);
     if (io_res < 0) {
+        goto end;
+    }
+    if (file_stat.st_blksize < 0) {
+        write_res = -3;
         goto end;
     }
     size_t block_size = (size_t)file_stat.st_blksize;

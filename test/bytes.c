@@ -129,11 +129,9 @@ void test_bytes_to_hex(test *t) {
     const char *expected_str = "68656c6c6f20776f726c6421";
     char dest[25] = {0};
 
-    bytes_to_hex(dest, str, cstr_len_unsafe(str));
+    bytes_to_hex((uchar *)dest, (const uchar *)str, cstr_len_unsafe(str));
 
-    assert_eq_cstr(
-        t, (char *)dest, expected_str, "string converstion to hex string"
-    );
+    assert_eq_cstr(t, dest, expected_str, "string converstion to hex string");
 }
 
 static test_case tests[] = {

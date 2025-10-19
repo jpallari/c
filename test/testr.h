@@ -30,14 +30,14 @@ static int print_all_asserts = 0;
 ////////////////////////
 
 typedef struct {
-    u64 logs_offset;
+    ullong logs_offset;
     const char *file;
-    s32 line;
-    b32 passed;
+    int line;
+    bool passed;
 } test_assert;
 
 typedef struct {
-    u8 *logs; // dynamic array
+    uchar *logs; // dynamic array
 } logs_handle;
 
 typedef struct {
@@ -47,30 +47,30 @@ typedef struct {
 typedef struct {
     logs_handle *logs_handle;
     asserts_handle *asserts_handle;
-    u32 assert_count;
-    u32 asserts_passed;
+    uint assert_count;
+    uint asserts_passed;
 } test;
 
 typedef struct {
     const char *name;
     test_assert *asserts;
-    u32 assert_count;
-    u32 asserts_passed;
+    uint assert_count;
+    uint asserts_passed;
 } test_report;
 
 typedef struct {
     logs_handle *logs_handle;
     asserts_handle *asserts_handle;
     test_report *test_reports;
-    u64 test_count;
-    u64 tests_passed;
-    u32 assert_count;
-    u32 asserts_passed;
+    uint test_count;
+    uint tests_passed;
+    uint assert_count;
+    uint asserts_passed;
 } test_suite_report;
 
-b32 test_report_append(
+bool test_report_append(
     test *t,
-    const b32 passed,
+    const bool passed,
     const char *log_message,
     const size_t log_message_size,
     const char *file,
@@ -80,7 +80,7 @@ b32 test_report_append(
     assert(t->logs_handle && "logs handle must not be null");
     assert(t->logs_handle->logs && "logs storage must not be null");
 
-    u64 logs_offset = dynarr_len(t->logs_handle->logs);
+    ullong logs_offset = dynarr_len(t->logs_handle->logs);
 
     test_assert assert_report = {
         .logs_offset = logs_offset,
@@ -97,8 +97,8 @@ b32 test_report_append(
         panic();
     }
 
-    u8 *next_logs = dynarr_push_grow(
-        t->logs_handle->logs, log_message, log_message_size, u8
+    uchar *next_logs = dynarr_push_grow(
+        t->logs_handle->logs, log_message, log_message_size, uchar
     );
     if (next_logs) {
         t->logs_handle->logs = next_logs;
@@ -117,9 +117,9 @@ b32 test_report_append(
     return passed;
 }
 
-b32 test_report_append_formatted_cstr(
+bool test_report_append_formatted_cstr(
     test *t,
-    b32 passed,
+    bool passed,
     const char *log_message,
     const char *file,
     const int line,
@@ -138,9 +138,9 @@ b32 test_report_append_formatted_cstr(
     return test_report_append(t, passed, buffer, (size_t)len + 1, file, line);
 }
 
-b32 test_report_append_formatted_float(
+bool test_report_append_formatted_float(
     test *t,
-    b32 passed,
+    bool passed,
     const char *log_message,
     const char *file,
     const int line,
@@ -159,21 +159,21 @@ b32 test_report_append_formatted_float(
     return test_report_append(t, passed, buffer, (size_t)len + 1, file, line);
 }
 
-b32 test_report_append_formatted_s64(
+bool test_report_append_formatted_int(
     test *t,
-    b32 passed,
+    bool passed,
     const char *log_message,
     const char *file,
     int line,
     const char *cmp,
-    const s64 left,
-    const s64 right
+    const llong left,
+    const llong right
 ) {
     char buffer[1024] = {0};
     int len = snprintf(
         buffer,
         sizeof(buffer),
-        "%ld %s %ld // %s",
+        "%lld %s %lld // %s",
         left,
         cmp,
         right,
@@ -186,21 +186,21 @@ b32 test_report_append_formatted_s64(
     return test_report_append(t, passed, buffer, (size_t)len + 1, file, line);
 }
 
-b32 test_report_append_formatted_u64(
+bool test_report_append_formatted_uint(
     test *t,
-    b32 passed,
+    bool passed,
     const char *log_message,
     const char *file,
     int line,
     const char *cmp,
-    const u64 left,
-    const u64 right
+    const ullong left,
+    const ullong right
 ) {
     char buffer[1024] = {0};
     int len = snprintf(
         buffer,
         sizeof(buffer),
-        "%lu %s %lu // %s",
+        "%llu %s %llu // %s",
         left,
         cmp,
         right,
@@ -234,9 +234,9 @@ void test_suite_report_pretty(test_suite_report *report, FILE *stream) {
         return;
     }
 
-    const u8 *logs = report->logs_handle->logs;
+    const uchar *logs = report->logs_handle->logs;
 
-    for (u64 i = 0; i < report->test_count; i += 1) {
+    for (ullong i = 0; i < report->test_count; i += 1) {
         test_report tr = report->test_reports[i];
         const char *prefix = "";
         const char *color = "";
@@ -262,7 +262,7 @@ void test_suite_report_pretty(test_suite_report *report, FILE *stream) {
             tr.assert_count,
             color_reset
         );
-        for (u32 j = 0; j < tr.assert_count; j += 1) {
+        for (uint j = 0; j < tr.assert_count; j += 1) {
             test_assert ar = tr.asserts[j];
             if (!ar.passed || print_all_asserts) {
                 fprintf(
@@ -299,7 +299,7 @@ int test_main(
     int argc,
     char **argv,
     test_setup *setup,
-    size_t test_count,
+    uint test_count,
     test_case *test_cases
 ) {
     FILE *stream = stderr;
@@ -322,7 +322,7 @@ int test_main(
 
     // buffer to back logs
     logs_handle logs_handle = {
-        .logs = dynarr_new(4096, u8, &std_allocator),
+        .logs = dynarr_new(4096, uchar, &std_allocator),
     };
     if (!logs_handle.logs) {
         panic();
@@ -369,7 +369,7 @@ int test_main(
             .asserts_passed = 0,
         };
 
-        b32 run_test = argc < 2;
+        bool run_test = argc < 2;
         for (int i = 1; i < argc; i++) {
             if (run_test) {
                 break;
@@ -411,8 +411,8 @@ int test_main(
     dynarr_free(asserts_handle.asserts);
     dynarr_free(logs_handle.logs);
 
-    u64 fail_count = report.test_count - report.tests_passed;
-    return (int)fail_count;
+    int fail_count = (int)(report.test_count - report.tests_passed);
+    return fail_count;
 }
 
 #define setup_tests(setup, tests) \
@@ -432,12 +432,12 @@ int test_main(
 #define assert_false(t, c, msg) assert_true(t, !(c), msg)
 
 #define __assert_cmp_uint(t, c, l, r, cmp, msg) \
-    test_report_append_formatted_u64( \
+    test_report_append_formatted_uint( \
         (t), !!(c), (msg), __FILE__, __LINE__, #cmp, (l), (r) \
     )
 
 #define __assert_cmp_sint(t, c, l, r, cmp, msg) \
-    test_report_append_formatted_s64( \
+    test_report_append_formatted_int( \
         (t), !!(c), (msg), __FILE__, __LINE__, #cmp, (l), (r) \
     )
 

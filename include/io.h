@@ -11,12 +11,12 @@
 ////////////////////////
 
 typedef struct {
-    u8 *data;
-    u64 size;
-    s32 err_code;
+    uchar *data;
+    size_t size;
+    int err_code;
 } file_result;
 
 file_result read_file(const char *filename, allocator *allocator);
-s64 write_file(char *filename, void *data, u64 size);
+ssize_t write_file(char *filename, void *data, size_t size);
 
 #endif // JP_IO_H

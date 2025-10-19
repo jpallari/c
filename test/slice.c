@@ -2,7 +2,7 @@
 #include "testr.h"
 
 void test_slice_span(test *t) {
-    u8 arr[] = {10, 11, 12, 13, 14, 15, 16, 17};
+    uchar arr[] = {10, 11, 12, 13, 14, 15, 16, 17};
     slice s1 = slice_span(&arr[2], &arr[6]);
     slice s2 = slice_span(&arr[6], &arr[2]);
 
@@ -19,8 +19,8 @@ void test_slice_span(test *t) {
 }
 
 void test_slice_equal(test *t) {
-    u8 arr1[] = {0, 0, 0, 11, 12, 13, 0, 0};
-    u8 arr2[] = {0, 11, 12, 13, 0, 0, 0, 0};
+    uchar arr1[] = {0, 0, 0, 11, 12, 13, 0, 0};
+    uchar arr2[] = {0, 11, 12, 13, 0, 0, 0, 0};
     slice s1_1 = slice_span(&arr1[3], &arr1[6]);
     slice s1_2 = slice_span(&arr1[1], &arr1[4]);
     slice s1_3 = slice_span(&arr1[3], &arr1[7]);
@@ -44,15 +44,15 @@ void test_slice_from(test *t) {
         t, (char *)s1.buffer, "hello world!", "s1 contents should be the same"
     );
     assert_eq_bytes(
-        t, s2.buffer, (u8 *)arr, s2.len, "s2 contents should be the same"
+        t, s2.buffer, (uchar *)arr, s2.len, "s2 contents should be the same"
     );
 }
 
 void test_slice_copy_larger(test *t) {
-    u8 arr1[] = {10, 11, 12, 13, 14, 15, 16, 17};
-    u8 arr2[] = {20, 21, 22, 23, 24, 25, 26, 27};
-    u8 expected_arr1[] = {10, 11, 21, 22, 23, 15, 16, 17};
-    u8 expected_arr2[] = {20, 21, 22, 23, 24, 25, 26, 27};
+    uchar arr1[] = {10, 11, 12, 13, 14, 15, 16, 17};
+    uchar arr2[] = {20, 21, 22, 23, 24, 25, 26, 27};
+    uchar expected_arr1[] = {10, 11, 21, 22, 23, 15, 16, 17};
+    uchar expected_arr2[] = {20, 21, 22, 23, 24, 25, 26, 27};
     slice s1 = slice_span(&arr1[2], &arr1[6]);
     slice s2 = slice_span(&arr2[1], &arr2[4]);
 
@@ -71,10 +71,10 @@ void test_slice_copy_larger(test *t) {
 }
 
 void test_slice_copy_smaller(test *t) {
-    u8 arr1[] = {10, 11, 12, 13, 14, 15, 16, 17};
-    u8 arr2[] = {20, 21, 22, 23, 24, 25, 26, 27};
-    u8 expected_arr1[] = {10, 11, 21, 22, 14, 15, 16, 17};
-    u8 expected_arr2[] = {20, 21, 22, 23, 24, 25, 26, 27};
+    uchar arr1[] = {10, 11, 12, 13, 14, 15, 16, 17};
+    uchar arr2[] = {20, 21, 22, 23, 24, 25, 26, 27};
+    uchar expected_arr1[] = {10, 11, 21, 22, 14, 15, 16, 17};
+    uchar expected_arr2[] = {20, 21, 22, 23, 24, 25, 26, 27};
     slice s1 = slice_span(&arr1[2], &arr1[4]);
     slice s2 = slice_span(&arr2[1], &arr2[6]);
 
@@ -93,8 +93,8 @@ void test_slice_copy_smaller(test *t) {
 }
 
 void test_slice_move_overlapping(test *t) {
-    u8 arr[] = {10, 11, 12, 13, 14, 15, 16, 17};
-    u8 expected_arr[] = {10, 11, 13, 14, 14, 15, 16, 17};
+    uchar arr[] = {10, 11, 12, 13, 14, 15, 16, 17};
+    uchar expected_arr[] = {10, 11, 13, 14, 14, 15, 16, 17};
     slice s1 = slice_span(&arr[2], &arr[4]);
     slice s2 = slice_span(&arr[3], &arr[6]);
 

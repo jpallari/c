@@ -6,22 +6,22 @@
 typedef struct {
     cliargs *args;
     char **argv;
-    u32 index;
+    uint index;
 } cliargs_state;
 
 typedef struct {
     const char *flag;
     const char *val;
-    u16 flag_len;
-    u16 val_len;
-    u16 prefix_dash_count;
+    uint flag_len;
+    uint val_len;
+    uint prefix_dash_count;
 } cliargs_arg;
 
 const char *cliargs_type_to_name(cliargs_type type) {
     switch (type) {
-    case cliargs_type_s64: return cliargs_type_s64_tname;
-    case cliargs_type_u64: return cliargs_type_u64_tname;
-    case cliargs_type_f64: return cliargs_type_f64_tname;
+    case cliargs_type_int: return cliargs_type_int_tname;
+    case cliargs_type_uint: return cliargs_type_uint_tname;
+    case cliargs_type_float: return cliargs_type_float_tname;
     case cliargs_type_str: return cliargs_type_str_tname;
     case cliargs_type_bool: return cliargs_type_bool_tname;
     default: assert(0 && "unexpected type"); return "";
@@ -51,7 +51,7 @@ void cliargs_write_error(cliargs_state state, const char *format, ...) {
     if (len < 0) {
         return;
     }
-    state.args->errors.len += (u32)len;
+    state.args->errors.len += (uint)len;
 
     va_list va_args;
     va_start(va_args, format);
@@ -66,8 +66,8 @@ void cliargs_write_error(cliargs_state state, const char *format, ...) {
         return;
     }
 
-    state.args->errors.len += (u32)len;
-    u32 last_index =
+    state.args->errors.len += (uint)len;
+    uint last_index =
         min(state.args->errors.len, state.args->errors.max_len - 1);
     state.args->errors.buffer[last_index] = '\0';
 }
@@ -77,7 +77,7 @@ cliargs_error cliargs_parse_value(
 ) {
     assert(arg && "arg must not be null");
     assert(value && "value must not be null");
-    b32 ok = 0;
+    bool ok = 0;
 
     switch (t) {
     case cliargs_type_bool:
@@ -89,20 +89,20 @@ cliargs_error cliargs_parse_value(
             return cliargs_error_parse_fail;
         }
         return cliargs_error_none;
-    case cliargs_type_f64:
+    case cliargs_type_float:
         ok = cstr_to_double(arg, arg_len, &value->real);
         if (!ok) {
             return cliargs_error_parse_fail;
         }
         return cliargs_error_none;
-    case cliargs_type_s64:
-        ok = cstr_to_s64(arg, arg_len, &value->sint);
+    case cliargs_type_int:
+        ok = cstr_to_llong(arg, arg_len, &value->sint);
         if (!ok) {
             return cliargs_error_parse_fail;
         }
         return cliargs_error_none;
-    case cliargs_type_u64:
-        ok = cstr_to_u64(arg, arg_len, &value->uint);
+    case cliargs_type_uint:
+        ok = cstr_to_ullong(arg, arg_len, &value->uint);
         if (!ok) {
             return cliargs_error_parse_fail;
         }
@@ -117,7 +117,7 @@ cliargs_arg cliargs_parse_arg(const char *arg) {
 
     cliargs_arg a = {0};
     int parsing_mode = 1, previous_parsing_mode = 1;
-    u16 i = 0;
+    uint i = 0;
 
     while (arg[i]) {
         previous_parsing_mode = parsing_mode;
@@ -193,7 +193,7 @@ cliargs_find_by_name(cliargs_state state, const char *name, size_t name_len) {
         cliargs_opt *opt = &state.args->named.opts[i];
         size_t opt_short_name_len = cstr_len_unsafe(opt->short_name);
         size_t opt_long_name_len = cstr_len_unsafe(opt->long_name);
-        b32 found =
+        bool found =
             cstr_eq(opt->short_name, name, min(opt_short_name_len, name_len))
             || cstr_eq(opt->long_name, name, min(opt_long_name_len, name_len));
         if (found) {
@@ -286,13 +286,13 @@ cliargs_error cliargs_parse(cliargs *args, int argc, char **argv) {
     assert(args && "args must not be null");
     assert(argv && "argv must not be null");
 
-    if (argc < 0) {
+    if (argc <= 0) {
         // nothing to parse
         return cliargs_error_none;
     }
 
-    u32 argc_uint = (u32)argc;
-    b32 positional_only = 0;
+    uint argc_uint = (uint)argc;
+    bool positional_only = 0;
     cliargs_state state = {
         .args = args,
         .argv = argv,
@@ -377,11 +377,11 @@ cliargs_error cliargs_parse(cliargs *args, int argc, char **argv) {
 void cliargs_init(
     cliargs *args,
     cliargs_opt *named_opts_storage,
-    u32 named_opts_max_len,
+    uint named_opts_max_len,
     char const **pos_args_storage,
-    u32 pos_args_max_len,
+    uint pos_args_max_len,
     char *errors_buffer,
-    u32 errors_max_len
+    uint errors_max_len
 ) {
     assert(args && "args must not be null");
     assert(
@@ -405,7 +405,7 @@ void cliargs_init(
     args->errors.buffer = errors_buffer;
 }
 
-u32 *cliargs_add_named(cliargs *args, cliargs_opt_spec opt_spec, void *vals) {
+uint *cliargs_add_named(cliargs *args, cliargs_opt_spec opt_spec, void *vals) {
     assert(args && "args must not be null");
 
     if (args->named.len >= args->named.max_len) {

@@ -49,16 +49,16 @@ typedef enum {
  * Types of data expected from CLI arguments.
  */
 typedef enum {
-    cliargs_type_s64, // signed 64-bit integer
-    cliargs_type_u64, // unsigned 64-bit integer
-    cliargs_type_f64, // double precision floating point
+    cliargs_type_int, // signed integer (at least 64-bit wide)
+    cliargs_type_uint, // unsigned integer (at least 64-bit wide)
+    cliargs_type_float, // double precision floating point
     cliargs_type_str, // (null-terminated) string
     cliargs_type_bool, // boolean value (true/false)
 } cliargs_type;
 
-#define cliargs_type_s64_tname "signed integer"
-#define cliargs_type_u64_tname "unsigned integer"
-#define cliargs_type_f64_tname "real number"
+#define cliargs_type_int_tname "signed integer"
+#define cliargs_type_uint_tname "unsigned integer"
+#define cliargs_type_float_tname "real number"
 #define cliargs_type_str_tname "string"
 #define cliargs_type_bool_tname "boolean"
 
@@ -66,8 +66,8 @@ typedef enum {
  * Types of data stored from parsed CLI arguments.
  */
 typedef union {
-    s64 sint; // signed 64-bit integer
-    u64 uint; // unsigned 64-bit integer
+    llong sint; // signed integer (at least 64-bit wide)
+    ullong uint; // unsigned integer (at least 64-bit wide)
     double real; // double precision floating point
     const char *str; // null-terminated string
 } cliargs_val;
@@ -79,7 +79,7 @@ typedef struct {
     const char *long_name;
     const char *short_name;
     const char *help_text;
-    u32 max_len;
+    uint max_len;
     cliargs_type type;
 } cliargs_opt_spec;
 
@@ -91,8 +91,8 @@ typedef struct {
     const char *short_name;
     const char *help_text;
     cliargs_val *vals;
-    u32 len;
-    u32 max_len;
+    uint len;
+    uint max_len;
     cliargs_type type;
 } cliargs_opt;
 
@@ -105,8 +105,8 @@ typedef struct {
      */
     struct {
         cliargs_opt *opts;
-        u32 len;
-        u32 max_len;
+        uint len;
+        uint max_len;
     } named;
 
     /**
@@ -114,8 +114,8 @@ typedef struct {
      */
     struct {
         char const **vals;
-        u32 len;
-        u32 max_len;
+        uint len;
+        uint max_len;
     } positional;
 
     /**
@@ -123,8 +123,8 @@ typedef struct {
      */
     struct {
         char *buffer;
-        u32 len;
-        u32 max_len;
+        uint len;
+        uint max_len;
     } errors;
 } cliargs;
 
@@ -142,11 +142,11 @@ typedef struct {
 void cliargs_init(
     cliargs *args,
     cliargs_opt *named_opts_storage,
-    u32 named_opts_max_len,
+    uint named_opts_max_len,
     char const **pos_args_storage,
-    u32 pos_args_max_len,
+    uint pos_args_max_len,
     char *errors_buffer,
-    u32 errors_max_len
+    uint errors_max_len
 );
 
 /**
@@ -157,7 +157,7 @@ void cliargs_init(
  * @param vals buffer where to store parsed arguments
  * @returns pointer that tells the count of the parsed arguments
  */
-u32 *cliargs_add_named(cliargs *args, cliargs_opt_spec opt_spec, void *vals);
+uint *cliargs_add_named(cliargs *args, cliargs_opt_spec opt_spec, void *vals);
 
 /**
  * Parse CLI arguments from given argument list.

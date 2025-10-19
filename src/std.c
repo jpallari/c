@@ -1,5 +1,6 @@
 #include "std.h"
 #include <float.h>
+#include <limits.h>
 
 ////////////////////////
 // Bytes
@@ -9,7 +10,7 @@ int bytes_diff_index(
     const void *a, const void *b, size_t start, size_t capacity
 ) {
     assert(start < capacity && "start must be lower than capacity");
-    const u8 *a_ = a, *b_ = b;
+    const uchar *a_ = a, *b_ = b;
     if ((uintptr_t)a_ == (uintptr_t)b_) {
         return -1;
     }
@@ -26,28 +27,28 @@ int bytes_diff_index(
     return -1;
 }
 
-b32 bytes_eq(const void *a, const void *b, size_t capacity) {
+bool bytes_eq(const void *a, const void *b, size_t capacity) {
     if (bytes_diff_index(a, b, 0, capacity) >= 0) {
         return 0;
     }
     return 1;
 }
 
-char byte_to_hex_char(char b) {
+uchar byte_to_hex_char(uchar b) {
     assert(b < 16 && "byte must be between 0..=15");
 
     if (b < 10) {
-        return '0' + b;
+        return (uchar)('0' + b);
     }
-    return (char)((int)'a' + (int)b - 10);
+    return (uchar)('a' + b - 10);
 }
 
-void byte_to_hex_chars(char b, char *high, char *low) {
+void byte_to_hex_chars(uchar b, uchar *high, uchar *low) {
     *high = byte_to_hex_char(b / 16);
     *low = byte_to_hex_char(b % 16);
 }
 
-size_t bytes_to_hex(char *dest, const char *src, size_t n) {
+size_t bytes_to_hex(uchar *dest, const uchar *src, size_t n) {
     size_t j = 0;
     for (size_t i = 0; i < n; i += 1, j += 2) {
         byte_to_hex_chars(src[i], &dest[j], &dest[j + 1]);
@@ -61,11 +62,11 @@ size_t bytes_to_hex(char *dest, const char *src, size_t n) {
 // Slices
 ////////////////////////
 
-slice slice_span(u8 *start, u8 *end) {
+slice slice_span(uchar *start, uchar *end) {
     assert(start && "start must not be null");
     assert(end && "end must not be null");
 
-    u8 *temp;
+    uchar *temp;
     if ((uintptr_t)start > (uintptr_t)end) {
         temp = start;
         start = end;
@@ -74,11 +75,11 @@ slice slice_span(u8 *start, u8 *end) {
 
     slice s = {0};
     s.buffer = start;
-    s.len = (u64)((uintptr_t)end - (uintptr_t)start);
+    s.len = (size_t)((uintptr_t)end - (uintptr_t)start);
     return s;
 }
 
-s32 slice_eq(const slice a, const slice b) {
+bool slice_eq(const slice a, const slice b) {
     if (a.len != b.len) {
         return 0;
     }
@@ -97,7 +98,7 @@ void slice_move(slice dest, const slice src) {
 
 slice slice_from_cstr_unsafe(char *str) {
     slice slice = {0};
-    slice.buffer = (u8 *)str;
+    slice.buffer = (uchar *)str;
     slice.len = cstr_len_unsafe(str);
     return slice;
 }
@@ -106,17 +107,17 @@ slice slice_from_cstr_unsafe(char *str) {
 // Arena allocator
 ////////////////////////
 
-arena arena_new(u8 *buffer, u64 size) {
+arena arena_new(uchar *buffer, size_t size) {
     arena arena = {.buffer = buffer, .size = size, .used = 0};
     return arena;
 }
 
-void *arena_alloc_bytes(arena *arena, u64 size, u64 alignment) {
-    u64 aligned_used = arena_aligned_used(arena->used, alignment);
+void *arena_alloc_bytes(arena *arena, size_t size, size_t alignment) {
+    size_t aligned_used = arena_aligned_used(arena->used, alignment);
     if (arena->size < size + aligned_used) {
         return NULL;
     }
-    void *p = ((u8 *)arena->buffer) + aligned_used;
+    void *p = arena->buffer + aligned_used;
     arena->used = aligned_used + size;
     return p;
 }
@@ -145,9 +146,9 @@ allocator arena_allocator_new(arena *arena) {
 ////////////////////////
 
 void *dynarr_new_sized(
-    u64 capacity, size_t item_size, size_t alignment, allocator *allocator
+    ullong capacity, size_t item_size, size_t alignment, allocator *allocator
 ) {
-    u8 *data = alloc_malloc(
+    uchar *data = alloc_malloc(
         allocator, dynarr_count_to_bytes(capacity, item_size), alignment
     );
     if (!data) {
@@ -171,7 +172,7 @@ void dynarr_free(void *array) {
 }
 
 void *dynarr_grow_ut(
-    void *array, u64 capacity_increase, size_t item_size, size_t alignment
+    void *array, ullong capacity_increase, size_t item_size, size_t alignment
 ) {
     if (!array) {
         return NULL;
@@ -179,8 +180,8 @@ void *dynarr_grow_ut(
     dynarr_header *header = dynarr_get_header(array);
     assert(header && "Header must not be null");
 
-    u64 capacity = capacity_increase + header->capacity;
-    u8 *new_array_data = alloc_malloc(
+    ullong capacity = capacity_increase + header->capacity;
+    uchar *new_array_data = alloc_malloc(
         header->allocator, dynarr_count_to_bytes(capacity, item_size), alignment
     );
     if (!new_array_data) {
@@ -196,7 +197,7 @@ void *dynarr_grow_ut(
         return array;
     }
 
-    u8 *new_array = new_array_data + sizeof(dynarr_header);
+    uchar *new_array = new_array_data + sizeof(dynarr_header);
     dynarr_header *new_header = (dynarr_header *)new_array_data;
     new_header->len = header->len;
     new_header->capacity = capacity;
@@ -207,7 +208,7 @@ void *dynarr_grow_ut(
 }
 
 void *dynarr_clone_ut(
-    void *array, u64 capacity_increase, size_t item_size, size_t alignment
+    void *array, ullong capacity_increase, size_t item_size, size_t alignment
 ) {
     if (!array) {
         return NULL;
@@ -215,7 +216,7 @@ void *dynarr_clone_ut(
     dynarr_header *header = dynarr_get_header(array);
     assert(header && "Header must not be null");
 
-    u64 capacity = capacity_increase + header->capacity;
+    ullong capacity = capacity_increase + header->capacity;
     void *new_array =
         dynarr_new_sized(capacity, item_size, alignment, header->allocator);
     if (!new_array) {
@@ -230,8 +231,8 @@ void *dynarr_clone_ut(
     return new_array;
 }
 
-b32 dynarr_push_ut(
-    void *array, const void *items, u64 count, size_t item_size
+bool dynarr_push_ut(
+    void *array, const void *items, ullong count, size_t item_size
 ) {
     if (count == 0) {
         return 0;
@@ -249,7 +250,7 @@ b32 dynarr_push_ut(
     }
 
     bytes_copy(
-        ((u8 *)array) + header->len * item_size, items, count * item_size
+        ((uchar *)array) + header->len * item_size, items, count * item_size
     );
     header->len += count;
     return 1;
@@ -258,7 +259,7 @@ b32 dynarr_push_ut(
 void *dynarr_push_grow_ut(
     void *array,
     const void *items,
-    u64 count,
+    ullong count,
     size_t item_size,
     size_t alignment
 ) {
@@ -274,7 +275,7 @@ void *dynarr_push_grow_ut(
     assert(header && "header must not be null");
 
     if (header->len + count > header->capacity) {
-        u64 capacity_increase = header->capacity + count + 8;
+        ullong capacity_increase = header->capacity + count + 8;
         void *new_array =
             dynarr_grow_ut(array, capacity_increase, item_size, alignment);
         if (!new_array) {
@@ -290,13 +291,13 @@ void *dynarr_push_grow_ut(
         }
     }
 
-    void *dest = ((u8 *)array) + header->len * item_size;
+    void *dest = ((uchar *)array) + header->len * item_size;
     bytes_copy(dest, items, count * item_size);
     header->len += count;
     return array;
 }
 
-b32 dynarr_pop_ut(void *array, void *out, size_t item_size) {
+bool dynarr_pop_ut(void *array, void *out, size_t item_size) {
     if (!array) {
         return 0;
     }
@@ -304,13 +305,13 @@ b32 dynarr_pop_ut(void *array, void *out, size_t item_size) {
     if (header->len == 0) {
         return 0;
     }
-    u8 *item = ((u8 *)array) + (header->len - 1) * item_size;
-    bytes_copy((u8 *)out, item, item_size);
+    uchar *item = ((uchar *)array) + (header->len - 1) * item_size;
+    bytes_copy(out, item, item_size);
     header->len -= 1;
     return 1;
 }
 
-b32 dynarr_remove_ut(void *array, u64 index, size_t item_size) {
+bool dynarr_remove_ut(void *array, ullong index, size_t item_size) {
     if (!array) {
         return 0;
     }
@@ -318,16 +319,16 @@ b32 dynarr_remove_ut(void *array, u64 index, size_t item_size) {
     if (header->len <= index) {
         return 0;
     }
-    u8 *data = (u8 *)array;
-    u8 *data_dst = data + index * item_size;
-    u8 *data_src = data_dst + item_size;
-    u64 bytes = (header->len - index - 1) * item_size;
+    uchar *data = (uchar *)array;
+    uchar *data_dst = data + index * item_size;
+    uchar *data_src = data_dst + item_size;
+    size_t bytes = (size_t)(header->len - index - 1) * item_size;
     bytes_move(data_dst, data_src, bytes);
     header->len -= 1;
     return 1;
 }
 
-b32 dynarr_remove_uo_ut(void *array, u64 index, size_t item_size) {
+bool dynarr_remove_uo_ut(void *array, ullong index, size_t item_size) {
     if (!array) {
         return 0;
     }
@@ -335,19 +336,127 @@ b32 dynarr_remove_uo_ut(void *array, u64 index, size_t item_size) {
     if (header->len <= index) {
         return 0;
     }
-    u8 *data = (u8 *)array;
-    u8 *data_dst = data + index * item_size;
-    u8 *data_src = data + (header->len - 1) * item_size;
+    uchar *data = (uchar *)array;
+    uchar *data_dst = data + index * item_size;
+    uchar *data_src = data + (header->len - 1) * item_size;
     bytes_copy(data_dst, data_src, item_size);
     header->len -= 1;
     return 1;
 }
 
 ////////////////////////
+// Byte buffer
+////////////////////////
+
+bytebuf bytebuf_new(size_t capacity, allocator *allocator) {
+    assert(allocator && "allocator must not be null");
+    assert(capacity > 0 && "capacity must be larger than 0");
+    bytebuf b;
+    bytes_set(&b, 0, sizeof(b));
+    b.allocator = allocator;
+    b.buffer = alloc_malloc(allocator, capacity, _Alignof(uchar));
+    if (b.buffer) {
+        b.cap = capacity;
+    }
+    return b;
+}
+
+void bytebuf_free(bytebuf *bbuf) {
+    assert(bbuf && "bytebuf must not be null");
+    assert(bbuf->buffer && "bytebuf's buffer must not be null");
+    assert(bbuf->allocator && "allocator must not be null");
+    if (!bbuf && !bbuf->buffer) {
+        return;
+    }
+    alloc_free(bbuf->allocator, bbuf->buffer);
+    bbuf->cap = 0;
+    bbuf->len = 0;
+    bbuf->buffer = 0;
+}
+
+bool bytebuf_grow(bytebuf *bbuf, size_t capacity_increase) {
+    assert(bbuf && "bytebuf must not be null");
+    assert(bbuf->buffer && "bytebuf's buffer must not be null");
+    assert(capacity_increase > 0 && "capacity increase must be larger than 0");
+    if (capacity_increase == 0) {
+        return 1;
+    }
+
+    uchar *newbuf = alloc_malloc(
+        bbuf->allocator, bbuf->cap + capacity_increase, _Alignof(uchar)
+    );
+    if (!newbuf) {
+        return 0;
+    }
+
+    bytes_copy(newbuf, bbuf->buffer, bbuf->len);
+    bbuf->buffer = newbuf;
+    bbuf->cap += capacity_increase;
+    return 1;
+}
+
+bytebuf bytebuf_clone(bytebuf *bbuf, size_t capacity_increase) {
+    assert(bbuf && "bytebuf must not be null");
+    assert(bbuf->buffer && "bytebuf's buffer must not be null");
+    assert(bbuf->allocator && "allocator must not be null");
+
+    bytebuf newbbuf =
+        bytebuf_new(bbuf->cap + capacity_increase, bbuf->allocator);
+    if (!newbbuf.buffer) {
+        return newbbuf; // failed new
+    }
+    bytes_copy(newbbuf.buffer, bbuf->buffer, bbuf->len);
+    newbbuf.len = bbuf->len;
+    return newbbuf;
+}
+
+bool bytebuf_write(bytebuf *bbuf, uchar *src, size_t len) {
+    assert(bbuf && "bytebuf must not be null");
+    assert(bbuf->buffer && "bytebuf's buffer must not be null");
+    assert(src && "source must not be null");
+    assert(len > 0 && "length must be more than 0");
+
+    if (!src || len == 0) {
+        return 1; // nothing to write
+    }
+    if (len > bbuf->cap - bbuf->len) {
+        return 0; // no capacity left
+    }
+    bytes_copy(bbuf->buffer + bbuf->len, src, len);
+    bbuf->len += len;
+    return 1;
+}
+
+bool bytebuf_write_grow(bytebuf *bbuf, uchar *src, size_t len) {
+    assert(bbuf && "bytebuf must not be null");
+    assert(bbuf->buffer && "bytebuf's buffer must not be null");
+    assert(src && "source must not be null");
+    assert(len > 0 && "length must be more than 0");
+
+    if (!src || len == 0) {
+        return 1; // nothing to write
+    }
+    if (len > bbuf->cap - bbuf->len) {
+        size_t capacity_increase = bbuf->cap + len;
+        bool ok = bytebuf_grow(bbuf, capacity_increase);
+        if (!ok) {
+            return 0; // grow failed
+        }
+    }
+    bytes_copy(bbuf->buffer + bbuf->len, src, len);
+    bbuf->len += len;
+    return 1;
+}
+
+void bytebuf_clear(bytebuf *bbuf) {
+    bbuf->len = 0;
+}
+
+////////////////////////
 // C strings
 ////////////////////////
 
-b32 cstr_eq_unsafe(const char *s1, const char *s2) {
+bool cstr_eq_unsafe(const char *s1, const char *s2) {
     if (s1 == s2) {
         return 1;
     }
@@ -369,7 +478,7 @@ b32 cstr_eq_unsafe(const char *s1, const char *s2) {
     return 1;
 }
 
-b32 cstr_eq(const char *s1, const char *s2, size_t len) {
+bool cstr_eq(const char *s1, const char *s2, size_t len) {
     if (s1 == s2) {
         return 1;
     }
@@ -421,8 +530,8 @@ slice cstr_split_next(cstr_split_iter *split) {
         return slice;
     }
 
-    slice.buffer = (u8 *)split->str + split->index;
-    b32 len_set = 0;
+    slice.buffer = (uchar *)split->str + split->index;
+    bool len_set = 0;
 
     while (split->index < split->str_len && !len_set) {
         char ch = split->str[split->index];
@@ -434,7 +543,7 @@ slice cstr_split_next(cstr_split_iter *split) {
                     }
                     uintptr_t str = (uintptr_t)split->str;
                     uintptr_t buf = (uintptr_t)slice.buffer;
-                    slice.len = (u64)(str + split->index - buf);
+                    slice.len = (size_t)(str + split->index - buf);
                     len_set = 1;
                     break;
                 }
@@ -442,7 +551,7 @@ slice cstr_split_next(cstr_split_iter *split) {
         } else {
             uintptr_t str = (uintptr_t)split->str;
             uintptr_t buf = (uintptr_t)slice.buffer;
-            slice.len = (u64)(str + split->index - buf);
+            slice.len = (size_t)(str + split->index - buf);
             len_set = 1;
         }
         split->index += 1;
@@ -472,7 +581,7 @@ cstr_split_collect_strings(char **strings, size_t len, cstr_split_iter *split) {
     assert(split && "split must not be null");
 
     struct {
-        u32 null_terminate : 1;
+        uint null_terminate : 1;
     } flags = {
         .null_terminate = split->null_terminate,
     };
@@ -491,11 +600,11 @@ cstr_split_collect_strings(char **strings, size_t len, cstr_split_iter *split) {
     return i;
 }
 
-b32 cstr_match_wild_ascii(
+bool cstr_match_wild_ascii(
     const char *txt, size_t txt_len, const char *pat, size_t pat_len
 ) {
     size_t i = 0, j = 0, start_index = 0, match = 0;
-    b32 start_index_set = 0;
+    bool start_index_set = 0;
 
     while (i < txt_len) {
         if (j < pat_len && (pat[j] == '?' || pat[j] == txt[i])) {
@@ -520,22 +629,22 @@ b32 cstr_match_wild_ascii(
     return j == pat_len;
 }
 
-b32 cstr_match_wild_ascii_unsafe(const char *txt, const char *pat) {
+bool cstr_match_wild_ascii_unsafe(const char *txt, const char *pat) {
     size_t txt_len = cstr_len_unsafe(txt);
     size_t pat_len = cstr_len_unsafe(pat);
     return cstr_match_wild_ascii(txt, txt_len, pat, pat_len);
 }
 
-b32 cstr_to_s8(const char *s, size_t len, s8 *v) {
+bool cstr_to_int(const char *s, size_t len, int *v) {
     assert(s && "string must not be null");
     assert(len && "length must be 1 or more");
     assert(v && "value storage must not be null");
     if (!s || !len || !v) {
         return 0;
     }
-    s8 v_ = 0;
+    int v_ = 0;
     size_t i = 0;
-    s8 sign = 1;
+    int sign = 1;
 
     if (s[0] == '-') {
         i += 1;
@@ -544,8 +653,8 @@ b32 cstr_to_s8(const char *s, size_t len, s8 *v) {
 
     for (; i < len && s[i]; i += 1) {
         if (s[i] >= '0' && s[i] <= '9') {
-            s8 n = s[i] - '0';
-            if ((INT8_MAX - n) / 10 < v_) {
+            int n = s[i] - '0';
+            if ((INT_MAX - n) / 10 < v_) {
                 // exceeds int size
                 return 0;
             }
@@ -561,19 +670,19 @@ b32 cstr_to_s8(const char *s, size_t len, s8 *v) {
     return 1;
 }
 
-b32 cstr_to_u8(const char *s, size_t len, u8 *v) {
+bool cstr_to_uint(const char *s, size_t len, uint *v) {
     assert(s && "string must not be null");
     assert(len && "length must be 1 or more");
     assert(v && "value storage must not be null");
     if (!s || !len || !v) {
         return 0;
     }
-    u8 v_ = 0;
+    uint v_ = 0;
 
     for (size_t i = 0; i < len && s[i]; i += 1) {
         if (s[i] >= '0' && s[i] <= '9') {
-            u8 n = (u8)(s[i] - '0');
-            if ((UINT8_MAX - n) / 10 < v_) {
+            uint n = (uchar)s[i] - '0';
+            if ((UINT_MAX - n) / 10 < v_) {
                 // exceeds int size
                 return 0;
             }
@@ -589,16 +698,16 @@ b32 cstr_to_u8(const char *s, size_t len, u8 *v) {
     return 1;
 }
 
-b32 cstr_to_s16(const char *s, size_t len, s16 *v) {
+bool cstr_to_llong(const char *s, size_t len, llong *v) {
     assert(s && "string must not be null");
     assert(len && "length must be 1 or more");
     assert(v && "value storage must not be null");
     if (!s || !len || !v) {
         return 0;
     }
-    s16 v_ = 0;
+    llong v_ = 0;
     size_t i = 0;
-    s16 sign = 1;
+    llong sign = 1;
 
     if (s[0] == '-') {
         i += 1;
@@ -607,8 +716,8 @@ b32 cstr_to_s16(const char *s, size_t len, s16 *v) {
 
     for (; i < len && s[i]; i += 1) {
         if (s[i] >= '0' && s[i] <= '9') {
-            s16 n = (s16)(s[i] - '0');
-            if ((INT16_MAX - n) / 10 < v_) {
+            llong n = s[i] - '0';
+            if ((LLONG_MAX - n) / 10 < v_) {
                 // exceeds int size
                 return 0;
             }
@@ -624,145 +733,19 @@ b32 cstr_to_s16(const char *s, size_t len, s16 *v) {
     return 1;
 }
 
-b32 cstr_to_u16(const char *s, size_t len, u16 *v) {
+bool cstr_to_ullong(const char *s, size_t len, ullong *v) {
     assert(s && "string must not be null");
     assert(len && "length must be 1 or more");
     assert(v && "value storage must not be null");
     if (!s || !len || !v) {
         return 0;
     }
-    u16 v_ = 0;
+    ullong v_ = 0;
 
     for (size_t i = 0; i < len && s[i]; i += 1) {
         if (s[i] >= '0' && s[i] <= '9') {
-            u16 n = (u16)(s[i] - '0');
-            if ((UINT16_MAX - n) / 10 < v_) {
-                // exceeds int size
-                return 0;
-            }
-            v_ *= 10;
-            v_ += n;
-        } else {
-            // invalid character
-            return 0;
-        }
-    }
-
-    *v = v_;
-    return 1;
-}
-
-b32 cstr_to_s32(const char *s, size_t len, s32 *v) {
-    assert(s && "string must not be null");
-    assert(len && "length must be 1 or more");
-    assert(v && "value storage must not be null");
-    if (!s || !len || !v) {
-        return 0;
-    }
-    s32 v_ = 0;
-    size_t i = 0;
-    s32 sign = 1;
-
-    if (s[0] == '-') {
-        i += 1;
-        sign = -1;
-    }
-
-    for (; i < len && s[i]; i += 1) {
-        if (s[i] >= '0' && s[i] <= '9') {
-            s32 n = (s32)(s[i] - '0');
-            if ((INT32_MAX - n) / 10 < v_) {
-                // exceeds int size
-                return 0;
-            }
-            v_ *= 10;
-            v_ += n;
-        } else {
-            // invalid character
-            return 0;
-        }
-    }
-
-    *v = sign * v_;
-    return 1;
-}
-
-b32 cstr_to_u32(const char *s, size_t len, u32 *v) {
-    assert(s && "string must not be null");
-    assert(len && "length must be 1 or more");
-    assert(v && "value storage must not be null");
-    if (!s || !len || !v) {
-        return 0;
-    }
-    u32 v_ = 0;
-
-    for (size_t i = 0; i < len && s[i]; i += 1) {
-        if (s[i] >= '0' && s[i] <= '9') {
-            u32 n = (u32)(s[i] - '0');
-            if ((UINT32_MAX - n) / 10 < v_) {
-                // exceeds int size
-                return 0;
-            }
-            v_ *= 10;
-            v_ += n;
-        } else {
-            // invalid character
-            return 0;
-        }
-    }
-
-    *v = v_;
-    return 1;
-}
-
-b32 cstr_to_s64(const char *s, size_t len, s64 *v) {
-    assert(s && "string must not be null");
-    assert(len && "length must be 1 or more");
-    assert(v && "value storage must not be null");
-    if (!s || !len || !v) {
-        return 0;
-    }
-    s64 v_ = 0;
-    size_t i = 0;
-    s64 sign = 1;
-
-    if (s[0] == '-') {
-        i += 1;
-        sign = -1;
-    }
-
-    for (; i < len && s[i]; i += 1) {
-        if (s[i] >= '0' && s[i] <= '9') {
-            s64 n = (s64)(s[i] - '0');
-            if ((INT64_MAX - n) / 10 < v_) {
-                // exceeds int size
-                return 0;
-            }
-            v_ *= 10;
-            v_ += n;
-        } else {
-            // invalid character
-            return 0;
-        }
-    }
-
-    *v = sign * v_;
-    return 1;
-}
-
-b32 cstr_to_u64(const char *s, size_t len, u64 *v) {
-    assert(s && "string must not be null");
-    assert(len && "length must be 1 or more");
-    assert(v && "value storage must not be null");
-    if (!s || !len || !v) {
-        return 0;
-    }
-    u64 v_ = 0;
-
-    for (size_t i = 0; i < len && s[i]; i += 1) {
-        if (s[i] >= '0' && s[i] <= '9') {
-            u64 n = (u64)(s[i] - '0');
-            if ((UINT64_MAX - n) / 10 < v_) {
+            ullong n = (uchar)s[i] - '0';
+            if ((ULLONG_MAX - n) / 10 < v_) {
                 // exceeds int size
                 return 0;
             }
@@ -810,7 +793,7 @@ static const double pow10d[] = {
     1e308
 };
 
-static const u64 pow10u64[] = {
+static const ullong pow10ullong[] = {
     1e0L,
     1e1L,
     1e2L,
@@ -832,18 +815,18 @@ static const u64 pow10u64[] = {
     1e18L
 };
 
-b32 cstr_to_float(const char *s, size_t len, float *v) {
+bool cstr_to_float(const char *s, size_t len, float *v) {
     assert(s && "string must not be null");
     assert(len && "length must be 1 or more");
     assert(v && "value storage must not be null");
     if (!s || !len || !v) {
         return 0;
     }
-    u64 integer = 0;
-    u64 decimals = 0;
+    ullong integer = 0;
+    ullong decimals = 0;
     float fraction = 0.0;
     float sign = 1.0;
-    u64 exp = 0;
+    ullong exp = 0;
     size_t i = 0;
 
     if (s[0] == '-') {
@@ -855,7 +838,7 @@ b32 cstr_to_float(const char *s, size_t len, float *v) {
 
     // integer part
     for (; i < len && s[i] >= '0' && s[i] <= '9'; i += 1) {
-        u64 n = (u64)(s[i] - '0');
+        ullong n = (uchar)s[i] - '0';
         if ((INT64_MAX - n) / 10 < integer) {
             // exceeds int size
             return 0;
@@ -869,7 +852,7 @@ b32 cstr_to_float(const char *s, size_t len, float *v) {
         i += 1;
         float divisor = 10.0;
         for (; i < len && s[i] >= '0' && s[i] <= '9'; i += 1) {
-            u64 n = (u64)(s[i] - '0');
+            ullong n = (uchar)s[i] - '0';
             if ((INT64_MAX - n) / 10 < integer) {
                 // exceeds int size, use fractions instead
                 fraction += (float)(s[i] - '0') / divisor;
@@ -887,7 +870,7 @@ b32 cstr_to_float(const char *s, size_t len, float *v) {
     if (s[i] == 'e' || s[i] == 'E') {
         i += 1;
 
-        s64 exp_sign = 1;
+        int exp_sign = 1;
         if (s[i] == '-') {
             exp_sign = -1;
             i += 1;
@@ -896,7 +879,7 @@ b32 cstr_to_float(const char *s, size_t len, float *v) {
         }
 
         for (; i < len && s[i] >= '0' && s[i] <= '9'; i += 1) {
-            u64 n = (u64)(s[i] - '0');
+            ullong n = (uchar)s[i] - '0';
             if ((INT64_MAX - n) / 10 < exp) {
                 // exceeds int size
                 return 0;
@@ -907,7 +890,7 @@ b32 cstr_to_float(const char *s, size_t len, float *v) {
 
         assert(exp_sign != 0 && "exp_sign must not be zero");
         if (exp_sign > 0) {
-            u64 decimals_to_reduce = min(decimals, exp);
+            ullong decimals_to_reduce = min(decimals, exp);
             decimals -= decimals_to_reduce;
             exp -= decimals_to_reduce;
         } else if (exp_sign < 0) {
@@ -949,18 +932,18 @@ b32 cstr_to_float(const char *s, size_t len, float *v) {
     return 1;
 }
 
-b32 cstr_to_double(const char *s, size_t len, double *v) {
+bool cstr_to_double(const char *s, size_t len, double *v) {
     assert(s && "string must not be null");
     assert(len && "length must be 1 or more");
     assert(v && "value storage must not be null");
     if (!s || !len || !v) {
         return 0;
     }
-    u64 integer = 0;
-    u64 decimals = 0;
+    ullong integer = 0;
+    ullong decimals = 0;
     double fraction = 0.0;
     float sign = 1.0;
-    u64 exp = 0;
+    ullong exp = 0;
     size_t i = 0;
 
     if (s[0] == '-') {
@@ -972,7 +955,7 @@ b32 cstr_to_double(const char *s, size_t len, double *v) {
 
     // integer part
     for (; i < len && s[i] >= '0' && s[i] <= '9'; i += 1) {
-        u64 n = (u64)(s[i] - '0');
+        ullong n = (uchar)s[i] - '0';
         if ((INT64_MAX - n) / 10 < integer) {
             // exceeds int size
             return 0;
@@ -986,7 +969,7 @@ b32 cstr_to_double(const char *s, size_t len, double *v) {
         i += 1;
         double divisor = 10.0;
         for (; i < len && s[i] >= '0' && s[i] <= '9'; i += 1) {
-            u64 n = (u64)(s[i] - '0');
+            ullong n = (uchar)s[i] - '0';
             if ((INT64_MAX - n) / 10 < integer) {
                 // exceeds int size, use fractions instead
                 fraction += (double)(s[i] - '0') / divisor;
@@ -1004,7 +987,7 @@ b32 cstr_to_double(const char *s, size_t len, double *v) {
     if (s[i] == 'e' || s[i] == 'E') {
         i += 1;
 
-        s64 exp_sign = 1;
+        int exp_sign = 1;
         if (s[i] == '-') {
             exp_sign = -1;
             i += 1;
@@ -1013,7 +996,7 @@ b32 cstr_to_double(const char *s, size_t len, double *v) {
         }
 
         for (; i < len && s[i] >= '0' && s[i] <= '9'; i += 1) {
-            u64 n = (u64)(s[i] - '0');
+            ullong n = (uchar)s[i] - '0';
             if ((INT64_MAX - n) / 10 < exp) {
                 // exceeds int size
                 return 0;
@@ -1024,7 +1007,7 @@ b32 cstr_to_double(const char *s, size_t len, double *v) {
 
         assert(exp_sign != 0 && "exp_sign must not be zero");
         if (exp_sign > 0) {
-            u64 decimals_to_reduce = min(decimals, exp);
+            ullong decimals_to_reduce = min(decimals, exp);
             decimals -= decimals_to_reduce;
             exp -= decimals_to_reduce;
         } else if (exp_sign < 0) {
@@ -1066,105 +1049,13 @@ b32 cstr_to_double(const char *s, size_t len, double *v) {
     return 1;
 }
 
-size_t cstr_from_s8(char *dest, size_t len, s8 src) {
-    assert(dest && "dest must not be null");
-    assert(len > 0 && "len must be more than 0");
-    char tmp[8] = {0};
-    char *end = tmp + sizeof(tmp);
-    char *cursor = end - 1;
-    b32 is_neg = src < 0;
-    if (is_neg) {
-        src = -src;
-    }
-
-    do {
-        cursor -= 1;
-        *cursor = '0' + (char)(src % 10);
-        src /= 10;
-    } while (src > 0);
-    if (is_neg) {
-        cursor -= 1;
-        *cursor = '-';
-    }
-
-    size_t tmp_len = (size_t)((uintptr_t)end - (uintptr_t)cursor);
-    size_t bytes_to_copy = min(len, tmp_len);
-    bytes_copy(dest, cursor, bytes_to_copy);
-    return bytes_to_copy;
-}
-
-size_t cstr_from_u8(char *dest, size_t len, u8 src) {
-    assert(dest && "dest must not be null");
-    assert(len > 0 && "len must be more than 0");
-    char tmp[8] = {0};
-    char *end = tmp + sizeof(tmp);
-    char *cursor = end - 1;
-
-    do {
-        cursor -= 1;
-        *cursor = '0' + (char)(src % 10);
-        src /= 10;
-    } while (src > 0);
-
-    size_t tmp_len = (size_t)((uintptr_t)end - (uintptr_t)cursor);
-    size_t bytes_to_copy = min(len, tmp_len);
-    bytes_copy(dest, cursor, bytes_to_copy);
-    return bytes_to_copy;
-}
-
-size_t cstr_from_s16(char *dest, size_t len, s16 src) {
-    assert(dest && "dest must not be null");
-    assert(len > 0 && "len must be more than 0");
-    char tmp[8] = {0};
-    char *end = tmp + sizeof(tmp);
-    char *cursor = end - 1;
-    b32 is_neg = src < 0;
-    if (is_neg) {
-        src = -src;
-    }
-
-    do {
-        cursor -= 1;
-        *cursor = '0' + (char)(src % 10);
-        src /= 10;
-    } while (src > 0);
-    if (is_neg) {
-        cursor -= 1;
-        *cursor = '-';
-    }
-
-    size_t tmp_len = (size_t)((uintptr_t)end - (uintptr_t)cursor);
-    size_t bytes_to_copy = min(len, tmp_len);
-    bytes_copy(dest, cursor, bytes_to_copy);
-    return bytes_to_copy;
-}
-
-size_t cstr_from_u16(char *dest, size_t len, u16 src) {
-    assert(dest && "dest must not be null");
-    assert(len > 0 && "len must be more than 0");
-    char tmp[8] = {0};
-    char *end = tmp + sizeof(tmp);
-    char *cursor = end - 1;
-
-    do {
-        cursor -= 1;
-        *cursor = '0' + (char)(src % 10);
-        src /= 10;
-    } while (src > 0);
-
-    size_t tmp_len = (size_t)((uintptr_t)end - (uintptr_t)cursor);
-    size_t bytes_to_copy = min(len, tmp_len);
-    bytes_copy(dest, cursor, bytes_to_copy);
-    return bytes_to_copy;
-}
-
-size_t cstr_from_s32(char *dest, size_t len, s32 src) {
+size_t cstr_from_int(char *dest, size_t len, int src) {
     assert(dest && "dest must not be null");
     assert(len > 0 && "len must be more than 0");
     char tmp[16] = {0};
     char *end = tmp + sizeof(tmp);
     char *cursor = end - 1;
-    b32 is_neg = src < 0;
+    bool is_neg = src < 0;
     if (is_neg) {
         src = -src;
     }
@@ -1185,7 +1076,7 @@ size_t cstr_from_s32(char *dest, size_t len, s32 src) {
     return bytes_to_copy;
 }
 
-size_t cstr_from_u32(char *dest, size_t len, u32 src) {
+size_t cstr_from_uint(char *dest, size_t len, uint src) {
     assert(dest && "dest must not be null");
     assert(len > 0 && "len must be more than 0");
     char tmp[16] = {0};
@@ -1204,13 +1095,13 @@ size_t cstr_from_u32(char *dest, size_t len, u32 src) {
     return bytes_to_copy;
 }
 
-size_t cstr_from_s64(char *dest, size_t len, s64 src) {
+size_t cstr_from_llong(char *dest, size_t len, llong src) {
     assert(dest && "dest must not be null");
     assert(len > 0 && "len must be more than 0");
     char tmp[32] = {0};
     char *end = tmp + sizeof(tmp);
     char *cursor = end - 1;
-    b32 is_neg = src < 0;
+    bool is_neg = src < 0;
     if (is_neg) {
         src = -src;
     }
@@ -1231,7 +1122,7 @@ size_t cstr_from_s64(char *dest, size_t len, s64 src) {
     return bytes_to_copy;
 }
 
-size_t cstr_from_u64(char *dest, size_t len, u64 src) {
+size_t cstr_from_ullong(char *dest, size_t len, ullong src) {
     assert(dest && "dest must not be null");
     assert(len > 0 && "len must be more than 0");
     char tmp[32] = {0};
@@ -1250,7 +1141,7 @@ size_t cstr_from_u64(char *dest, size_t len, u64 src) {
     return bytes_to_copy;
 }
 
-size_t cstr_from_float(char *dest, size_t len, float src, u8 decimals) {
+size_t cstr_from_float(char *dest, size_t len, float src, uint decimals) {
     assert(dest && "dest must not be null");
     assert(len > 0 && "len must be more than 0");
     assert(decimals < 19 && "decimals up to 18 are supported");
@@ -1280,9 +1171,10 @@ size_t cstr_from_float(char *dest, size_t len, float src, u8 decimals) {
     }
 
     // integer part
-    u64 integer = (u64)src;
+    ullong integer = (ullong)src;
     bytes_written +=
-        cstr_from_u64(dest + bytes_written, len - bytes_written, integer) - 1;
+        cstr_from_ullong(dest + bytes_written, len - bytes_written, integer)
+        - 1;
     if (bytes_written == len) {
         return bytes_written;
     }
@@ -1295,9 +1187,9 @@ size_t cstr_from_float(char *dest, size_t len, float src, u8 decimals) {
     }
 
     // fractional part
-    u64 fractional = (u64)((src - (double)integer) * precision_d);
-    u64 precision_u64 = pow10u64[decimals];
-    for (u64 i = precision_u64 / 10; i > 1; i /= 10) {
+    ullong fractional = (ullong)((src - (double)integer) * precision_d);
+    ullong precision_ullong = pow10ullong[decimals];
+    for (ullong i = precision_ullong / 10; i > 1; i /= 10) {
         if (i > fractional) {
             dest[bytes_written] = '0';
             bytes_written += 1;
@@ -1307,12 +1199,12 @@ size_t cstr_from_float(char *dest, size_t len, float src, u8 decimals) {
         }
     }
     bytes_written +=
-        cstr_from_u64(dest + bytes_written, len - bytes_written, fractional);
+        cstr_from_ullong(dest + bytes_written, len - bytes_written, fractional);
 
     return bytes_written;
 }
 
-size_t cstr_from_double(char *dest, size_t len, double src, u8 decimals) {
+size_t cstr_from_double(char *dest, size_t len, double src, uint decimals) {
     assert(dest && "dest must not be null");
     assert(len > 0 && "len must be more than 0");
     assert(decimals < 19 && "decimals up to 19 are supported");
@@ -1342,9 +1234,10 @@ size_t cstr_from_double(char *dest, size_t len, double src, u8 decimals) {
     }
 
     // integer part
-    u64 integer = (u64)src;
+    ullong integer = (ullong)src;
     bytes_written +=
-        cstr_from_u64(dest + bytes_written, len - bytes_written, integer) - 1;
+        cstr_from_ullong(dest + bytes_written, len - bytes_written, integer)
+        - 1;
     if (bytes_written == len) {
         return bytes_written;
     }
@@ -1357,9 +1250,9 @@ size_t cstr_from_double(char *dest, size_t len, double src, u8 decimals) {
     }
 
     // fractional part
-    u64 fractional = (u64)((src - (double)integer) * precision_d);
-    u64 precision_u64 = pow10u64[decimals];
-    for (u64 i = precision_u64 / 10; i > 1; i /= 10) {
+    ullong fractional = (ullong)((src - (double)integer) * precision_d);
+    ullong precision_ullong = pow10ullong[decimals];
+    for (ullong i = precision_ullong / 10; i > 1; i /= 10) {
         if (i > fractional) {
             dest[bytes_written] = '0';
             bytes_written += 1;
@@ -1369,7 +1262,7 @@ size_t cstr_from_double(char *dest, size_t len, double src, u8 decimals) {
         }
     }
     bytes_written +=
-        cstr_from_u64(dest + bytes_written, len - bytes_written, fractional);
+        cstr_from_ullong(dest + bytes_written, len - bytes_written, fractional);
 
     return bytes_written;
 }
