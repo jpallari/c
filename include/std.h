@@ -151,7 +151,8 @@ bytes_copy(void *restrict dest, const void *restrict src, size_t n) {
  * @param[in] n number of bytes to copy
  * @returns pointer to area of memory where bytes were copied to
  */
-static inline void *bytes_move(void *dest, const void *src, size_t n) {
+__attribute__((unused)) static inline void *
+bytes_move(void *dest, const void *src, size_t n) {
     assert(dest && "dest must not be null");
     assert(src && "src must not be null");
 
@@ -183,7 +184,8 @@ static inline void *bytes_move(void *dest, const void *src, size_t n) {
  * @param[in] n number of bytes to fill
  * @returns pointer to the memory area that was filled
  */
-static inline void *bytes_set(void *dest, int c, size_t n) {
+__attribute__((unused)) static inline void *
+bytes_set(void *dest, int c, size_t n) {
     if (!n) {
         return dest;
     }
@@ -330,8 +332,10 @@ __attribute__((unused)) static allocator std_allocator = {
  * @param alignment memory alignment to use for the allocation
  * @returns pointer to area of memory that was allocated
  */
-#define alloc_malloc(allocator, size, alignment) \
-    (allocator)->malloc((size), (alignment), (allocator)->ctx)
+__attribute__((unused)) static inline void *
+alloc_malloc(allocator *a, size_t size, size_t alignment) {
+    return a->malloc(size, alignment, a->ctx);
+}
 
 /**
  * Call free on a custom memory allocation interface.
@@ -339,7 +343,9 @@ __attribute__((unused)) static allocator std_allocator = {
  * @param allocator allocator to use for freeing memory
  * @param ptr pointer to area of memory to free
  */
-#define alloc_free(allocator, ptr) (allocator)->free((ptr), (allocator)->ctx)
+__attribute__((unused)) static inline void alloc_free(allocator *a, void *ptr) {
+    a->free(ptr, a->ctx);
+}
 
 ////////////////////////
 // Slices
@@ -444,8 +450,10 @@ arena arena_new(uchar *buffer, size_t size);
 /**
  * Calculate used bytes based on desired usage and alignment.
  */
-#define arena_aligned_used(used, alignment) \
-    ((used) + (alignment) - 1) & ~((alignment) - 1)
+__attribute__((unused)) static inline size_t
+arena_aligned_used(size_t used, size_t alignment) {
+    return (used + alignment - 1) & ~(alignment - 1);
+}
 
 /**
  * Allocate bytes from the given arena.
@@ -505,8 +513,10 @@ typedef struct {
 /**
  * Convert item count and size to byte size (incl. header)
  */
-#define dynarr_count_to_bytes(n, item_size) \
-    (((size_t)(n)) * item_size + sizeof(dynarr_header))
+__attribute__((unused)) static inline size_t
+dynarr_count_to_bytes(ullong n, size_t item_size) {
+    return (size_t)n * item_size + sizeof(dynarr_header);
+}
 
 /**
  * Create a new dynamic array
@@ -524,20 +534,34 @@ void *dynarr_new_sized(
 /**
  * Get the header for given array
  */
-#define dynarr_get_header(array) \
-    (array ? ((dynarr_header *)((void *)(array))) - 1 : NULL)
+static inline dynarr_header *dynarr_get_header(void *array) {
+    if (!array) {
+        return NULL;
+    }
+    return ((dynarr_header *)array) - 1;
+}
 
 /**
  * Get the count for given array
  */
-#define dynarr_len(array) \
-    (array ? (((dynarr_header *)((void *)(array))) - 1)->len : 0)
+__attribute__((unused)) static inline ullong dynarr_len(void *array) {
+    dynarr_header *header = dynarr_get_header(array);
+    if (!header) {
+        return 0;
+    }
+    return header->len;
+}
 
 /**
  * Get the capacity for given array
  */
-#define dynarr_capacity(array) \
-    (array ? (((dynarr_header *)((void *)(array))) - 1)->capacity : 0)
+__attribute__((unused)) static inline ullong dynarr_capacity(void *array) {
+    dynarr_header *header = dynarr_get_header(array);
+    if (!header) {
+        return 0;
+    }
+    return header->capacity;
+}
 
 /**
  * Free the given array
