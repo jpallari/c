@@ -165,7 +165,7 @@ void *dynarr_new_sized(
 
 void dynarr_free(void *array) {
     dynarr_header *header = dynarr_get_header(array);
-    if (!array) {
+    if (!header) {
         return;
     }
     alloc_free(header->allocator, header);
