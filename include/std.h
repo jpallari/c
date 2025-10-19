@@ -524,18 +524,20 @@ void *dynarr_new_sized(
 /**
  * Get the header for given array
  */
-#define dynarr_get_header(array) (array ? ((dynarr_header *)(array)) - 1 : NULL)
+#define dynarr_get_header(array) \
+    (array ? ((dynarr_header *)((void *)(array))) - 1 : NULL)
 
 /**
  * Get the count for given array
  */
-#define dynarr_len(array) (array ? (((dynarr_header *)(array)) - 1)->len : 0)
+#define dynarr_len(array) \
+    (array ? (((dynarr_header *)((void *)(array))) - 1)->len : 0)
 
 /**
  * Get the capacity for given array
  */
 #define dynarr_capacity(array) \
-    (array ? (((dynarr_header *)(array)) - 1)->capacity : 0)
+    (array ? (((dynarr_header *)((void *)(array))) - 1)->capacity : 0)
 
 /**
  * Free the given array

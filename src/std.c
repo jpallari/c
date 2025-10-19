@@ -148,7 +148,8 @@ allocator arena_allocator_new(arena *arena) {
 void *dynarr_new_sized(
     ullong capacity, size_t item_size, size_t alignment, allocator *allocator
 ) {
-    uchar *data = alloc_malloc(
+    alignment = max(alignment, _Alignof(dynarr_header));
+    void *data = alloc_malloc(
         allocator, dynarr_count_to_bytes(capacity, item_size), alignment
     );
     if (!data) {
@@ -160,7 +161,7 @@ void *dynarr_new_sized(
     header->capacity = capacity;
     header->allocator = allocator;
 
-    return data + sizeof(dynarr_header);
+    return (uchar *)(data) + sizeof(dynarr_header);
 }
 
 void dynarr_free(void *array) {
@@ -181,14 +182,15 @@ void *dynarr_grow_ut(
     assert(header && "Header must not be null");
 
     ullong capacity = capacity_increase + header->capacity;
-    uchar *new_array_data = alloc_malloc(
+    alignment = max(alignment, _Alignof(dynarr_header));
+    void *new_array_data = alloc_malloc(
         header->allocator, dynarr_count_to_bytes(capacity, item_size), alignment
     );
     if (!new_array_data) {
         return NULL;
     }
 
-    uchar *new_array = new_array_data + sizeof(dynarr_header);
+    uchar *new_array = (uchar *)(new_array_data) + sizeof(dynarr_header);
     dynarr_header *new_header = (dynarr_header *)new_array_data;
     new_header->len = header->len;
     new_header->capacity = capacity;
