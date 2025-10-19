@@ -263,62 +263,13 @@ void test_dynarr_remove_uo(test *t) {
     dynarr_free(arr);
 }
 
-void test_dynarr_grow_in_arena(test *t) {
-    _Alignas(max_align_t) uchar buffer[100] = {0};
-    arena arena = arena_new(buffer, sizeof(buffer));
-    allocator alloc = arena_allocator_new(&arena);
-
-    // prepare array
-    char *arr = dynarr_new(5, char, &alloc);
-    if (!assert_true(t, arr, "array must not be null")) {
-        return;
-    }
-    const char *items = "hello";
-    assert_true(t, dynarr_push(arr, items, 5), "push must succeed");
-
-    // grow array
-    char *new_arr = dynarr_grow(arr, 10, char);
-    assert_eq_uint(
-        t, dynarr_capacity(arr), 20L, "existing capacity must double and add 10"
-    );
-    assert_eq_uint(
-        t,
-        (uintptr_t)arr,
-        (uintptr_t)new_arr,
-        "new and old array must be the same"
-    );
-
-    // push more stuff to array
-    items = " world!";
-    assert_true(t, dynarr_push(arr, items, 8), "push must succeed");
-
-    // check backing buffer
-    dynarr_header *buf_head = (dynarr_header *)buffer;
-    assert_eq_uint(
-        t,
-        buf_head->capacity,
-        20L,
-        "array head on backing buffer start: capacity"
-    );
-    assert_eq_uint(
-        t, buf_head->len, 13L, "array head on backing buffer start: length"
-    );
-    assert_eq_cstr(
-        t,
-        (char *)buffer + sizeof(dynarr_header),
-        "hello world!",
-        "backing buffer must have the array contents"
-    );
-}
-
 static test_case tests[] = {
     {"Dynamic array push", test_dynarr_push},
     {"Dynamic array push grow", test_dynarr_push_grow},
     {"Dynamic array clone", test_dynarr_clone},
     {"Dynamic array pop", test_dynarr_pop},
     {"Dynamic array remove", test_dynarr_remove},
-    {"Dynamic array remove unordered", test_dynarr_remove_uo},
-    {"Dynamic array grow in an arena", test_dynarr_grow_in_arena}
+    {"Dynamic array remove unordered", test_dynarr_remove_uo}
 };
 
 setup_tests(NULL, tests)

@@ -188,15 +188,6 @@ void *dynarr_grow_ut(
         return NULL;
     }
 
-    if ((uintptr_t)array + header->capacity == (uintptr_t)new_array_data) {
-        // We got adjacent memory block, so we can extend the array and skip
-        // copying. This mainly works with memory arenas.
-        // If this happens for other allocators, this could introduce a memory
-        // leak because freeing the array will only free one of the pointers.
-        header->capacity += capacity;
-        return array;
-    }
-
     uchar *new_array = new_array_data + sizeof(dynarr_header);
     dynarr_header *new_header = (dynarr_header *)new_array_data;
     new_header->len = header->len;
