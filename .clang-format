@@ -1,8 +1,8 @@
 ﻿---
 AlignAfterOpenBracket: BlockIndent
-AlignConsecutiveMacros: 'false'
 AlignConsecutiveAssignments: 'false'
 AlignConsecutiveDeclarations: 'false'
+AlignConsecutiveMacros: 'false'
 AlignEscapedNewlines: DontAlign
 AlignOperands: 'false'
 AlignTrailingComments: 'false'
@@ -10,7 +10,8 @@ AllowAllArgumentsOnNextLine: 'true'
 AllowAllConstructorInitializersOnNextLine: 'true'
 AllowAllParametersOfDeclarationOnNextLine: 'true'
 AllowShortBlocksOnASingleLine: 'true'
-AllowShortCaseLabelsOnASingleLine: 'true'
+AllowShortCaseExpressionOnASingleLine: 'false'
+AllowShortCaseLabelsOnASingleLine: 'false'
 AllowShortFunctionsOnASingleLine: None
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLambdasOnASingleLine: All
@@ -53,8 +54,8 @@ SpaceBeforeParens: ControlStatements
 SpaceBeforeRangeBasedForLoopColon: 'true'
 SpaceInEmptyParentheses: 'false'
 SpacesInAngles: 'false'
-SpacesInCStyleCastParentheses: 'false'
 SpacesInContainerLiterals: 'false'
+SpacesInCStyleCastParentheses: 'false'
 SpacesInParentheses: 'false'
 SpacesInSquareBrackets: 'false'
 Standard: Cpp11
