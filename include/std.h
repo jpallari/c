@@ -1059,4 +1059,11 @@ size_t bytebuf_write_ullong(bytebuf *bbuf, ullong src);
 size_t bytebuf_write_float(bytebuf *bbuf, float src, uint decimals);
 size_t bytebuf_write_double(bytebuf *bbuf, double src, uint decimals);
 
+size_t bytebuf_write_grow_int(bytebuf *bbuf, int src);
+size_t bytebuf_write_grow_uint(bytebuf *bbuf, uint src);
+size_t bytebuf_write_grow_llong(bytebuf *bbuf, llong src);
+size_t bytebuf_write_grow_ullong(bytebuf *bbuf, ullong src);
+size_t bytebuf_write_grow_float(bytebuf *bbuf, float src, uint decimals);
+size_t bytebuf_write_grow_double(bytebuf *bbuf, double src, uint decimals);
+
 #endif // JP_STD_H
