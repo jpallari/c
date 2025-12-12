@@ -300,38 +300,38 @@ void test_cstr_from_int(test *t) {
     bytes_set(buffer, 0xce, sizeof(buffer));
 
     assert_eq_uint(
-        t, cstr_from_int(buffer, sizeof(buffer), 120), 4, "write all chars"
+        t, cstr_from_int_nt(buffer, sizeof(buffer), 120), 4, "write all chars"
     );
     assert_eq_cstr(t, buffer, "120", "expected number as string");
 
     bytes_set(buffer, 0xce, sizeof(buffer));
     assert_eq_uint(
-        t, cstr_from_int(buffer, sizeof(buffer), 89), 3, "write all chars"
+        t, cstr_from_int_nt(buffer, sizeof(buffer), 89), 3, "write all chars"
     );
     assert_eq_cstr(t, buffer, "89", "expected number as string");
 
     bytes_set(buffer, 0xce, sizeof(buffer));
     assert_eq_uint(
-        t, cstr_from_int(buffer, sizeof(buffer), 1), 2, "write all chars"
+        t, cstr_from_int_nt(buffer, sizeof(buffer), 1), 2, "write all chars"
     );
     assert_eq_cstr(t, buffer, "1", "expected number as string");
 
     bytes_set(buffer, 0xce, sizeof(buffer));
     assert_eq_uint(
-        t, cstr_from_int(buffer, sizeof(buffer), 0), 2, "write all chars"
+        t, cstr_from_int_nt(buffer, sizeof(buffer), 0), 2, "write all chars"
     );
     assert_eq_cstr(t, buffer, "0", "expected number as string");
 
     bytes_set(buffer, 0xce, sizeof(buffer));
     assert_eq_uint(
-        t, cstr_from_int(buffer, sizeof(buffer), -127), 5, "write all chars"
+        t, cstr_from_int_nt(buffer, sizeof(buffer), -127), 5, "write all chars"
     );
     assert_eq_cstr(t, buffer, "-127", "expected number as string");
 
-    bytes_set(buffer, 0xce, sizeof(buffer));
-    assert_eq_uint(t, cstr_from_int(buffer, 2, 123), 2, "write some chars");
+    bytes_copy(buffer, "xx", 3);
+    assert_eq_uint(t, cstr_from_int_nt(buffer, 2, 123), 0, "write no chars");
     assert_eq_bytes(
-        t, buffer, "12", 2, "expected prefix of the number as string"
+        t, buffer, "xx", 3, "expected no changes"
     );
 }
 
@@ -340,33 +340,72 @@ void test_cstr_from_uint(test *t) {
     bytes_set(buffer, 0xce, sizeof(buffer));
 
     assert_eq_uint(
-        t, cstr_from_uint(buffer, sizeof(buffer), 254), 4, "write all chars"
+        t, cstr_from_uint_nt(buffer, sizeof(buffer), 254), 4, "write all chars"
     );
     assert_eq_cstr(t, buffer, "254", "expected number as string");
 
     bytes_set(buffer, 0xce, sizeof(buffer));
     assert_eq_uint(
-        t, cstr_from_uint(buffer, sizeof(buffer), 89), 3, "write all chars"
+        t, cstr_from_uint_nt(buffer, sizeof(buffer), 89), 3, "write all chars"
     );
     assert_eq_cstr(t, buffer, "89", "expected number as string");
 
     bytes_set(buffer, 0xce, sizeof(buffer));
     assert_eq_uint(
-        t, cstr_from_uint(buffer, sizeof(buffer), 1), 2, "write all chars"
+        t, cstr_from_uint_nt(buffer, sizeof(buffer), 1), 2, "write all chars"
     );
     assert_eq_cstr(t, buffer, "1", "expected number as string");
 
     bytes_set(buffer, 0xce, sizeof(buffer));
     assert_eq_uint(
-        t, cstr_from_uint(buffer, sizeof(buffer), 0), 2, "write all chars"
+        t, cstr_from_uint_nt(buffer, sizeof(buffer), 0), 2, "write all chars"
     );
     assert_eq_cstr(t, buffer, "0", "expected number as string");
 
-    bytes_set(buffer, 0xce, sizeof(buffer));
-    assert_eq_uint(t, cstr_from_uint(buffer, 2, 123), 2, "write some chars");
+    bytes_copy(buffer, "xx", 3);
+    assert_eq_uint(t, cstr_from_uint_nt(buffer, 2, 123), 0, "write no chars");
     assert_eq_bytes(
-        t, buffer, "12", 2, "expected prefix of the number as string"
+        t, buffer, "xx", 3, "expected no changes"
     );
+}
+
+void test_cstr_fmt(test *t) {
+    char buf[1024] = {0};
+    size_t len;
+
+    len = cstr_fmt_len("string: %s; int: %d", "hello", -4);
+    assert_eq_uint(t, len, 23, "1: fmt len");
+    len = cstr_fmt(buf, sizeof(buf), "string: %s; int: %d", "hello", -4);
+    assert_eq_cstr(t, "string: hello; int: -4", buf, "1: fmt contents");
+    assert_eq_uint(t, len, 23, "1: fmt content len");
+
+    len = cstr_fmt_len("literal: %%; ullong: %llu", 123UL);
+    assert_eq_uint(t, len, 24, "2: fmt len");
+    len = cstr_fmt(buf, sizeof(buf), "literal: %%; ullong: %llu", 123UL);
+    assert_eq_cstr(t, "literal: %; ullong: 123", buf, "2: fmt contents");
+    assert_eq_uint(t, len, 24, "2: fmt content len");
+
+    len = cstr_fmt_len("uint: %u; llong: %lld", 98, -12345L);
+    assert_eq_uint(t, len, 24, "3: fmt len");
+    len = cstr_fmt(buf, sizeof(buf), "uint: %u; llong: %lld", 98, -12345L);
+    assert_eq_cstr(t, "uint: 98; llong: -12345", buf, "3: fmt contents");
+    assert_eq_uint(t, len, 24, "3: fmt content len");
+
+    len = cstr_fmt_len("float: %.2f; double: %.4f", 2.456f, 123.456789);
+    assert_eq_uint(t, len, 30, "4: fmt len");
+    len = cstr_fmt(
+        buf, sizeof(buf), "float: %.2f; double: %.4f", 2.456f, 123.456789
+    );
+    assert_eq_cstr(t, "float: 2.46; double: 123.4568", buf, "4: fmt contents");
+    assert_eq_uint(t, len, 30, "4: fmt content len");
+
+    len = cstr_fmt_len("string: %*s; char: %c", 5, "hello world", 'x');
+    assert_eq_uint(t, len, 23, "5: fmt len");
+    len = cstr_fmt(
+        buf, sizeof(buf), "string: %*s; char: %c", 5, "hello world", 'x'
+    );
+    assert_eq_cstr(t, "string: hello; char: x", buf, "5: fmt contents");
+    assert_eq_uint(t, len, 23, "5: fmt content len");
 }
 
 static test_case tests[] = {
@@ -381,7 +420,8 @@ static test_case tests[] = {
     {"C string to int", test_cstr_to_int},
     {"C string to uint", test_cstr_to_uint},
     {"C string from int", test_cstr_from_int},
-    {"C string from uint", test_cstr_from_uint}
+    {"C string from uint", test_cstr_from_uint},
+    {"C string fmt", test_cstr_fmt}
 };
 
 setup_tests(NULL, tests)
