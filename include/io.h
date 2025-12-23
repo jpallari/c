@@ -15,8 +15,7 @@ typedef struct {
     int err_code;
 } os_io_result;
 
-os_io_result
-os_write_all(int fd, void *buffer, size_t len, size_t chunk_size);
+os_io_result os_write_all(int fd, void *buffer, size_t len, size_t chunk_size);
 
 typedef struct {
     uchar *data;
@@ -29,5 +28,7 @@ typedef struct {
 
 file_read_result file_read(const char *filename, allocator *allocator);
 os_io_result file_write(const char *filename, void *data, size_t len);
+
+os_io_result bytebuf_flush(bytebuf *bbuf, int fd, size_t chunk_size);
 
 #endif // JP_IO_H
