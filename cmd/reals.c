@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
         mode = 2;
     }
 
-    file_read_result res = file_read(argv[1], &std_allocator);
+    file_read_result res = file_read_sync(argv[1], &std_allocator);
     if (res.err_code) {
         fprintf(
             stderr,

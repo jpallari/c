@@ -1514,9 +1514,6 @@ cstr_fmt_result cstr_fmt_va(
         // copy chunk to destination
         size_t bytes_to_copy = (size_t)(cursor - chunk_start);
         bytes_to_copy = min(bytes_to_copy, len - bytes_written);
-        if (bytes_to_copy == 0) { // nothing to copy
-            break;
-        }
         if (bytes_to_copy > 0) {
             bytes_copy(dest + bytes_written, chunk_start, bytes_to_copy);
             bytes_written += bytes_to_copy;
@@ -1701,26 +1698,26 @@ size_t cstr_fmt_len_va(const char *restrict format, va_list va_args) {
 // Byte buffer
 ////////////////////////
 
-bytebuf bytebuf_new(size_t capacity, allocator *allocator) {
+void bytebuf_init(bytebuf *bbuf, size_t capacity, allocator *allocator) {
+    assert(bbuf && "bytebuf must not be null");
     assert(allocator && "allocator must not be null");
     assert(capacity > 0 && "capacity must be larger than 0");
-    bytebuf b;
-    bytes_set(&b, 0, sizeof(b));
-    b.allocator = allocator;
-    b.buffer = alloc_malloc(allocator, capacity, _Alignof(uchar));
-    if (b.buffer) {
-        b.cap = capacity;
+    bytes_set(bbuf, 0, sizeof(*bbuf));
+    bbuf->allocator = allocator;
+    bbuf->buffer = alloc_malloc(allocator, capacity, _Alignof(uchar));
+    if (bbuf->buffer) {
+        bbuf->cap = capacity;
     }
-    return b;
 }
 
-bytebuf bytebuf_new_fixed(uchar *buffer, size_t len, size_t capacity) {
-    bytebuf b;
-    bytes_set(&b, 0, sizeof(b));
-    b.buffer = buffer;
-    b.len = len;
-    b.cap = capacity;
-    return b;
+void bytebuf_init_fixed(
+    bytebuf *bbuf, uchar *buffer, size_t len, size_t capacity
+) {
+    assert(bbuf && "bytebuf must not be null");
+    bytes_set(&bbuf, 0, sizeof(*bbuf));
+    bbuf->buffer = buffer;
+    bbuf->len = len;
+    bbuf->cap = capacity;
 }
 
 void bytebuf_free(bytebuf *bbuf) {
@@ -1730,7 +1727,9 @@ void bytebuf_free(bytebuf *bbuf) {
     if (!bbuf && !bbuf->buffer) {
         return;
     }
-    alloc_free(bbuf->allocator, bbuf->buffer);
+    if (bbuf->allocator) {
+        alloc_free(bbuf->allocator, bbuf->buffer);
+    }
     bbuf->cap = 0;
     bbuf->len = 0;
     bbuf->buffer = 0;
@@ -1738,10 +1737,13 @@ void bytebuf_free(bytebuf *bbuf) {
 
 bool bytebuf_grow(bytebuf *bbuf, size_t capacity_increase) {
     assert(bbuf && "bytebuf must not be null");
-    assert(bbuf->buffer && "bytebuf's buffer must not be null");
+    assert(bbuf->allocator && "allocator must not be null");
     assert(capacity_increase > 0 && "capacity increase must be larger than 0");
     if (capacity_increase == 0) {
         return 1;
+    }
+    if (!bbuf->allocator) {
+        return 0;
     }
 
     uchar *newbuf = alloc_malloc(
@@ -1751,7 +1753,9 @@ bool bytebuf_grow(bytebuf *bbuf, size_t capacity_increase) {
         return 0;
     }
 
-    bytes_copy(newbuf, bbuf->buffer, bbuf->len);
+    if (bbuf->buffer) {
+        bytes_copy(newbuf, bbuf->buffer, bbuf->len);
+    }
     bbuf->buffer = newbuf;
     bbuf->cap += capacity_increase;
     return 1;
