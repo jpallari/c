@@ -1,5 +1,6 @@
 #include "std.h"
 #include "testr.h"
+#include <stddef.h>
 
 void test_arena(test *t) {
     _Alignas(max_align_t) int buffer[10] = {0};
