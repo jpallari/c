@@ -1091,7 +1091,7 @@ cstr_from_real_parts_to_buf(struct cstr_from_real_parts *parts, char *dest) {
     cursor += parts->integer_len;
     cursor[0] = '.';
     cursor += 1;
-    for (uint i = 0; i < parts->decimal_zeros; i += 1) { cursor[i] += '0'; }
+    for (uint i = 0; i < parts->decimal_zeros; i += 1) { cursor[i] = '0'; }
     cursor += parts->decimal_zeros;
     bytes_copy(
         cursor,
