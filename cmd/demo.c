@@ -38,9 +38,7 @@ int array_demo(void) {
             exit_code = 1;
             goto end;
         }
-        io_write_all_sync(
-            STDOUT_FILENO, txt_buf, cstr_fmt_result_non_null_len(&fmt_res), 0
-        );
+        io_write_all_sync(STDOUT_FILENO, txt_buf, fmt_res.len, 0);
     }
 
     fmt_res = cstr_fmt(
@@ -55,9 +53,7 @@ int array_demo(void) {
         exit_code = 1;
         goto end;
     }
-    io_write_all_sync(
-        STDOUT_FILENO, txt_buf, cstr_fmt_result_non_null_len(&fmt_res), 0
-    );
+    io_write_all_sync(STDOUT_FILENO, txt_buf, fmt_res.len, 0);
 
 end:
     dynarr_free(arr);
@@ -94,9 +90,7 @@ void print_file_error(const char *filename, int err_code) {
             err_msg
         );
     }
-    io_write_all_sync(
-        STDERR_FILENO, txt_buf, cstr_fmt_result_non_null_len(&fmt_res), 0
-    );
+    io_write_all_sync(STDERR_FILENO, txt_buf, fmt_res.len, 0);
 }
 
 int file_demo(int argc, char **argv) {

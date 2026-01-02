@@ -1491,7 +1491,7 @@ cstr_fmt_result cstr_fmt_va(
     cstr_fmt_result res = {
         .len = 0,
         .ok = 1,
-        .has_null = 0,
+        .is_truncated = 0,
     };
     if (len == 0) {
         return res;
@@ -1543,11 +1543,17 @@ cstr_fmt_result cstr_fmt_va(
             field_bytes = cstr_from_int(
                 dest + bytes_written, len - bytes_written, va_arg(va_args, int)
             );
+            if (field_bytes == 0) {
+                res.ok = 0;
+            }
             break;
         case cstr_fmt_field_type_uint:
             field_bytes = cstr_from_uint(
                 dest + bytes_written, len - bytes_written, va_arg(va_args, uint)
             );
+            if (field_bytes == 0) {
+                res.ok = 0;
+            }
             break;
         case cstr_fmt_field_type_llong:
             field_bytes = cstr_from_llong(
@@ -1555,6 +1561,9 @@ cstr_fmt_result cstr_fmt_va(
                 len - bytes_written,
                 va_arg(va_args, llong)
             );
+            if (field_bytes == 0) {
+                res.ok = 0;
+            }
             break;
         case cstr_fmt_field_type_ullong:
             field_bytes = cstr_from_ullong(
@@ -1562,6 +1571,9 @@ cstr_fmt_result cstr_fmt_va(
                 len - bytes_written,
                 va_arg(va_args, ullong)
             );
+            if (field_bytes == 0) {
+                res.ok = 0;
+            }
             break;
         case cstr_fmt_field_type_float:
             if (field.flags & cstr_fmt_field_flag_precision) {
@@ -1573,6 +1585,9 @@ cstr_fmt_result cstr_fmt_va(
                 va_arg(va_args, double),
                 precision
             );
+            if (field_bytes == 0) {
+                res.ok = 0;
+            }
             break;
         case cstr_fmt_field_type_str:
             if (field.flags & cstr_fmt_field_flag_str_len) {
@@ -1592,19 +1607,19 @@ cstr_fmt_result cstr_fmt_va(
             break;
         }
 
-        if (field_bytes) {
-            bytes_written += field_bytes;
-            cursor += field.len;
-        } else {
-            res.ok = 0;
-        }
+        bytes_written += field_bytes;
+        cursor += field.len;
     }
 
     // null termination
     if (bytes_written + 1 < len) {
+        // null termination is not included in length
         dest[bytes_written] = '\0';
-        bytes_written += 1;
-        res.has_null = 1;
+    } else {
+        // always null terminate
+        dest[len - 1] = '\0';
+        bytes_written -= 1;
+        res.is_truncated = 1;
     }
 
     res.len = bytes_written;
@@ -1689,9 +1704,6 @@ size_t cstr_fmt_len_va(const char *restrict format, va_list va_args) {
 
         cursor += field.len;
     }
-
-    // null termination
-    len += 1;
 
     return len;
 }
