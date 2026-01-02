@@ -127,9 +127,9 @@ $(RELEASE_OBJ_DIR)/io.o: $(SRC_DIR)/io.c $(INCLUDE_DIR)/io.h $(INCLUDE_DIR)/std.
 $(RELEASE_OBJ_DIR)/std.o: $(SRC_DIR)/std.c $(INCLUDE_DIR)/std.h
 	@mkdir -p $(RELEASE_OBJ_DIR)
 	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) -c $< -o $@
-$(RELEASE_OBJ_DIR)/testr.o: $(SRC_DIR)/std.c $(INCLUDE_DIR)/io.h $(INCLUDE_DIR)/std.h $(INCLUDE_DIR)/testr.h
+$(RELEASE_OBJ_DIR)/testr.o: $(SRC_DIR)/testr.c $(INCLUDE_DIR)/io.h $(INCLUDE_DIR)/std.h $(INCLUDE_DIR)/testr.h
 	@mkdir -p $(RELEASE_OBJ_DIR)
-	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) -c $< -o $@
 $(RELEASE_CMD_OBJ_DIR)/demo.o: $(CMD_DIR)/demo.c $(INCLUDE_DIR)/io.h $(INCLUDE_DIR)/std.h
 	@mkdir -p $(RELEASE_CMD_OBJ_DIR)
 	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) -c $< -o $@
@@ -180,8 +180,15 @@ test: \
 	$(DEBUG_TEST_REPORT_DIR)/cliargs.txt \
 	$(DEBUG_TEST_REPORT_DIR)/cstr.txt \
 	$(DEBUG_TEST_REPORT_DIR)/dynarr.txt \
-	$(DEBUG_TEST_REPORT_DIR)/slice.txt
+	$(DEBUG_TEST_REPORT_DIR)/slice.txt \
+	$(RELEASE_TEST_REPORT_DIR)/arena.txt \
+	$(RELEASE_TEST_REPORT_DIR)/bytes.txt \
+	$(RELEASE_TEST_REPORT_DIR)/cliargs.txt \
+	$(RELEASE_TEST_REPORT_DIR)/cstr.txt \
+	$(RELEASE_TEST_REPORT_DIR)/dynarr.txt \
+	$(RELEASE_TEST_REPORT_DIR)/slice.txt
 
+# Arena (debug)
 $(DEBUG_TEST_DIR)/arena.o: $(TEST_DIR)/arena.c $(INCLUDE_DIR)/testr.h $(INCLUDE_DIR)/std.h
 	@mkdir -p $(DEBUG_TEST_DIR)
 	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
@@ -192,6 +199,7 @@ $(DEBUG_TEST_REPORT_DIR)/arena.txt: $(DEBUG_TEST_DIR)/arena
 	@mkdir -p $(DEBUG_TEST_REPORT_DIR)
 	./$< $(TEST_FILTERS) > $@
 
+# Bytes (debug)
 $(DEBUG_TEST_DIR)/bytes.o: $(TEST_DIR)/bytes.c $(INCLUDE_DIR)/testr.h $(INCLUDE_DIR)/std.h
 	@mkdir -p $(DEBUG_TEST_DIR)
 	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
@@ -201,6 +209,7 @@ $(DEBUG_TEST_REPORT_DIR)/bytes.txt: $(DEBUG_TEST_DIR)/bytes
 	@mkdir -p $(DEBUG_TEST_REPORT_DIR)
 	./$< $(TEST_FILTERS) > $@
 
+# CLI args (debug)
 $(DEBUG_TEST_DIR)/cliargs.o: $(TEST_DIR)/cliargs.c $(INCLUDE_DIR)/testr.h $(INCLUDE_DIR)/std.h $(INCLUDE_DIR)/cliargs.h
 	@mkdir -p $(DEBUG_TEST_DIR)
 	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
@@ -210,6 +219,7 @@ $(DEBUG_TEST_REPORT_DIR)/cliargs.txt: $(DEBUG_TEST_DIR)/cliargs
 	@mkdir -p $(DEBUG_TEST_REPORT_DIR)
 	./$< $(TEST_FILTERS) > $@
 
+# C strings (debug)
 $(DEBUG_TEST_DIR)/cstr.o: $(TEST_DIR)/cstr.c $(INCLUDE_DIR)/testr.h $(INCLUDE_DIR)/std.h
 	@mkdir -p $(DEBUG_TEST_DIR)
 	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
@@ -219,6 +229,7 @@ $(DEBUG_TEST_REPORT_DIR)/cstr.txt: $(DEBUG_TEST_DIR)/cstr
 	@mkdir -p $(DEBUG_TEST_REPORT_DIR)
 	./$< $(TEST_FILTERS) > $@
 
+# Dynamic array (debug)
 $(DEBUG_TEST_DIR)/dynarr.o: $(TEST_DIR)/dynarr.c $(INCLUDE_DIR)/testr.h $(INCLUDE_DIR)/std.h
 	@mkdir -p $(DEBUG_TEST_DIR)
 	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
@@ -228,6 +239,7 @@ $(DEBUG_TEST_REPORT_DIR)/dynarr.txt: $(DEBUG_TEST_DIR)/dynarr
 	@mkdir -p $(DEBUG_TEST_REPORT_DIR)
 	./$< $(TEST_FILTERS) > $@
 
+# Slice (debug)
 $(DEBUG_TEST_DIR)/slice.o: $(TEST_DIR)/slice.c $(INCLUDE_DIR)/testr.h $(INCLUDE_DIR)/std.h
 	@mkdir -p $(DEBUG_TEST_DIR)
 	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
@@ -237,6 +249,66 @@ $(DEBUG_TEST_REPORT_DIR)/slice.txt: $(DEBUG_TEST_DIR)/slice
 	@mkdir -p $(DEBUG_TEST_REPORT_DIR)
 	./$< $(TEST_FILTERS) > $@
 
+# Arena (release)
+$(RELEASE_TEST_DIR)/arena.o: $(TEST_DIR)/arena.c $(INCLUDE_DIR)/testr.h $(INCLUDE_DIR)/std.h
+	@mkdir -p $(RELEASE_TEST_DIR)
+	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) -c $< -o $@
+$(RELEASE_TEST_DIR)/arena: $(RELEASE_TEST_DIR)/arena.o $(RELEASE_OBJ_DIR)/testr.o $(RELEASE_OBJ_DIR)/std.o $(RELEASE_OBJ_DIR)/io.o
+	@mkdir -p $(RELEASE_TEST_DIR)
+	$(CC) $(LDFLAGS) $(RELEASE_LDFLAGS) $^ -o $@
+$(RELEASE_TEST_REPORT_DIR)/arena.txt: $(RELEASE_TEST_DIR)/arena
+	@mkdir -p $(RELEASE_TEST_REPORT_DIR)
+	./$< $(TEST_FILTERS) > $@
+
+# Bytes (release)
+$(RELEASE_TEST_DIR)/bytes.o: $(TEST_DIR)/bytes.c $(INCLUDE_DIR)/testr.h $(INCLUDE_DIR)/std.h
+	@mkdir -p $(RELEASE_TEST_DIR)
+	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) -c $< -o $@
+$(RELEASE_TEST_DIR)/bytes: $(RELEASE_TEST_DIR)/bytes.o $(RELEASE_OBJ_DIR)/testr.o $(RELEASE_OBJ_DIR)/std.o $(RELEASE_OBJ_DIR)/io.o
+	$(CC) $(LDFLAGS) $(RELEASE_LDFLAGS) $^ -o $@
+$(RELEASE_TEST_REPORT_DIR)/bytes.txt: $(RELEASE_TEST_DIR)/bytes
+	@mkdir -p $(RELEASE_TEST_REPORT_DIR)
+	./$< $(TEST_FILTERS) > $@
+
+# CLI args (release)
+$(RELEASE_TEST_DIR)/cliargs.o: $(TEST_DIR)/cliargs.c $(INCLUDE_DIR)/testr.h $(INCLUDE_DIR)/std.h $(INCLUDE_DIR)/cliargs.h
+	@mkdir -p $(RELEASE_TEST_DIR)
+	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) -c $< -o $@
+$(RELEASE_TEST_DIR)/cliargs: $(RELEASE_TEST_DIR)/cliargs.o $(RELEASE_OBJ_DIR)/testr.o $(RELEASE_OBJ_DIR)/std.o $(RELEASE_OBJ_DIR)/io.o $(RELEASE_OBJ_DIR)/cliargs.o 
+	$(CC) $(LDFLAGS) $(RELEASE_LDFLAGS) $^ -o $@
+$(RELEASE_TEST_REPORT_DIR)/cliargs.txt: $(RELEASE_TEST_DIR)/cliargs
+	@mkdir -p $(RELEASE_TEST_REPORT_DIR)
+	./$< $(TEST_FILTERS) > $@
+
+# C strings (release)
+$(RELEASE_TEST_DIR)/cstr.o: $(TEST_DIR)/cstr.c $(INCLUDE_DIR)/testr.h $(INCLUDE_DIR)/std.h
+	@mkdir -p $(RELEASE_TEST_DIR)
+	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) -c $< -o $@
+$(RELEASE_TEST_DIR)/cstr: $(RELEASE_TEST_DIR)/cstr.o $(RELEASE_OBJ_DIR)/testr.o $(RELEASE_OBJ_DIR)/std.o $(RELEASE_OBJ_DIR)/io.o
+	$(CC) $(LDFLAGS) $(RELEASE_LDFLAGS) $^ -o $@
+$(RELEASE_TEST_REPORT_DIR)/cstr.txt: $(RELEASE_TEST_DIR)/cstr
+	@mkdir -p $(RELEASE_TEST_REPORT_DIR)
+	./$< $(TEST_FILTERS) > $@
+
+# Dynamic array (release)
+$(RELEASE_TEST_DIR)/dynarr.o: $(TEST_DIR)/dynarr.c $(INCLUDE_DIR)/testr.h $(INCLUDE_DIR)/std.h
+	@mkdir -p $(RELEASE_TEST_DIR)
+	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) -c $< -o $@
+$(RELEASE_TEST_DIR)/dynarr: $(RELEASE_TEST_DIR)/dynarr.o $(RELEASE_OBJ_DIR)/testr.o $(RELEASE_OBJ_DIR)/std.o $(RELEASE_OBJ_DIR)/io.o
+	$(CC) $(LDFLAGS) $(RELEASE_LDFLAGS) $^ -o $@
+$(RELEASE_TEST_REPORT_DIR)/dynarr.txt: $(RELEASE_TEST_DIR)/dynarr
+	@mkdir -p $(RELEASE_TEST_REPORT_DIR)
+	./$< $(TEST_FILTERS) > $@
+
+# Slice (release)
+$(RELEASE_TEST_DIR)/slice.o: $(TEST_DIR)/slice.c $(INCLUDE_DIR)/testr.h $(INCLUDE_DIR)/std.h
+	@mkdir -p $(RELEASE_TEST_DIR)
+	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) -c $< -o $@
+$(RELEASE_TEST_DIR)/slice: $(RELEASE_TEST_DIR)/slice.o $(RELEASE_OBJ_DIR)/testr.o $(RELEASE_OBJ_DIR)/std.o $(RELEASE_OBJ_DIR)/io.o
+	$(CC) $(LDFLAGS) $(RELEASE_LDFLAGS) $^ -o $@
+$(RELEASE_TEST_REPORT_DIR)/slice.txt: $(RELEASE_TEST_DIR)/slice
+	@mkdir -p $(RELEASE_TEST_REPORT_DIR)
+	./$< $(TEST_FILTERS) > $@
 lint: $(SRC_FILES) $(HEADER_FILES) $(CMD_FILES) $(TEST_FILES)
 	cppcheck -DJP_USE_ASSERT_H --check-level=exhaustive $^
 

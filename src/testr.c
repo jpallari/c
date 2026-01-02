@@ -46,9 +46,6 @@ bool test_report_append(
         t->asserts_passed += 1;
     }
 
-    if (!passed && trap_on_assert_fail) {
-        breakpoint();
-    }
     return passed;
 }
 
