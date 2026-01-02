@@ -104,8 +104,6 @@ bool test_report_append_formatted_uint(
     const ullong right
 );
 
-void test_suite_report_pretty(test_suite_report *report, int fd);
-
 ////////////////////////
 // Test runner
 ////////////////////////
