@@ -96,7 +96,7 @@ static inline void breakpoint(void) {
 #define countof(x) (sizeof(x) / sizeof(*(x)))
 
 /**
- * Length of an array or a static string
+ * Length of a static string
  */
 #define lengthof(x) (countof(x) - 1)
 
@@ -1035,12 +1035,15 @@ size_t bytebuf_write_float(bytebuf *bbuf, float src, uint decimals);
 size_t bytebuf_write_double(bytebuf *bbuf, double src, uint decimals);
 
 __attribute__((unused)) static inline size_t
-bytebuf_write_str(bytebuf *bbuf, char *str, size_t len) {
-    if (bytebuf_write(bbuf, (uchar *)str, len)) {
+bytebuf_write_str(bytebuf *bbuf, const char *str, size_t len) {
+    if (bytebuf_write(bbuf, (const uchar *)str, len)) {
         return len;
     }
     return 0;
 }
+
+#define bytebuf_write_static_cstr(bbuf, str) \
+    bytebuf_write_str((bbuf), (str), lengthof(str))
 
 size_t bytebuf_write_grow_int(bytebuf *bbuf, int src);
 size_t bytebuf_write_grow_uint(bytebuf *bbuf, uint src);
@@ -1050,12 +1053,15 @@ size_t bytebuf_write_grow_float(bytebuf *bbuf, float src, uint decimals);
 size_t bytebuf_write_grow_double(bytebuf *bbuf, double src, uint decimals);
 
 __attribute__((unused)) static inline size_t
-bytebuf_write_str_grow(bytebuf *bbuf, char *str, size_t len) {
-    if (bytebuf_write_grow(bbuf, (uchar *)str, len)) {
+bytebuf_write_str_grow(bytebuf *bbuf, const char *str, size_t len) {
+    if (bytebuf_write_grow(bbuf, (const uchar *)str, len)) {
         return len;
     }
     return 0;
 }
+
+#define bytebuf_write_grow_static_cstr(bbuf, str) \
+    bytebuf_write_grow_str((bbuf), (str), lengthof(str))
 
 ////////////////////////
 // Buffered byte stream
@@ -1087,5 +1093,13 @@ bytesink_result bufstream_flush(bufstream *bstream);
 
 bufstream_write_result
 bufstream_write(bufstream *bstream, const uchar *src, size_t len);
+
+__attribute__((unused)) static inline bufstream_write_result
+bufstream_write_str(bufstream *bstream, const char *src, size_t len) {
+    return bufstream_write(bstream, (const uchar *)src, len);
+}
+
+#define bufstream_write_static_str(bstream, str) \
+    bufstream_write_str((bstream), (str), lengthof(str))
 
 #endif // JP_STD_H

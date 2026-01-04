@@ -165,9 +165,9 @@ io_result bytebuf_flush_sync(bytebuf *bbuf, int fd, size_t chunk_size) {
 }
 
 bytesink_result io_file_bytesink(void *context, const uchar *bytes, size_t len) {
-    io_file_bytesink_context ctx = (io_file_bytesink_context *)context;
+    io_file_bytesink_context *ctx = (io_file_bytesink_context *)context;
     bytesink_result res;
-    io_result io_res = io_write_all_sync(ctx->fd, bytes, len, ctx.chunk_size);
+    io_result io_res = io_write_all_sync(ctx->fd, bytes, len, ctx->chunk_size);
     res.len = io_res.len;
     res.err_code = io_res.err_code;
     return res;
