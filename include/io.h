@@ -35,4 +35,11 @@ io_result file_write_sync(const char *filename, const void *data, size_t len);
 
 io_result bytebuf_flush_sync(bytebuf *bbuf, int fd, size_t chunk_size);
 
+typedef struct {
+    int fd;
+    size_t chunk_size;
+} io_file_bytesink_context;
+
+bytesink_result io_file_bytesink(void *context, const uchar *bytes, size_t len);
+
 #endif // JP_IO_H
