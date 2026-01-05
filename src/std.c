@@ -2303,3 +2303,128 @@ bufstream_write(bufstream *bstream, const uchar *src, size_t len) {
 
     return res;
 }
+
+bufstream_write_result bufstream_write_int(bufstream *bstream, int src) {
+    assert(bstream && "bstream must not be null");
+    assert(bstream->buffer && "bufstream's buffer must not be null");
+
+    char tmp[16];
+    char *end = tmp + sizeof(tmp);
+    size_t bytes_to_copy = cstr_from_int_unsafe(end, src);
+    return bufstream_write(
+        bstream, (uchar *)end - bytes_to_copy, bytes_to_copy
+    );
+}
+
+bufstream_write_result bufstream_write_uint(bufstream *bstream, uint src) {
+    assert(bstream && "bstream must not be null");
+    assert(bstream->buffer && "bufstream's buffer must not be null");
+
+    char tmp[16];
+    char *end = tmp + sizeof(tmp);
+    size_t bytes_to_copy = cstr_from_uint_unsafe(end, src);
+    return bufstream_write(
+        bstream, (uchar *)end - bytes_to_copy, bytes_to_copy
+    );
+}
+
+bufstream_write_result bufstream_write_llong(bufstream *bstream, llong src) {
+    assert(bstream && "bstream must not be null");
+    assert(bstream->buffer && "bufstream's buffer must not be null");
+
+    char tmp[32];
+    char *end = tmp + sizeof(tmp);
+    size_t bytes_to_copy = cstr_from_llong_unsafe(end, src);
+    return bufstream_write(
+        bstream, (uchar *)end - bytes_to_copy, bytes_to_copy
+    );
+}
+
+bufstream_write_result bufstream_write_ullong(bufstream *bstream, ullong src) {
+    assert(bstream && "bstream must not be null");
+    assert(bstream->buffer && "bufstream's buffer must not be null");
+
+    char tmp[32];
+    char *end = tmp + sizeof(tmp);
+    size_t bytes_to_copy = cstr_from_ullong_unsafe(end, src);
+    return bufstream_write(
+        bstream, (uchar *)end - bytes_to_copy, bytes_to_copy
+    );
+}
+
+static bufstream_write_result cstr_from_real_parts_to_bufstream(
+    struct cstr_from_real_parts *parts, bufstream *bstream
+) {
+    // infinity
+    if (parts->is_inf) {
+        const char *text = "inf";
+        size_t bytes_to_write = sizeof("inf") - 1;
+        if (parts->is_neg) {
+            text = "-inf";
+            bytes_to_write = sizeof("-inf") - 1;
+        }
+        return bufstream_write(bstream, (const uchar *)text, bytes_to_write);
+    }
+
+    // negative sign
+    bufstream_write_result res;
+    size_t integer_len = parts->integer_len;
+    if (parts->is_neg) {
+        // inject the negative sign to the integer buffer
+        integer_len += 1;
+        *(parts->integer_cursor - integer_len) = '-';
+    }
+
+    // integer part
+    res = bufstream_write(
+        bstream, (uchar *)parts->integer_cursor - integer_len, integer_len
+    );
+    if (res.err_code) {
+        return res;
+    }
+
+    // decimal + decimal zeros
+    uchar decimals[32];
+    decimals[0] = '.';
+    for (uint i = 0; i < parts->decimal_zeros; i += 1) {
+        decimals[i + 1] = '0';
+    }
+    res = bufstream_write(bstream, decimals, parts->decimal_zeros + 1);
+
+    // fractional part
+    res = bufstream_write(
+        bstream,
+        (uchar *)parts->fractional_cursor - parts->fractional_len,
+        parts->fractional_len
+    );
+
+    return res;
+}
+
+bufstream_write_result
+bufstream_write_float(bufstream *bstream, float src, uint decimals) {
+    assert(bstream && "bstream must not be null");
+    assert(bstream->buffer && "bufstream's buffer must not be null");
+
+    char integer_cstr[32];
+    char fractional_cstr[32];
+    struct cstr_from_real_parts parts = {0};
+    parts.integer_cursor = integer_cstr + sizeof(integer_cstr);
+    parts.fractional_cursor = fractional_cstr + sizeof(fractional_cstr);
+    cstr_from_float_parts(&parts, src, decimals);
+    return cstr_from_real_parts_to_bufstream(&parts, bstream);
+}
+
+bufstream_write_result
+bufstream_write_double(bufstream *bstream, double src, uint decimals) {
+    assert(bstream && "bstream must not be null");
+    assert(bstream->buffer && "bufstream's buffer must not be null");
+
+    char integer_cstr[32];
+    char fractional_cstr[32];
+    struct cstr_from_real_parts parts = {0};
+    parts.integer_cursor = integer_cstr + sizeof(integer_cstr);
+    parts.fractional_cursor = fractional_cstr + sizeof(fractional_cstr);
+    cstr_from_double_parts(&parts, src, decimals);
+    return cstr_from_real_parts_to_bufstream(&parts, bstream);
+}

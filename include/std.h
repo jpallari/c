@@ -1161,6 +1161,31 @@ bytebuf_write_str_grow(bytebuf *bbuf, const char *str, size_t len) {
 #define bytebuf_write_grow_sstr(bbuf, str) \
     bytebuf_write_grow_str((bbuf), (str), lengthof(str))
 
+cstr_fmt_result
+bytebuf_fmt_va(bytebuf *bbuf, const char *restrict format, va_list va_args);
+
+__attribute__((unused)) static inline cstr_fmt_result
+bytebuf_fmt(bytebuf *bbuf, const char *restrict format, ...) {
+    va_list va_args;
+    va_start(va_args, format);
+    cstr_fmt_result res = bytebuf_fmt_va(bbuf, format, va_args);
+    va_end(va_args);
+    return res;
+}
+
+cstr_fmt_result bytebuf_fmt_grow_va(
+    bytebuf *bbuf, const char *restrict format, va_list va_args
+);
+
+__attribute__((unused)) static inline cstr_fmt_result
+bytebuf_fmt_grow(bytebuf *bbuf, const char *restrict format, ...) {
+    va_list va_args;
+    va_start(va_args, format);
+    cstr_fmt_result res = bytebuf_fmt_grow_va(bbuf, format, va_args);
+    va_end(va_args);
+    return res;
+}
+
 ////////////////////////
 // Buffered byte stream
 ////////////////////////
@@ -1199,5 +1224,27 @@ bufstream_write_str(bufstream *bstream, const char *src, size_t len) {
 
 #define bufstream_write_sstr(bstream, str) \
     bufstream_write_str((bstream), (str), lengthof(str))
+
+bufstream_write_result bufstream_write_int(bufstream *bstream, int src);
+bufstream_write_result bufstream_write_uint(bufstream *bstream, uint src);
+bufstream_write_result bufstream_write_llong(bufstream *bstream, llong src);
+bufstream_write_result bufstream_write_ullong(bufstream *bstream, ullong src);
+bufstream_write_result
+bufstream_write_float(bufstream *bstream, float src, uint decimals);
+bufstream_write_result
+bufstream_write_double(bufstream *bstream, double src, uint decimals);
+
+cstr_fmt_result bufstream_fmt_va(
+    bufstream *bstream, const char *restrict format, va_list va_args
+);
+
+__attribute__((unused)) static inline cstr_fmt_result
+bufstream_fmt(bufstream *bstream, const char *restrict format, ...) {
+    va_list va_args;
+    va_start(va_args, format);
+    cstr_fmt_result res = bufstream_fmt_va(bstream, format, va_args);
+    va_end(va_args);
+    return res;
+}
 
 #endif // JP_STD_H
