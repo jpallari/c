@@ -388,10 +388,9 @@ typedef struct {
  * @param arr an array
  * @returns a new slice
  */
-#define slice_from_arr(arr) \
+#define slice_arr(arr) \
     (slice) { \
-        .buffer = (uchar *)(arr), \
-        .len = sizeof(arr), \
+        .buffer = (uchar *)(arr), .len = sizeof(arr), \
     }
 
 /**
@@ -400,10 +399,9 @@ typedef struct {
  * @param str a static string
  * @returns a new slice
  */
-#define slice_from_static_cstr(str) \
+#define slice_sstr(str) \
     (slice_const) { \
-        .buffer = (const uchar *)(str), \
-        .len = lengthof(str), \
+        .buffer = (const uchar *)(str), .len = lengthof(str), \
     }
 
 /**
@@ -413,10 +411,26 @@ typedef struct {
  * @param len length of the data
  * @returns a new slice
  */
-__attribute__((unused)) static inline
-slice slice_new(void *buffer, size_t len) {
+__attribute__((unused)) static inline slice
+slice_new(void *buffer, size_t len) {
     slice s = {
         .buffer = (uchar *)buffer,
+        .len = len,
+    };
+    return s;
+}
+
+/**
+ * Create a const slice from a pointer to a data and length
+ *
+ * @param buffer a pointer to data
+ * @param len length of the data
+ * @returns a new slice
+ */
+__attribute__((unused)) static inline slice_const
+slice_const_new(const void *buffer, size_t len) {
+    slice_const s = {
+        .buffer = (const uchar *)buffer,
         .len = len,
     };
     return s;
@@ -989,10 +1003,42 @@ size_t cstr_len_float(float src, uint decimals);
 size_t cstr_len_double(double src, uint decimals);
 
 typedef struct {
+    double v;
+    uint precision;
+} cstr_fmt_float;
+
+typedef struct {
     size_t len;
     bool ok;
     bool is_truncated;
 } cstr_fmt_result;
+
+cstr_fmt_result cstr_fmt2_va(
+    char *restrict dest,
+    size_t len,
+    const char *restrict format,
+    va_list va_args
+);
+
+__attribute__((unused)) static inline cstr_fmt_result
+cstr_fmt2(char *restrict dest, size_t len, const char *restrict format, ...) {
+    va_list va_args;
+    va_start(va_args, format);
+    cstr_fmt_result res = cstr_fmt2_va(dest, len, format, va_args);
+    va_end(va_args);
+    return res;
+}
+
+size_t cstr_fmt2_len_va(const char *restrict format, va_list va_args);
+
+__attribute__((unused)) static inline size_t
+cstr_fmt2_len(const char *restrict format, ...) {
+    va_list va_args;
+    va_start(va_args, format);
+    size_t bytes_written = cstr_fmt2_len_va(format, va_args);
+    va_end(va_args);
+    return bytes_written;
+}
 
 cstr_fmt_result cstr_fmt_va(
     char *restrict dest,
@@ -1094,7 +1140,7 @@ bytebuf_write_str(bytebuf *bbuf, const char *str, size_t len) {
     return 0;
 }
 
-#define bytebuf_write_static_cstr(bbuf, str) \
+#define bytebuf_write_sstr(bbuf, str) \
     bytebuf_write_str((bbuf), (str), lengthof(str))
 
 size_t bytebuf_write_grow_int(bytebuf *bbuf, int src);
@@ -1112,7 +1158,7 @@ bytebuf_write_str_grow(bytebuf *bbuf, const char *str, size_t len) {
     return 0;
 }
 
-#define bytebuf_write_grow_static_cstr(bbuf, str) \
+#define bytebuf_write_grow_sstr(bbuf, str) \
     bytebuf_write_grow_str((bbuf), (str), lengthof(str))
 
 ////////////////////////
@@ -1151,7 +1197,7 @@ bufstream_write_str(bufstream *bstream, const char *src, size_t len) {
     return bufstream_write(bstream, (const uchar *)src, len);
 }
 
-#define bufstream_write_static_str(bstream, str) \
+#define bufstream_write_sstr(bstream, str) \
     bufstream_write_str((bstream), (str), lengthof(str))
 
 #endif // JP_STD_H

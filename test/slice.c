@@ -35,8 +35,8 @@ void test_slice_equal(test *t) {
 void test_slice_from_arr(test *t) {
     char str[] = "hello world!";
     int arr[] = {100, 200, 300, 400};
-    slice s1 = slice_from_arr(str);
-    slice s2 = slice_from_arr(arr);
+    slice s1 = slice_arr(str);
+    slice s2 = slice_arr(arr);
 
     assert_eq_uint(t, s1.len, 13L, "s1 len must be size of string");
     assert_eq_uint(t, s2.len, sizeof(int) * 4, "s2 len must be size of array");
@@ -49,7 +49,7 @@ void test_slice_from_arr(test *t) {
 }
 
 void test_slice_from_static_cstr(test *t) {
-    slice_const s1 = slice_from_static_cstr("hello world!");
+    slice_const s1 = slice_sstr("hello world!");
 
     assert_eq_uint(t, s1.len, 12L, "s1 len must be length of string");
     assert_eq_cstr(
@@ -62,7 +62,7 @@ void test_slice_from_static_cstr(test *t) {
 
 void test_slice_const_conversion(test *t) {
     char text[] = "hello world!";
-    slice s_mut = slice_from_arr(text);
+    slice s_mut = slice_arr(text);
     slice_const *s_const = (slice_const *)&s_mut;
 
     assert_eq_uint(t, s_mut.len, s_const->len, "same length");
