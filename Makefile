@@ -1,6 +1,6 @@
 .POSIX:
 .SUFFIXES:
-CC = gcc
+CC = cc
 LANG_STD = c11
 SAN_FLAGS = -fsanitize=address,leak,undefined
 TEST_FILTERS =
