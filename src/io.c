@@ -147,24 +147,7 @@ end:
     return res;
 }
 
-io_result bytebuf_flush_sync(bytebuf *bbuf, int fd, size_t chunk_size) {
-    assert(bbuf && "bbuf must not be null");
-
-    io_result res = io_write_all_sync(fd, bbuf->buffer, bbuf->len, chunk_size);
-    assert(res.len <= bbuf->len);
-
-    if (res.len < bbuf->len) {
-        size_t new_len = bbuf->len - res.len;
-        bytes_move(bbuf->buffer, bbuf->buffer + res.len, new_len);
-        bbuf->len = new_len;
-    } else {
-        bbuf->len = 0;
-    }
-
-    return res;
-}
-
-bytesink_result io_file_bytesink(void *context, const uchar *bytes, size_t len) {
+bytesink_result io_file_bytesink_fn(void *context, const uchar *bytes, size_t len) {
     io_file_bytesink_context *ctx = (io_file_bytesink_context *)context;
     bytesink_result res;
     io_result io_res = io_write_all_sync(ctx->fd, bytes, len, ctx->chunk_size);

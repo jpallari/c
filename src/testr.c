@@ -35,9 +35,7 @@ bool test_report_append(
         panic();
     }
 
-    if (!bytebuf_write_grow(
-            t->logs, (const uchar *)log_message, log_message_size
-        )) {
+    if (!bytebuf_write(t->logs, (const uchar *)log_message, log_message_size)) {
         panic();
     }
 
