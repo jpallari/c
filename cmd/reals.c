@@ -3,17 +3,6 @@
 #include <stdio.h>
 
 int main(int argc, char **argv) {
-    uchar buf_stdout[4 * 1024];
-    io_file_bytesink_context stdout_ctx = {
-        .fd = STDOUT_FILENO,
-        .chunk_size = 0,
-    };
-    bufstream bstream_stdout = {
-        .buffer = buf_stdout,
-        .len = 0,
-        .cap = sizeof(buf_stdout),
-        .sink = io_file_bytesink(&stdout_ctx),
-    };
     uchar buf_stderr[4 * 1024];
     io_file_bytesink_context stderr_ctx = {
         .fd = STDERR_FILENO,
