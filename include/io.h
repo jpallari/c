@@ -50,4 +50,29 @@ io_file_bytesink(io_file_bytesink_context *ctx) {
     return sink;
 }
 
+//////////////////////////////
+// STDOUT & STDERR (blocking)
+//////////////////////////////
+
+#ifndef JP_IO_STDOUT_BUF_SIZE
+#define JP_IO_STDOUT_BUF_SIZE 1024
+#endif // JP_IO_STDOUT_BUF_SIZE
+
+#ifndef JP_IO_STDERR_BUF_SIZE
+#define JP_IO_STDERR_BUF_SIZE 1024
+#endif // JP_IO_STDERR_BUF_SIZE
+
+bufstream_write_result io_stdout_write_str(const char *src, size_t len);
+bufstream_write_result io_stderr_write_str(const char *src, size_t len);
+bufstream_write_result io_stdout_fmt(const char *restrict format, ...);
+bufstream_write_result io_stderr_fmt(const char *restrict format, ...);
+bytesink_result io_stdout_flush(void);
+bytesink_result io_stderr_flush(void);
+
+#define io_stdout_write_sstr(str) \
+    io_stdout_write_str((str), lengthof(str))
+
+#define io_stderr_write_sstr(str) \
+    io_stderr_write_str((str), lengthof(str))
+
 #endif // JP_IO_H
