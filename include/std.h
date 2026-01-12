@@ -939,7 +939,13 @@ size_t cstr_len_double(double src, uint decimals);
 typedef struct {
     size_t len;
     bool ok;
+    bool has_null;
 } cstr_fmt_result;
+
+__attribute__((unused)) static inline size_t
+cstr_fmt_result_non_null_len(cstr_fmt_result *res) {
+    return res->len - (res->has_null ? 1 : 0);
+}
 
 cstr_fmt_result cstr_fmt_va(
     char *restrict dest,
@@ -999,14 +1005,12 @@ bytebuf_new_fixed(uchar *buffer, size_t len, size_t capacity) {
     return bbuf;
 }
 
-__attribute__((unused)) static inline
-bool bytebuf_is_init(bytebuf *bbuf) {
+__attribute__((unused)) static inline bool bytebuf_is_init(bytebuf *bbuf) {
     assert(bbuf && "bytebuf must not be null");
     return bbuf->buffer && bbuf->cap;
 }
 
-__attribute__((unused)) static inline
-bool bytebuf_is_growable(bytebuf *bbuf) {
+__attribute__((unused)) static inline bool bytebuf_is_growable(bytebuf *bbuf) {
     assert(bbuf && "bytebuf must not be null");
     return bbuf->allocator != NULL;
 }

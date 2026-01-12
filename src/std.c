@@ -1491,6 +1491,7 @@ cstr_fmt_result cstr_fmt_va(
     cstr_fmt_result res = {
         .len = 0,
         .ok = 1,
+        .has_null = 0,
     };
     if (len == 0) {
         return res;
@@ -1603,6 +1604,7 @@ cstr_fmt_result cstr_fmt_va(
     if (bytes_written + 1 < len) {
         dest[bytes_written] = '\0';
         bytes_written += 1;
+        res.has_null = 1;
     }
 
     res.len = bytes_written;
