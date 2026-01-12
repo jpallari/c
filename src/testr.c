@@ -99,7 +99,7 @@ bool test_report_append_formatted_int(
     const llong left,
     const llong right
 ) {
-    char buffer[1024] = {0};
+    char buffer[4 * 1024] = {0};
     cstr_fmt_result fmt_res = cstr_fmt(
         buffer,
         sizeof(buffer),
@@ -126,7 +126,7 @@ bool test_report_append_formatted_uint(
     const ullong left,
     const ullong right
 ) {
-    char buffer[1024] = {0};
+    char buffer[4 * 1024] = {0};
     cstr_fmt_result fmt_res = cstr_fmt(
         buffer,
         sizeof(buffer),
@@ -143,22 +143,16 @@ bool test_report_append_formatted_uint(
     return test_report_append(t, passed, buffer, fmt_res.len + 1, file, line);
 }
 
-static int test_suite_report_tap(test_suite_report *report, int fd) {
+static int test_suite_report_tap(test_suite_report *report, bufstream *out) {
     assert(report && "test suite report must not be null");
-    char txt_buf[4096];
-    cstr_fmt_result fmt_res;
-    io_result io_res;
+    bufstream_write_result out_res;
 
     // header
-    fmt_res = cstr_fmt(
-        txt_buf, sizeof(txt_buf), "TAP version 14\n1..%u\n", report->test_count
+    out_res = bufstream_fmt(
+        out, "s\n1..u\n", slice_sstr("TAP version 14"), report->test_count
     );
-    if (!fmt_res.ok) {
-        return -4;
-    }
-    io_res = io_write_all_sync(fd, txt_buf, fmt_res.len, 0);
-    if (io_res.err_code) {
-        return io_res.err_code;
+    if (out_res.err_code) {
+        return out_res.err_code;
     }
 
     const bytebuf *logs = report->logs;
@@ -166,90 +160,77 @@ static int test_suite_report_tap(test_suite_report *report, int fd) {
         test_report tr = report->test_reports[i];
 
         // sub test header
-        fmt_res =
-            cstr_fmt(txt_buf, sizeof(txt_buf), "# Subtest: %s\n", tr.name);
-        if (!fmt_res.ok) {
-            return -4;
-        }
-        io_res = io_write_all_sync(fd, txt_buf, fmt_res.len, 0);
-        if (io_res.err_code) {
-            return io_res.err_code;
+        out_res =
+            bufstream_fmt(out, "# s: S\n", slice_sstr("Subtest"), tr.name);
+        if (out_res.err_code) {
+            return out_res.err_code;
         }
 
         // nr of sub-tests
-        fmt_res =
-            cstr_fmt(txt_buf, sizeof(txt_buf), "    1..%u\n", tr.assert_count);
-        if (!fmt_res.ok) {
-            return -4;
-        }
-        io_res = io_write_all_sync(fd, txt_buf, fmt_res.len, 0);
-        if (io_res.err_code) {
-            return io_res.err_code;
+        out_res = bufstream_fmt(out, "    1..u\n", tr.assert_count);
+        if (out_res.err_code) {
+            return out_res.err_code;
         }
 
         // asserts as sub-tests
         for (uint j = 0; j < tr.assert_count; j += 1) {
             test_assert ar = tr.asserts[j];
-            const char *status = "ok";
+            slice_const status = slice_sstr("ok");
             if (!ar.passed) {
-                status = "not ok";
+                status = slice_sstr("not ok");
             }
-            fmt_res = cstr_fmt(
-                txt_buf,
-                sizeof(txt_buf),
-                "    %s %u - %s\n",
+            out_res = bufstream_fmt(
+                out,
+                "    s u - S\n",
                 status,
                 j + 1,
                 &(logs->buffer[ar.logs_offset])
             );
-            if (!fmt_res.ok) {
-                return -4;
-            }
-            io_res = io_write_all_sync(fd, txt_buf, fmt_res.len, 0);
-            if (io_res.err_code) {
-                return io_res.err_code;
+            if (out_res.err_code) {
+                return out_res.err_code;
             }
         }
 
         // test status
-        const char *status = "ok";
+        slice_const status = slice_sstr("ok");
         if (tr.asserts_passed < tr.assert_count) {
-            status = "not ok";
+            status = slice_sstr("not ok");
         }
-        fmt_res = cstr_fmt(
-            txt_buf, sizeof(txt_buf), "%s %lu - %s\n", status, i + 1, tr.name
-        );
-        if (!fmt_res.ok) {
-            return -4;
-        }
-        io_res = io_write_all_sync(fd, txt_buf, fmt_res.len, 0);
-        if (io_res.err_code) {
-            return io_res.err_code;
+        out_res = bufstream_fmt(out, "s U - S\n", status, i + 1, tr.name);
+        if (out_res.err_code) {
+            return out_res.err_code;
         }
     }
 
     return 0;
 }
 
-static bool test_suite_report_pretty(test_suite_report *report, int fd) {
+static bool
+test_suite_report_pretty(test_suite_report *report, bufstream *out) {
     assert(report && "test suite report must not be null");
 
-    const char *color_ok = "\x1B[32m";
-    const char *color_fail = "\x1B[31m";
-    const char *color_skip = "\x1B[33m";
-    const char *color_reset = "\x1B[0m";
-    const char *color_info = "\x1B[1;30m";
-    if (!color_enabled) {
-        color_ok = "";
-        color_fail = "";
-        color_skip = "";
-        color_reset = "";
-        color_info = "";
+    slice_const color_ok;
+    slice_const color_fail;
+    slice_const color_skip;
+    slice_const color_reset;
+    slice_const color_info;
+    if (color_enabled) {
+        color_ok = slice_sstr("\x1B[32m");
+        color_fail = slice_sstr("\x1B[31m");
+        color_skip = slice_sstr("\x1B[33m");
+        color_reset = slice_sstr("\x1B[0m");
+        color_info = slice_sstr("\x1B[1;30m");
+    } else {
+        color_ok = slice_sstr("");
+        color_fail = slice_sstr("");
+        color_skip = slice_sstr("");
+        color_reset = slice_sstr("");
+        color_info = slice_sstr("");
     }
 
-    io_result io_res = {0};
+    bufstream_write_result io_res = {0};
     if (!report->test_count) {
-        io_res = io_write_str_sync(fd, "No tests executed\n");
+        io_res = bufstream_write_sstr(out, "No tests executed\n");
         if (io_res.err_code) {
             return 0;
         }
@@ -257,27 +238,24 @@ static bool test_suite_report_pretty(test_suite_report *report, int fd) {
     }
 
     const bytebuf *logs = report->logs;
-    char msg_buffer[2048];
-    cstr_fmt_result fmt_res = {0};
     for (ullong i = 0; i < report->test_count; i += 1) {
         test_report tr = report->test_reports[i];
-        const char *prefix = "";
-        const char *color = "";
+        slice_const prefix;
+        slice_const color;
         if (tr.assert_count == 0) {
-            prefix = "SKIP";
+            prefix = slice_sstr("SKIP");
             color = color_skip;
         } else if (tr.assert_count > tr.asserts_passed) {
-            prefix = "FAIL";
+            prefix = slice_sstr("FAIL");
             color = color_fail;
         } else {
-            prefix = " OK ";
+            prefix = slice_sstr(" OK ");
             color = color_ok;
         }
 
-        fmt_res = cstr_fmt(
-            msg_buffer,
-            sizeof(msg_buffer),
-            "%s[%s]%s %s %s(%u/%u passed)%s\n",
+        io_res = bufstream_fmt(
+            out,
+            "s[s]s S s(u/u s)s\n",
             color,
             prefix,
             color_reset,
@@ -285,12 +263,9 @@ static bool test_suite_report_pretty(test_suite_report *report, int fd) {
             color_info,
             tr.asserts_passed,
             tr.assert_count,
+            slice_sstr("passed"),
             color_reset
         );
-        if (!fmt_res.ok) {
-            return 0;
-        }
-        io_res = io_write_all_sync(fd, msg_buffer, fmt_res.len, 0);
         if (io_res.err_code) {
             return 0;
         }
@@ -298,18 +273,13 @@ static bool test_suite_report_pretty(test_suite_report *report, int fd) {
         for (uint j = 0; j < tr.assert_count; j += 1) {
             test_assert ar = tr.asserts[j];
             if (!ar.passed || print_all_asserts) {
-                fmt_res = cstr_fmt(
-                    msg_buffer,
-                    sizeof(msg_buffer),
-                    "    %s:%d: %s\n",
+                io_res = bufstream_fmt(
+                    out,
+                    "    S:i: S\n",
                     ar.file,
                     ar.line,
                     &(logs->buffer[ar.logs_offset])
                 );
-                if (!fmt_res.ok) {
-                    return 0;
-                }
-                io_res = io_write_all_sync(fd, msg_buffer, fmt_res.len, 0);
                 if (io_res.err_code) {
                     return 0;
                 }
@@ -327,6 +297,29 @@ int test_main(
     uint test_count,
     test_case *test_cases
 ) {
+    uchar buf_stdout[4 * 1024];
+    io_file_bytesink_context stdout_ctx = {
+        .fd = STDOUT_FILENO,
+        .chunk_size = 0,
+    };
+    bufstream bstream_stdout = {
+        .buffer = buf_stdout,
+        .len = 0,
+        .cap = sizeof(buf_stdout),
+        .sink = io_file_bytesink(&stdout_ctx),
+    };
+    uchar buf_stderr[4 * 1024];
+    io_file_bytesink_context stderr_ctx = {
+        .fd = STDERR_FILENO,
+        .chunk_size = 0,
+    };
+    bufstream bstream_stderr = {
+        .buffer = buf_stderr,
+        .len = 0,
+        .cap = sizeof(buf_stderr),
+        .sink = io_file_bytesink(&stderr_ctx),
+    };
+
     int ret_val = 0;
 
     // settings
@@ -419,6 +412,17 @@ int test_main(
         if (t.assert_count == t.asserts_passed) {
             report.tests_passed += 1;
         }
+
+        bytesink_result io_res = bufstream_flush(&bstream_stderr);
+        if (io_res.err_code) {
+            ret_val = 2;
+            break;
+        }
+        io_res = bufstream_flush(&bstream_stdout);
+        if (io_res.err_code) {
+            ret_val = 2;
+            break;
+        }
     }
 
     if (setup && setup->after_all) {
@@ -430,10 +434,10 @@ int test_main(
         ret_val = 1; // Tests failed
     }
 
-    if (!test_suite_report_pretty(&report, STDERR_FILENO)) {
+    if (!test_suite_report_pretty(&report, &bstream_stderr)) {
         ret_val = 2; // IO error
     }
-    int err_code = test_suite_report_tap(&report, STDOUT_FILENO);
+    int err_code = test_suite_report_tap(&report, &bstream_stdout);
     if (err_code) {
         ret_val = 2; // IO error
     }
@@ -442,6 +446,15 @@ int test_main(
     alloc_free(&std_allocator, report.test_reports);
     dynarr_free(asserts_handle.asserts);
     bytebuf_free(&logs);
+
+    bytesink_result io_res = bufstream_flush(&bstream_stderr);
+    if (io_res.err_code) {
+        ret_val = 2;
+    }
+    io_res = bufstream_flush(&bstream_stdout);
+    if (io_res.err_code) {
+        ret_val = 2;
+    }
 
     return ret_val;
 }
