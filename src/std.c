@@ -7,9 +7,7 @@
 // Bytes
 ////////////////////////
 
-int bytes_diff_index(
-    const void *a, const void *b, size_t start, size_t len
-) {
+int bytes_diff_index(const void *a, const void *b, size_t start, size_t len) {
     assert(start < len && "start must be lower than length");
     const uchar *a_ = a, *b_ = b;
     if ((uintptr_t)a_ == (uintptr_t)b_) {
@@ -919,6 +917,11 @@ size_t cstr_to_double(const char *s, size_t len, double *v) {
     return i;
 }
 
+#define cstr_int_max_len 16
+#define cstr_uint_max_len 16
+#define cstr_llong_max_len 32
+#define cstr_ullong_max_len 32
+
 static size_t cstr_from_int_unsafe(char *cursor, int src) {
     char *start = cursor;
     bool is_neg = src < 0;
@@ -939,19 +942,11 @@ static size_t cstr_from_int_unsafe(char *cursor, int src) {
     return (size_t)(start - cursor);
 }
 
-int cstr_from_int_cb(int (*cb)(char *, size_t), int src) {
-    assert(cb && "cb must not be null");
-    char tmp[16];
-    char *end = tmp + sizeof(tmp);
-    size_t bytes_to_copy = cstr_from_int_unsafe(end, src);
-    return cb(end - bytes_to_copy, bytes_to_copy);
-}
-
 size_t cstr_from_int(char *dest, size_t len, int src) {
     assert(dest && "dest must not be null");
     assert(len > 0 && "len must be more than 0");
 
-    char tmp[16];
+    char tmp[cstr_int_max_len];
     char *end = tmp + sizeof(tmp);
     size_t bytes_to_copy = cstr_from_int_unsafe(end, src);
 
@@ -975,19 +970,11 @@ static size_t cstr_from_uint_unsafe(char *cursor, uint src) {
     return (size_t)(start - cursor);
 }
 
-int cstr_from_uint_cb(int (*cb)(char *, size_t), uint src) {
-    assert(cb && "cb must not be null");
-    char tmp[16];
-    char *end = tmp + sizeof(tmp);
-    size_t bytes_to_copy = cstr_from_uint_unsafe(end, src);
-    return cb(end - bytes_to_copy, bytes_to_copy);
-}
-
 size_t cstr_from_uint(char *dest, size_t len, uint src) {
     assert(dest && "dest must not be null");
     assert(len > 0 && "len must be more than 0");
 
-    char tmp[16];
+    char tmp[cstr_uint_max_len];
     char *end = tmp + sizeof(tmp);
     size_t bytes_to_copy = cstr_from_uint_unsafe(end, src);
 
@@ -1019,19 +1006,11 @@ static size_t cstr_from_llong_unsafe(char *cursor, llong src) {
     return (size_t)(start - cursor);
 }
 
-int cstr_from_llong_cb(int (*cb)(char *, size_t), llong src) {
-    assert(cb && "cb must not be null");
-    char tmp[32];
-    char *end = tmp + sizeof(tmp);
-    size_t bytes_to_copy = cstr_from_llong_unsafe(end, src);
-    return cb(end - bytes_to_copy, bytes_to_copy);
-}
-
 size_t cstr_from_llong(char *dest, size_t len, llong src) {
     assert(dest && "dest must not be null");
     assert(len > 0 && "len must be more than 0");
 
-    char tmp[32];
+    char tmp[cstr_llong_max_len];
     char *end = tmp + sizeof(tmp);
     size_t bytes_to_copy = cstr_from_llong_unsafe(end, src);
 
@@ -1055,19 +1034,11 @@ static size_t cstr_from_ullong_unsafe(char *cursor, ullong src) {
     return (size_t)(start - cursor);
 }
 
-int cstr_from_ullong_cb(int (*cb)(char *, size_t), ullong src) {
-    assert(cb && "cb must not be null");
-    char tmp[32];
-    char *end = tmp + sizeof(tmp);
-    size_t bytes_to_copy = cstr_from_ullong_unsafe(end, src);
-    return cb(end - bytes_to_copy, bytes_to_copy);
-}
-
 size_t cstr_from_ullong(char *dest, size_t len, ullong src) {
     assert(dest && "dest must not be null");
     assert(len > 0 && "len must be more than 0");
 
-    char tmp[32];
+    char tmp[cstr_ullong_max_len];
     char *end = tmp + sizeof(tmp);
     size_t bytes_to_copy = cstr_from_ullong_unsafe(end, src);
 
@@ -1194,8 +1165,8 @@ size_t cstr_from_float(char *dest, size_t len, float src, uint decimals) {
         return 0;
     }
 
-    char integer_cstr[32];
-    char fractional_cstr[32];
+    char integer_cstr[cstr_ullong_max_len];
+    char fractional_cstr[cstr_ullong_max_len];
     struct cstr_from_real_parts parts = {0};
     parts.integer_cursor = integer_cstr + sizeof(integer_cstr);
     parts.fractional_cursor = fractional_cstr + sizeof(fractional_cstr);
@@ -1255,8 +1226,8 @@ size_t cstr_from_double(char *dest, size_t len, double src, uint decimals) {
         return 0;
     }
 
-    char integer_cstr[32];
-    char fractional_cstr[32];
+    char integer_cstr[cstr_ullong_max_len];
+    char fractional_cstr[cstr_ullong_max_len];
     struct cstr_from_real_parts parts = {0};
     parts.integer_cursor = integer_cstr + sizeof(integer_cstr);
     parts.fractional_cursor = fractional_cstr + sizeof(fractional_cstr);
