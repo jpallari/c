@@ -1514,9 +1514,6 @@ cstr_fmt_result cstr_fmt_va(
         // copy chunk to destination
         size_t bytes_to_copy = (size_t)(cursor - chunk_start);
         bytes_to_copy = min(bytes_to_copy, len - bytes_written);
-        if (bytes_to_copy == 0) { // nothing to copy
-            break;
-        }
         if (bytes_to_copy > 0) {
             bytes_copy(dest + bytes_written, chunk_start, bytes_to_copy);
             bytes_written += bytes_to_copy;
