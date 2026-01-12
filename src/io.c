@@ -1,4 +1,5 @@
 #include "io.h"
+#include "std.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -138,5 +139,22 @@ end:
     if (res.err_code == 0 && io_res < 0) {
         res.err_code = errno;
     }
+    return res;
+}
+
+os_io_result bytebuf_flush(bytebuf *bbuf, int fd, size_t chunk_size) {
+    assert(bbuf && "bbuf must not be null");
+
+    os_io_result res = os_write_all(fd, bbuf->buffer, bbuf->len, chunk_size);
+    assert(res.len <= bbuf->len);
+
+    if (res.len < bbuf->len) {
+        size_t new_len = bbuf->len - res.len;
+        bytes_move(bbuf->buffer, bbuf->buffer + res.len, new_len);
+        bbuf->len = new_len;
+    } else {
+        bbuf->len = 0;
+    }
+
     return res;
 }
