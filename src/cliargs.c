@@ -1,7 +1,6 @@
 #include "cliargs.h"
 #include "std.h"
 #include <stdarg.h>
-#include <stdio.h>
 
 typedef struct {
     cliargs *args;
@@ -19,12 +18,19 @@ typedef struct {
 
 const char *cliargs_type_to_name(cliargs_type type) {
     switch (type) {
-    case cliargs_type_int: return cliargs_type_int_tname;
-    case cliargs_type_uint: return cliargs_type_uint_tname;
-    case cliargs_type_float: return cliargs_type_float_tname;
-    case cliargs_type_str: return cliargs_type_str_tname;
-    case cliargs_type_bool: return cliargs_type_bool_tname;
-    default: assert(0 && "unexpected type"); return "";
+    case cliargs_type_int:
+        return cliargs_type_int_tname;
+    case cliargs_type_uint:
+        return cliargs_type_uint_tname;
+    case cliargs_type_float:
+        return cliargs_type_float_tname;
+    case cliargs_type_str:
+        return cliargs_type_str_tname;
+    case cliargs_type_bool:
+        return cliargs_type_bool_tname;
+    default:
+        assert(0 && "unexpected type");
+        return "";
     }
 }
 
@@ -39,35 +45,34 @@ void cliargs_write_error(cliargs_state state, const char *format, ...) {
     }
 
     size_t remaining_len = state.args->errors.max_len - state.args->errors.len;
-    int len = 0;
 
-    len = snprintf(
+    cstr_fmt_result fmt_res = cstr_fmt(
         state.args->errors.buffer + state.args->errors.len,
         remaining_len,
-        "Failed to process argument #%d '%s': ",
+        "Failed to process argument #%u '%s': ",
         state.index + 1,
         state.argv[state.index]
     );
-    if (len < 0) {
+    if (!fmt_res.ok) {
         return;
     }
-    state.args->errors.len += (uint)len;
+    state.args->errors.len += fmt_res.len;
 
     va_list va_args;
     va_start(va_args, format);
-    len = vsnprintf(
+    fmt_res = cstr_fmt_va(
         state.args->errors.buffer + state.args->errors.len,
         remaining_len,
         format,
         va_args
     );
     va_end(va_args);
-    if (len < 0) {
+    if (!fmt_res.ok) {
         return;
     }
 
-    state.args->errors.len += (uint)len;
-    uint last_index =
+    state.args->errors.len += fmt_res.len;
+    size_t last_index =
         min(state.args->errors.len, state.args->errors.max_len - 1);
     state.args->errors.buffer[last_index] = '\0';
 }
@@ -107,8 +112,11 @@ cliargs_error cliargs_parse_value(
             return cliargs_error_parse_fail;
         }
         return cliargs_error_none;
-    case cliargs_type_str: value->str = arg; return cliargs_error_none;
-    default: return cliargs_error_unknown_type;
+    case cliargs_type_str:
+        value->str = arg;
+        return cliargs_error_none;
+    default:
+        return cliargs_error_unknown_type;
     }
 }
 
@@ -125,7 +133,9 @@ cliargs_arg cliargs_parse_arg(const char *arg) {
         case 1: // flag or val
             for (; arg[i] && parsing_mode == previous_parsing_mode; i += 1) {
                 switch (arg[i]) {
-                case '-': a.prefix_dash_count += 1; break;
+                case '-':
+                    a.prefix_dash_count += 1;
+                    break;
                 case ' ':
                 case '\t':
                 case '\n':
@@ -178,7 +188,9 @@ cliargs_arg cliargs_parse_arg(const char *arg) {
         case 0:
             // nothing left to parse, exit
             break;
-        default: assert(0 && "unknown parsing mode"); break;
+        default:
+            assert(0 && "unknown parsing mode");
+            break;
         }
     }
 
@@ -242,7 +254,8 @@ cliargs_error cliargs_parse_value_to_opt(
         cliargs_parse_value(opt->type, arg, arg_len, (opt->vals + opt->len));
 
     switch (err) {
-    case cliargs_error_none: break;
+    case cliargs_error_none:
+        break;
     case cliargs_error_parse_fail:
         cliargs_write_error(
             state,
@@ -257,7 +270,9 @@ cliargs_error cliargs_parse_value_to_opt(
     case cliargs_error_too_many_flag_args:
     case cliargs_error_too_many_pos_args:
     case cliargs_error_value_expected:
-    default: assert(0 && "unexpected error type"); return err;
+    default:
+        assert(0 && "unexpected error type");
+        return err;
     }
 
     opt->len += 1;
@@ -381,7 +396,7 @@ void cliargs_init(
     char const **pos_args_storage,
     uint pos_args_max_len,
     char *errors_buffer,
-    uint errors_max_len
+    size_t errors_max_len
 ) {
     assert(args && "args must not be null");
     assert(

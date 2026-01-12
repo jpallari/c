@@ -123,8 +123,8 @@ typedef struct {
      */
     struct {
         char *buffer;
-        uint len;
-        uint max_len;
+        size_t len;
+        size_t max_len;
     } errors;
 } cliargs;
 
@@ -146,7 +146,7 @@ void cliargs_init(
     char const **pos_args_storage,
     uint pos_args_max_len,
     char *errors_buffer,
-    uint errors_max_len
+    size_t errors_max_len
 );
 
 /**
