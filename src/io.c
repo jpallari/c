@@ -7,110 +7,136 @@
 // File I/O (blocking)
 ////////////////////////
 
-file_result read_file(const char *filename, allocator *allocator) {
+os_io_result os_read_all(int fd, uchar *buffer, size_t len, size_t chunk_len) {
+    assert(buffer && "buffer may not be null");
+    assert(len > 0 && "len must be > 0");
+
+    os_io_result res = {0};
+
+    if (chunk_len == 0) {
+        chunk_len = len;
+    }
+
+    while (res.len < len) {
+        size_t next_chunk_len = min(len - res.len, chunk_len);
+        ssize_t read_res = read(fd, buffer + res.len, next_chunk_len);
+        if (read_res < 0) {
+            res.err_code = errno;
+            break;
+        }
+        if (read_res == 0) {
+            break;
+        }
+        res.len += (size_t)read_res;
+    }
+
+    return res;
+}
+
+os_io_result os_write_all(int fd, void *buffer, size_t len, size_t chunk_len) {
+    assert(buffer && "buffer may not be null");
+    assert(len > 0 && "len must be > 0");
+
+    uchar *buf_ = buffer;
+    os_io_result res = {0};
+
+    if (chunk_len == 0) {
+        chunk_len = len;
+    }
+
+    while (res.len < len) {
+        size_t next_chunk_size = min(len - res.len, chunk_len);
+        ssize_t write_res = write(fd, buf_ + res.len, next_chunk_size);
+        if (write_res < 0) {
+            res.err_code = errno;
+            break;
+        }
+        res.len += (size_t)write_res;
+    }
+
+    return res;
+}
+
+file_read_result file_read(const char *filename, allocator *allocator) {
     assert(filename && "filename must not be null");
     assert(allocator && "allocator must not be null");
 
-    int fd = 0, io_res = 0;
-    ssize_t read_res = 0;
-    uchar *data = NULL, *cursor = NULL;
-    file_result result = {0};
-    struct stat file_stat = {0};
-    size_t bs_remaining = 0, chunk_size = 0;
+    file_read_result res = {0};
 
-    fd = open(filename, O_RDONLY);
+    int fd = open(filename, O_RDONLY);
     if (fd < 0) {
-        result.err_code = errno;
-        return result;
+        res.err_code = errno;
+        return res;
     }
 
-    io_res = fstat(fd, &file_stat);
+    struct stat file_stat = {0};
+    int io_res = fstat(fd, &file_stat);
     if (io_res < 0) {
-        result.err_code = errno;
-        goto end;
+        res.err_code = errno;
+        return res;
     }
     if (file_stat.st_size == 0) {
         goto end;
     }
-    if (file_stat.st_size < 0) {
-        result.err_code = -3;
+    if (file_stat.st_size < 0 || file_stat.st_blksize < 0) {
+        res.err_code = -3;
         goto end;
     }
     size_t block_size = (size_t)file_stat.st_blksize;
 
-    data = alloc_new(allocator, uchar, (size_t)file_stat.st_size);
-    if (!data) {
-        result.err_code = -2;
+    size_t len = (size_t)file_stat.st_size;
+    res.data = alloc_new(allocator, uchar, len);
+    if (!res.data) {
+        res.err_code = -2;
         goto end;
     }
-    result.data = data;
 
-    for (bs_remaining = (size_t)file_stat.st_size, cursor = data;
-         bs_remaining > 0;
-         bs_remaining -= (size_t)read_res,
-        cursor += read_res,
-        result.size += (size_t)read_res) {
-        chunk_size = min(bs_remaining, block_size);
-        read_res = read(fd, cursor, chunk_size);
-        if (read_res == 0) { // EOF
-            goto end;
-        }
-        if (read_res < 0) {
-            result.err_code = errno;
-            goto end;
-        }
-    }
+    os_io_result io_read_res = os_read_all(fd, res.data, len, block_size);
+    res.len = io_read_res.len;
+    res.err_code = io_read_res.err_code;
 
 end:
     io_res = close(fd);
-    if (!result.err_code && io_res < 0) {
-        result.err_code = errno;
+    if (!res.err_code && io_res < 0) {
+        res.err_code = errno;
     }
 
-    return result;
+    return res;
 }
 
-ssize_t write_file(char *filename, void *data, size_t size) {
+os_io_result file_write(const char *filename, void *data, size_t len) {
     assert(filename && "filename must not be null");
     assert(data && "data must not be null");
 
-    int fd = 0, io_res = 0, close_res = 0;
-    uchar *cursor = data;
-    struct stat file_stat = {0};
-    size_t bs_remaining = 0, chunk_size = 0;
-    ssize_t write_res = 0;
+    os_io_result res = {0};
 
-    fd = open(
+    int fd = open(
         filename,
         O_WRONLY | O_CREAT | O_TRUNC,
         S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH
     );
     if (fd < 0) {
-        return errno;
+        res.err_code = errno;
+        return res;
     }
-    io_res = fstat(fd, &file_stat);
-    if (io_res < 0) {
-        goto end;
-    }
-    if (file_stat.st_blksize < 0) {
-        write_res = -3;
-        goto end;
-    }
-    size_t block_size = (size_t)file_stat.st_blksize;
 
-    for (bs_remaining = size; bs_remaining > 0;
-         bs_remaining -= (size_t)write_res, cursor += write_res) {
-        chunk_size = min(bs_remaining, block_size);
-        write_res = write(fd, cursor, chunk_size);
-        if (write_res <= 0) {
-            goto end;
-        }
+    struct stat file_stat = {0};
+    int io_res = fstat(fd, &file_stat);
+    if (io_res < 0) {
+        res.err_code = errno;
+        goto end;
     }
+    if (file_stat.st_size || file_stat.st_blksize < 0) {
+        res.err_code = -3;
+        goto end;
+    }
+
+    res = os_write_all(fd, data, len, (size_t)file_stat.st_blksize);
 
 end:
-    close_res = close(fd);
-    if (write_res < 0) {
-        return write_res;
+    io_res = close(fd);
+    if (res.err_code == 0 && io_res < 0) {
+        res.err_code = errno;
     }
-    return io_res || close_res || 0;
+    return res;
 }

@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
         mode = 2;
     }
 
-    file_result res = read_file(argv[1], &std_allocator);
+    file_read_result res = file_read(argv[1], &std_allocator);
     if (res.err_code) {
         fprintf(
             stderr,
@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
 
     cstr_split_iter split = {
         .str = (char *)res.data,
-        .str_len = res.size,
+        .str_len = res.len,
         .split_chars = "\n",
         .split_chars_len = 1,
         .null_terminate = 1,
@@ -51,11 +51,19 @@ int main(int argc, char **argv) {
         }
 
         if (ok && mode == 2) {
-            cstr_from_float(buf, sizeof(buf), f, 6);
-            printf("%s %g %s\n", s.buffer, f, buf);
+            size_t len = cstr_from_float(buf, sizeof(buf), f, 6);
+            if (len) {
+                printf("%s %g %s\n", s.buffer, f, buf);
+            } else {
+                printf("%s %g ERR\n", s.buffer, f);
+            }
         } else if (ok) {
-            cstr_from_double(buf, sizeof(buf), d, 18);
-            printf("%s %g %s\n", s.buffer, d, buf);
+            size_t len = cstr_from_double(buf, sizeof(buf), d, 18);
+            if (len) {
+                printf("%s %g %s\n", s.buffer, d, buf);
+            } else {
+                printf("%s %g ERR\n", s.buffer, f);
+            }
         } else {
             printf("fail: %s\n", s.buffer);
         }
