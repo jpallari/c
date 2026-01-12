@@ -979,9 +979,37 @@ typedef struct {
     allocator *allocator;
 } bytebuf;
 
-bytebuf bytebuf_new(size_t capacity, allocator *allocator);
+void bytebuf_init(bytebuf *bbuf, size_t capacity, allocator *allocator);
 
-bytebuf bytebuf_new_fixed(uchar *buffer, size_t len, size_t capacity);
+void bytebuf_init_fixed(
+    bytebuf *bbuf, uchar *buffer, size_t len, size_t capacity
+);
+
+__attribute__((unused)) static inline bytebuf
+bytebuf_new(size_t capacity, allocator *allocator) {
+    bytebuf bbuf;
+    bytebuf_init(&bbuf, capacity, allocator);
+    return bbuf;
+}
+
+__attribute__((unused)) static inline bytebuf
+bytebuf_new_fixed(uchar *buffer, size_t len, size_t capacity) {
+    bytebuf bbuf;
+    bytebuf_init_fixed(&bbuf, buffer, len, capacity);
+    return bbuf;
+}
+
+__attribute__((unused)) static inline
+bool bytebuf_is_init(bytebuf *bbuf) {
+    assert(bbuf && "bytebuf must not be null");
+    return bbuf->buffer && bbuf->cap;
+}
+
+__attribute__((unused)) static inline
+bool bytebuf_is_growable(bytebuf *bbuf) {
+    assert(bbuf && "bytebuf must not be null");
+    return bbuf->allocator != NULL;
+}
 
 void bytebuf_free(bytebuf *bbuf);
 
