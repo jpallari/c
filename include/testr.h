@@ -187,11 +187,11 @@ int test_main(
         (t), abs((l) - (r)) < (eps), (msg), __FILE__, __LINE__, "==", (l), (r) \
     )
 
-#define assert_eq_bytes(t, l, r, capacity, msg) \
-    assert_true(t, bytes_eq((l), (r), (capacity)), msg)
+#define assert_eq_bytes(t, l, r, len, msg) \
+    assert_true(t, bytes_eq((l), (r), (len)), msg)
 
-#define assert_ne_bytes(t, l, r, capacity, msg) \
-    assert_false(t, bytes_eq((l), (r), (capacity)), msg)
+#define assert_ne_bytes(t, l, r, len, msg) \
+    assert_false(t, bytes_eq((l), (r), (len)), msg)
 
 #define assert_eq_cstr(t, l, r, msg) \
     test_report_append_formatted_cstr( \

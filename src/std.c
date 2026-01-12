@@ -8,9 +8,9 @@
 ////////////////////////
 
 int bytes_diff_index(
-    const void *a, const void *b, size_t start, size_t capacity
+    const void *a, const void *b, size_t start, size_t len
 ) {
-    assert(start < capacity && "start must be lower than capacity");
+    assert(start < len && "start must be lower than length");
     const uchar *a_ = a, *b_ = b;
     if ((uintptr_t)a_ == (uintptr_t)b_) {
         return -1;
@@ -19,7 +19,7 @@ int bytes_diff_index(
         return 0;
     }
 
-    for (size_t i = start; i < capacity; i += 1) {
+    for (size_t i = start; i < len; i += 1) {
         if (a_[i] != b_[i]) {
             return (int)i;
         }
@@ -28,8 +28,8 @@ int bytes_diff_index(
     return -1;
 }
 
-bool bytes_eq(const void *a, const void *b, size_t capacity) {
-    if (bytes_diff_index(a, b, 0, capacity) >= 0) {
+bool bytes_eq(const void *a, const void *b, size_t len) {
+    if (bytes_diff_index(a, b, 0, len) >= 0) {
         return 0;
     }
     return 1;

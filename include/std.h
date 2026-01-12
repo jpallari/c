@@ -96,7 +96,7 @@ static inline void breakpoint(void) {
 #define countof(x) (sizeof(x) / sizeof(*(x)))
 
 /**
- * Length of an array or a static string
+ * Length of a static string
  */
 #define lengthof(x) (countof(x) - 1)
 
@@ -217,22 +217,22 @@ bytes_set(void *dest, int c, size_t n) {
  *
  * @param a,b byte buffers to compare
  * @param start index to start comparing from
- * @param capacity the capacity of the buffers
+ * @param len the length of the buffers
  * @returns -1 when the buffers contain the same bytes, and the index of the
  * differing byte otherwise
  */
 int bytes_diff_index(
-    const void *a, const void *b, size_t start, size_t capacity
+    const void *a, const void *b, size_t start, size_t len
 );
 
 /**
  * Check whether both buffers contain the same bytes up to the given capacity.
  *
  * @param a,b byte buffers to compare
- * @param capacity the capacity of the buffers
+ * @param len the length of the buffers
  * @returns true when bytes contain the same bytes and false otherwise
  */
-bool bytes_eq(const void *a, const void *b, size_t capacity);
+bool bytes_eq(const void *a, const void *b, size_t len);
 
 /**
  * Write bytes as a hex string.
