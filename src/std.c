@@ -939,6 +939,14 @@ static size_t cstr_from_int_unsafe(char *cursor, int src) {
     return (size_t)(start - cursor);
 }
 
+int cstr_from_int_cb(int (*cb)(char *, size_t), int src) {
+    assert(cb && "cb must not be null");
+    char tmp[16];
+    char *end = tmp + sizeof(tmp);
+    size_t bytes_to_copy = cstr_from_int_unsafe(end, src);
+    return cb(end - bytes_to_copy, bytes_to_copy);
+}
+
 size_t cstr_from_int(char *dest, size_t len, int src) {
     assert(dest && "dest must not be null");
     assert(len > 0 && "len must be more than 0");
@@ -965,6 +973,14 @@ static size_t cstr_from_uint_unsafe(char *cursor, uint src) {
     } while (src > 0);
 
     return (size_t)(start - cursor);
+}
+
+int cstr_from_uint_cb(int (*cb)(char *, size_t), uint src) {
+    assert(cb && "cb must not be null");
+    char tmp[16];
+    char *end = tmp + sizeof(tmp);
+    size_t bytes_to_copy = cstr_from_uint_unsafe(end, src);
+    return cb(end - bytes_to_copy, bytes_to_copy);
 }
 
 size_t cstr_from_uint(char *dest, size_t len, uint src) {
@@ -1003,6 +1019,14 @@ static size_t cstr_from_llong_unsafe(char *cursor, llong src) {
     return (size_t)(start - cursor);
 }
 
+int cstr_from_llong_cb(int (*cb)(char *, size_t), llong src) {
+    assert(cb && "cb must not be null");
+    char tmp[32];
+    char *end = tmp + sizeof(tmp);
+    size_t bytes_to_copy = cstr_from_llong_unsafe(end, src);
+    return cb(end - bytes_to_copy, bytes_to_copy);
+}
+
 size_t cstr_from_llong(char *dest, size_t len, llong src) {
     assert(dest && "dest must not be null");
     assert(len > 0 && "len must be more than 0");
@@ -1029,6 +1053,14 @@ static size_t cstr_from_ullong_unsafe(char *cursor, ullong src) {
     } while (src > 0);
 
     return (size_t)(start - cursor);
+}
+
+int cstr_from_ullong_cb(int (*cb)(char *, size_t), ullong src) {
+    assert(cb && "cb must not be null");
+    char tmp[32];
+    char *end = tmp + sizeof(tmp);
+    size_t bytes_to_copy = cstr_from_ullong_unsafe(end, src);
+    return cb(end - bytes_to_copy, bytes_to_copy);
 }
 
 size_t cstr_from_ullong(char *dest, size_t len, ullong src) {
@@ -1645,9 +1677,6 @@ size_t cstr_fmt_len_va(const char *restrict format, va_list va_args) {
 
         // copy chunk to destination
         size_t bytes_to_copy = (size_t)(cursor - chunk_start);
-        if (bytes_to_copy == 0) { // nothing to copy
-            break;
-        }
         if (bytes_to_copy > 0) {
             len += bytes_to_copy;
         }
@@ -1689,7 +1718,6 @@ size_t cstr_fmt_len_va(const char *restrict format, va_list va_args) {
         case cstr_fmt_field_type_str:
             if (field.flags & cstr_fmt_field_flag_str_len) {
                 s_len = va_arg(va_args, size_t);
-                s = va_arg(va_args, char *);
             } else {
                 s = va_arg(va_args, char *);
                 s_len = cstr_len_unsafe(s);
@@ -2032,4 +2060,87 @@ size_t bytebuf_write_grow_double(bytebuf *bbuf, double src, uint decimals) {
     cstr_from_real_parts_to_buf(&parts, (char *)bbuf->buffer);
     bbuf->len += bytes_to_write;
     return bytes_to_write;
+}
+
+////////////////////////
+// Buffered byte stream
+////////////////////////
+
+bytesink_result bufstream_flush(bufstream *bstream) {
+    assert(bstream && "bstream must not be null");
+    assert(bstream->buffer && "bstream's buffer must not be null");
+
+    bytesink_result res = {0};
+
+    if (bstream->len == 0) {
+        return res;
+    }
+
+    res =
+        bstream->sink.fn(bstream->sink.context, bstream->buffer, bstream->len);
+
+    if (res.len >= bstream->len) {
+        // full write successful
+        bstream->len = 0;
+        return res;
+    }
+
+    // partial write --> move remaining bytes to beginning of buffer
+    bytes_move(bstream->buffer, bstream->buffer + res.len, 0);
+    bstream->len -= res.len;
+
+    return res;
+}
+
+bufstream_write_result
+bufstream_write(bufstream *bstream, const uchar *src, size_t len) {
+    assert(bstream && "bstream must not be null");
+    assert(bstream->buffer && "bstream's buffer must not be null");
+    assert(src && "source must not be null");
+    assert(len > 0 && "length must be more than 0");
+    assert(bstream->sink.fn && "sink fn must not be null");
+
+    bufstream_write_result res = {0};
+
+    if (!src || len == 0) {
+        // nothing to write
+        return res;
+    }
+
+    while (res.len < len) {
+        size_t bytes_available = len - res.len;
+
+        // buffer empty and available bytes exceed buffer capacity
+        // --> pipe to sink directly
+        if (bstream->len == 0 && bytes_available > bstream->cap) {
+            bytesink_result bs_res = bstream->sink.fn(
+                bstream->sink.context, src + res.len, bytes_available
+            );
+            res.err_code = bs_res.err_code;
+            res.len += bs_res.len;
+            return res;
+        }
+
+        // append whatever we can to the buffer
+        size_t bytes_to_copy =
+            min(bytes_available, bstream->cap - bstream->len);
+        bytes_copy(
+            bstream->buffer + bstream->len, src + res.len, bytes_to_copy
+        );
+        bstream->len += bytes_to_copy;
+        res.len += bytes_to_copy;
+
+        // no space left --> flush buffer to sink
+        assert(bstream->cap >= bstream->len);
+        if (bstream->cap == bstream->len) {
+            bytesink_result bs_res = bufstream_flush(bstream);
+            res.err_code = bs_res.err_code;
+            res.len += bs_res.len;
+            if (res.err_code) {
+                return res;
+            }
+        }
+    }
+
+    return res;
 }

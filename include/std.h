@@ -1002,12 +1002,12 @@ bytebuf_new_fixed(uchar *buffer, size_t len, size_t capacity) {
 
 __attribute__((unused)) static inline bool bytebuf_is_init(bytebuf *bbuf) {
     assert(bbuf && "bytebuf must not be null");
-    return bbuf->buffer && bbuf->cap;
+    return bbuf && bbuf->buffer && bbuf->cap;
 }
 
 __attribute__((unused)) static inline bool bytebuf_is_growable(bytebuf *bbuf) {
     assert(bbuf && "bytebuf must not be null");
-    return bbuf->allocator != NULL;
+    return bbuf && (bbuf->allocator != NULL);
 }
 
 void bytebuf_free(bytebuf *bbuf);
@@ -1034,11 +1034,58 @@ size_t bytebuf_write_ullong(bytebuf *bbuf, ullong src);
 size_t bytebuf_write_float(bytebuf *bbuf, float src, uint decimals);
 size_t bytebuf_write_double(bytebuf *bbuf, double src, uint decimals);
 
+__attribute__((unused)) static inline size_t
+bytebuf_write_str(bytebuf *bbuf, char *str, size_t len) {
+    if (bytebuf_write(bbuf, (uchar *)str, len)) {
+        return len;
+    }
+    return 0;
+}
+
 size_t bytebuf_write_grow_int(bytebuf *bbuf, int src);
 size_t bytebuf_write_grow_uint(bytebuf *bbuf, uint src);
 size_t bytebuf_write_grow_llong(bytebuf *bbuf, llong src);
 size_t bytebuf_write_grow_ullong(bytebuf *bbuf, ullong src);
 size_t bytebuf_write_grow_float(bytebuf *bbuf, float src, uint decimals);
 size_t bytebuf_write_grow_double(bytebuf *bbuf, double src, uint decimals);
+
+__attribute__((unused)) static inline size_t
+bytebuf_write_str_grow(bytebuf *bbuf, char *str, size_t len) {
+    if (bytebuf_write_grow(bbuf, (uchar *)str, len)) {
+        return len;
+    }
+    return 0;
+}
+
+////////////////////////
+// Buffered byte stream
+////////////////////////
+
+typedef struct {
+    size_t len;
+    int err_code;
+} bytesink_result;
+
+typedef struct {
+    bytesink_result (*fn)(void *, const uchar *, size_t);
+    void *context;
+} bytesink;
+
+typedef struct {
+    uchar *buffer;
+    size_t len;
+    size_t cap;
+    bytesink sink;
+} bufstream;
+
+typedef struct {
+    size_t len;
+    int err_code;
+} bufstream_write_result;
+
+bytesink_result bufstream_flush(bufstream *bstream);
+
+bufstream_write_result
+bufstream_write(bufstream *bstream, const uchar *src, size_t len);
 
 #endif // JP_STD_H
