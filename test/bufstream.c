@@ -52,17 +52,17 @@ void test_buffered_stream_short_writes(test *t) {
     };
 
     bufstream_write_result res;
-    res = bufstream_write_static_str(&bstream, "hello");
+    res = bufstream_write_sstr(&bstream, "hello");
     assert_eq_sint(t, res.err_code, 0, "no error");
     assert_eq_uint(t, res.len, lengthof("hello"), "len = lengthof('hello')");
     assert_eq_uint(t, context.bbuf.len, 0, "sink len = 0");
 
-    res = bufstream_write_static_str(&bstream, " ");
+    res = bufstream_write_sstr(&bstream, " ");
     assert_eq_sint(t, res.err_code, 0, "no error");
     assert_eq_uint(t, res.len, 1, "len = lengthof(' ')");
     assert_eq_uint(t, context.bbuf.len, 0, "sink len = 0");
 
-    res = bufstream_write_static_str(&bstream, "world!");
+    res = bufstream_write_sstr(&bstream, "world!");
     assert_eq_sint(t, res.err_code, 0, "no error");
     assert_eq_uint(t, res.len, lengthof("world!"), "len = lengthof('world!')");
     assert_eq_bytes(
@@ -93,9 +93,9 @@ void test_buffered_stream_long_writes(test *t) {
         },
     };
 
-    bufstream_write_static_str(&bstream, "Tolstoy");
+    bufstream_write_sstr(&bstream, "Tolstoy");
     bufstream_write_result res =
-        bufstream_write_static_str(&bstream, " book Anna Karenina");
+        bufstream_write_sstr(&bstream, " book Anna Karenina");
     assert_eq_sint(t, res.err_code, 0, "no error");
     assert_eq_uint(t, res.len, 19, "length of last write");
     assert_eq_bytes(
@@ -124,11 +124,11 @@ void test_buffered_stream_failing_writes(test *t) {
         },
     };
 
-    bufstream_write_static_str(&bstream, "this is ");
-    bufstream_write_static_str(&bstream, "a somewhat ");
+    bufstream_write_sstr(&bstream, "this is ");
+    bufstream_write_sstr(&bstream, "a somewhat ");
 
     bufstream_write_result res =
-        bufstream_write_static_str(&bstream, "long sentence");
+        bufstream_write_sstr(&bstream, "long sentence");
     assert_eq_sint(t, res.err_code, 1, "has error");
     assert_eq_uint(t, res.len, 5, "partial write length");
     assert_eq_bytes(

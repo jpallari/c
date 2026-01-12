@@ -1108,7 +1108,7 @@ bytebuf_write_str(bytebuf *bbuf, const char *str, size_t len) {
     return 0;
 }
 
-#define bytebuf_write_static_cstr(bbuf, str) \
+#define bytebuf_write_sstr(bbuf, str) \
     bytebuf_write_str((bbuf), (str), lengthof(str))
 
 size_t bytebuf_write_grow_int(bytebuf *bbuf, int src);
@@ -1126,7 +1126,7 @@ bytebuf_write_str_grow(bytebuf *bbuf, const char *str, size_t len) {
     return 0;
 }
 
-#define bytebuf_write_grow_static_cstr(bbuf, str) \
+#define bytebuf_write_grow_sstr(bbuf, str) \
     bytebuf_write_grow_str((bbuf), (str), lengthof(str))
 
 ////////////////////////
@@ -1165,7 +1165,7 @@ bufstream_write_str(bufstream *bstream, const char *src, size_t len) {
     return bufstream_write(bstream, (const uchar *)src, len);
 }
 
-#define bufstream_write_static_str(bstream, str) \
+#define bufstream_write_sstr(bstream, str) \
     bufstream_write_str((bstream), (str), lengthof(str))
 
 #endif // JP_STD_H
