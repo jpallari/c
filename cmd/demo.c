@@ -1,10 +1,12 @@
 #include "io.h"
 #include "std.h"
-#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 
 int array_demo(void) {
+    int exit_code = 0;
+    char txt_buf[1024] = {0};
+    cstr_fmt_result fmt_res = {0};
     uchar *buffer = alloc_new(&std_allocator, uchar, 1024 * 1024);
     arena arena = arena_new(buffer, 1024 * 1024);
     allocator allocator = arena_allocator_new(&arena);
@@ -13,13 +15,14 @@ int array_demo(void) {
     float last = 0.0;
     ullong i;
 
-    for (i = 0; i < 20; i += 1) {
+    for (i = 0; i < 200; i += 10) {
         float v = ((float)i) / 10;
-        float *new_arr = dynarr_push_grow(&arr, &v, 1, float);
+        float *new_arr = dynarr_push_grow(arr, &v, 1, float);
         if (new_arr) {
             arr = new_arr;
         } else {
-            printf("allocation failed!\n");
+            io_write_str_sync(STDERR_FILENO, "allocation failed!\n");
+            exit_code = 1;
             goto end;
         }
     }
@@ -29,28 +32,71 @@ int array_demo(void) {
     dynarr_pop(arr, last);
 
     for (i = 0; i < dynarr_len(arr); i += 1) {
-        printf("data %lld: %f\n", i, arr[i]);
+        fmt_res =
+            cstr_fmt(txt_buf, sizeof(txt_buf), "data %llu: %f\n", i, arr[i]);
+        if (!fmt_res.ok) {
+            exit_code = 1;
+            goto end;
+        }
+        io_write_all_sync(
+            STDOUT_FILENO, txt_buf, cstr_fmt_result_non_null_len(&fmt_res), 0
+        );
     }
 
-    printf("2: %f, 15: %f, last: %f\n", arr[2], arr[15], last);
+    fmt_res = cstr_fmt(
+        txt_buf,
+        sizeof(txt_buf),
+        "2: %f, 15: %f, last: %f\n",
+        arr[2],
+        arr[15],
+        last
+    );
+    if (!fmt_res.ok) {
+        exit_code = 1;
+        goto end;
+    }
+    io_write_all_sync(
+        STDOUT_FILENO, txt_buf, cstr_fmt_result_non_null_len(&fmt_res), 0
+    );
 
 end:
     dynarr_free(arr);
     arena_clear(&arena);
     alloc_free(&std_allocator, buffer);
 
-    return 0;
+    return exit_code;
 }
 
 void print_file_error(const char *filename, int err_code) {
+    char txt_buf[1024];
+    cstr_fmt_result fmt_res;
     if (err_code == file_err_invalid_stat) {
-        printf("Failed to get details for file %s\n", filename);
+        fmt_res = cstr_fmt(
+            txt_buf,
+            sizeof(txt_buf),
+            "Failed to get details for file %s\n",
+            filename
+        );
     } else if (err_code == file_err_failed_alloc) {
-        printf("Failed to allocate memory for file %s\n", filename);
+        fmt_res = cstr_fmt(
+            txt_buf,
+            sizeof(txt_buf),
+            "Failed to allocate memory for file %s\n",
+            filename
+        );
     } else {
         const char *err_msg = strerror(err_code);
-        printf("File error for file %s: %s\n", filename, err_msg);
+        fmt_res = cstr_fmt(
+            txt_buf,
+            sizeof(txt_buf),
+            "File error for file %s: %s\n",
+            filename,
+            err_msg
+        );
     }
+    io_write_all_sync(
+        STDERR_FILENO, txt_buf, cstr_fmt_result_non_null_len(&fmt_res), 0
+    );
 }
 
 int file_demo(int argc, char **argv) {
