@@ -939,13 +939,8 @@ size_t cstr_len_double(double src, uint decimals);
 typedef struct {
     size_t len;
     bool ok;
-    bool has_null;
+    bool is_truncated;
 } cstr_fmt_result;
-
-__attribute__((unused)) static inline size_t
-cstr_fmt_result_non_null_len(cstr_fmt_result *res) {
-    return res->len - (res->has_null ? 1 : 0);
-}
 
 cstr_fmt_result cstr_fmt_va(
     char *restrict dest,

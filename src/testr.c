@@ -206,9 +206,7 @@ void test_suite_report_pretty(test_suite_report *report, int fd) {
         if (!fmt_res.ok) {
             panic();
         }
-        io_res = io_write_all_sync(
-            fd, msg_buffer, cstr_fmt_result_non_null_len(&fmt_res), 0
-        );
+        io_res = io_write_all_sync(fd, msg_buffer, fmt_res.len, 0);
         if (io_res.err_code) {
             panic();
         }
@@ -227,9 +225,7 @@ void test_suite_report_pretty(test_suite_report *report, int fd) {
                 if (!fmt_res.ok) {
                     panic();
                 }
-                io_res = io_write_all_sync(
-                    fd, msg_buffer, cstr_fmt_result_non_null_len(&fmt_res), 0
-                );
+                io_res = io_write_all_sync(fd, msg_buffer, fmt_res.len, 0);
                 if (io_res.err_code) {
                     panic();
                 }
@@ -277,6 +273,7 @@ int test_main(
     // init report
     test_suite_report report = {
         .asserts_handle = &asserts_handle,
+        .logs = &logs,
         .test_reports = alloc_new(&std_allocator, test_report, test_count),
         .test_count = test_count,
         .tests_passed = 0,

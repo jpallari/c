@@ -375,42 +375,42 @@ void test_cstr_fmt(test *t) {
     cstr_fmt_result res;
 
     len = cstr_fmt_len("string: %s; int: %d", "hello", -4);
-    assert_eq_uint(t, len, 23, "1: fmt len");
+    assert_eq_uint(t, len, 22, "1: fmt len");
     res = cstr_fmt(buf, sizeof(buf), "string: %s; int: %d", "hello", -4);
     assert_eq_cstr(t, "string: hello; int: -4", buf, "1: fmt contents");
-    assert_eq_uint(t, res.len, 23, "1: fmt content len");
+    assert_eq_uint(t, res.len, 22, "1: fmt content len");
     assert_eq_sint(t, res.ok, 1, "1: ok");
 
     len = cstr_fmt_len("literal: %%; ullong: %llu", 123UL);
-    assert_eq_uint(t, len, 24, "2: fmt len");
+    assert_eq_uint(t, len, 23, "2: fmt len");
     res = cstr_fmt(buf, sizeof(buf), "literal: %%; ullong: %llu", 123UL);
     assert_eq_cstr(t, "literal: %; ullong: 123", buf, "2: fmt contents");
-    assert_eq_uint(t, res.len, 24, "2: fmt content len");
+    assert_eq_uint(t, res.len, 23, "2: fmt content len");
     assert_eq_sint(t, res.ok, 1, "2: ok");
 
     len = cstr_fmt_len("uint: %u; llong: %lld", 98, -12345L);
-    assert_eq_uint(t, len, 24, "3: fmt len");
+    assert_eq_uint(t, len, 23, "3: fmt len");
     res = cstr_fmt(buf, sizeof(buf), "uint: %u; llong: %lld", 98, -12345L);
     assert_eq_cstr(t, "uint: 98; llong: -12345", buf, "3: fmt contents");
-    assert_eq_uint(t, res.len, 24, "3: fmt content len");
+    assert_eq_uint(t, res.len, 23, "3: fmt content len");
     assert_eq_sint(t, res.ok, 1, "3: ok");
 
     len = cstr_fmt_len("float: %.2f; double: %.4f", 2.456f, 123.456789);
-    assert_eq_uint(t, len, 30, "4: fmt len");
+    assert_eq_uint(t, len, 29, "4: fmt len");
     res = cstr_fmt(
         buf, sizeof(buf), "float: %.2f; double: %.4f", 2.456f, 123.456789
     );
     assert_eq_cstr(t, "float: 2.46; double: 123.4568", buf, "4: fmt contents");
-    assert_eq_uint(t, res.len, 30, "4: fmt content len");
+    assert_eq_uint(t, res.len, 29, "4: fmt content len");
     assert_eq_sint(t, res.ok, 1, "4: ok");
 
     len = cstr_fmt_len("string: %*s; char: %c", 5, "hello world", 'x');
-    assert_eq_uint(t, len, 23, "5: fmt len");
+    assert_eq_uint(t, len, 22, "5: fmt len");
     res = cstr_fmt(
         buf, sizeof(buf), "string: %*s; char: %c", 5, "hello world", 'x'
     );
     assert_eq_cstr(t, "string: hello; char: x", buf, "5: fmt contents");
-    assert_eq_uint(t, res.len, 23, "5: fmt content len");
+    assert_eq_uint(t, res.len, 22, "5: fmt content len");
     assert_eq_sint(t, res.ok, 1, "5: ok");
 }
 
