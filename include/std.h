@@ -1021,7 +1021,7 @@ typedef struct {
     bool is_truncated;
 } cstr_fmt_result;
 
-cstr_fmt_result cstr_fmt2_va(
+cstr_fmt_result cstr_fmt_va(
     char *restrict dest,
     size_t len,
     const char *restrict format,
@@ -1029,21 +1029,21 @@ cstr_fmt_result cstr_fmt2_va(
 );
 
 __attribute__((unused)) static inline cstr_fmt_result
-cstr_fmt2(char *restrict dest, size_t len, const char *restrict format, ...) {
+cstr_fmt(char *restrict dest, size_t len, const char *restrict format, ...) {
     va_list va_args;
     va_start(va_args, format);
-    cstr_fmt_result res = cstr_fmt2_va(dest, len, format, va_args);
+    cstr_fmt_result res = cstr_fmt_va(dest, len, format, va_args);
     va_end(va_args);
     return res;
 }
 
-size_t cstr_fmt2_len_va(const char *restrict format, va_list va_args);
+size_t cstr_fmt_len_va(const char *restrict format, va_list va_args);
 
 __attribute__((unused)) static inline size_t
-cstr_fmt2_len(const char *restrict format, ...) {
+cstr_fmt_len(const char *restrict format, ...) {
     va_list va_args;
     va_start(va_args, format);
-    size_t bytes_written = cstr_fmt2_len_va(format, va_args);
+    size_t bytes_written = cstr_fmt_len_va(format, va_args);
     va_end(va_args);
     return bytes_written;
 }

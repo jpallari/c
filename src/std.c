@@ -1362,7 +1362,7 @@ size_t cstr_len_double(double src, uint decimals) {
     return len;
 }
 
-cstr_fmt_result cstr_fmt2_va(
+cstr_fmt_result cstr_fmt_va(
     char *restrict dest,
     size_t len,
     const char *restrict format,
@@ -1489,7 +1489,7 @@ cstr_fmt_result cstr_fmt2_va(
     return res;
 }
 
-size_t cstr_fmt2_len_va(const char *restrict format, va_list va_args) {
+size_t cstr_fmt_len_va(const char *restrict format, va_list va_args) {
     assert(format && "format must not be null");
 
     if (!format) {
