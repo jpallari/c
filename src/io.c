@@ -37,7 +37,8 @@ io_result os_read_all(int fd, uchar *buffer, size_t len, size_t chunk_len) {
     return res;
 }
 
-io_result io_write_all_sync(int fd, const void *buffer, size_t len, size_t chunk_len) {
+io_result
+io_write_all_sync(int fd, const void *buffer, size_t len, size_t chunk_len) {
     assert(buffer && "buffer may not be null");
 
     const uchar *buf_ = buffer;
@@ -147,11 +148,79 @@ end:
     return res;
 }
 
-bytesink_result io_file_bytesink_fn(void *context, const uchar *bytes, size_t len) {
+bytesink_result
+io_file_bytesink_fn(void *context, const uchar *bytes, size_t len) {
     io_file_bytesink_context *ctx = (io_file_bytesink_context *)context;
     bytesink_result res;
     io_result io_res = io_write_all_sync(ctx->fd, bytes, len, ctx->chunk_size);
     res.len = io_res.len;
     res.err_code = io_res.err_code;
     return res;
+}
+
+//////////////////////////////
+// STDOUT & STDERR (blocking)
+//////////////////////////////
+
+static uchar io_stdout_byte_buffer[JP_IO_STDOUT_BUF_SIZE];
+static uchar io_stderr_byte_buffer[JP_IO_STDERR_BUF_SIZE];
+static io_file_bytesink_context io_stdout_bytesink_context = {
+    .fd = STDOUT_FILENO,
+    .chunk_size = 0,
+};
+static io_file_bytesink_context io_stderr_bytesink_context = {
+    .fd = STDERR_FILENO,
+    .chunk_size = 0,
+};
+static bufstream io_stdout_bufstream = {
+    .buffer = io_stdout_byte_buffer,
+    .len = 0,
+    .cap = sizeof(io_stdout_byte_buffer),
+    .sink = (bytesink) {
+        .context = &io_stdout_bytesink_context,
+        .fn = io_file_bytesink_fn,
+    },
+};
+static bufstream io_stderr_bufstream = {
+    .buffer = io_stderr_byte_buffer,
+    .len = 0,
+    .cap = sizeof(io_stderr_byte_buffer),
+    .sink = (bytesink) {
+        .context = &io_stderr_bytesink_context,
+        .fn = io_file_bytesink_fn,
+    },
+};
+
+bufstream_write_result io_stdout_write_str(const char *src, size_t len) {
+    return bufstream_write(&io_stdout_bufstream, (const uchar *)src, len);
+}
+
+bufstream_write_result io_stderr_write_str(const char *src, size_t len) {
+    return bufstream_write(&io_stderr_bufstream, (const uchar *)src, len);
+}
+
+bufstream_write_result io_stdout_fmt(const char *restrict format, ...) {
+    va_list va_args;
+    va_start(va_args, format);
+    bufstream_write_result res =
+        bufstream_fmt_va(&io_stdout_bufstream, format, va_args);
+    va_end(va_args);
+    return res;
+}
+
+bufstream_write_result io_stderr_fmt(const char *restrict format, ...) {
+    va_list va_args;
+    va_start(va_args, format);
+    bufstream_write_result res =
+        bufstream_fmt_va(&io_stderr_bufstream, format, va_args);
+    va_end(va_args);
+    return res;
+}
+
+bytesink_result io_stdout_flush(void) {
+    return bufstream_flush(&io_stdout_bufstream);
+}
+
+bytesink_result io_stderr_flush(void) {
+    return bufstream_flush(&io_stderr_bufstream);
 }
