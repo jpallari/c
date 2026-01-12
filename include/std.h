@@ -478,6 +478,14 @@ void slice_copy(slice dest, const slice src);
 void slice_move(slice dest, const slice src);
 
 /**
+ * Create a const slice from a null terminated string
+ *
+ * @param str null terminated string
+ * @returns a new slice pointing to the given string
+ */
+slice_const slice_const_from_cstr_unsafe(const char *str);
+
+/**
  * Create a slice from a null terminated string
  *
  * @param str null terminated string

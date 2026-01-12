@@ -102,6 +102,13 @@ void slice_move(slice dest, const slice src) {
     bytes_move(dest.buffer, src.buffer, amount);
 }
 
+slice_const slice_const_from_cstr_unsafe(const char *str) {
+    slice_const slice = {0};
+    slice.buffer = (const uchar *)str;
+    slice.len = cstr_len_unsafe(str);
+    return slice;
+}
+
 slice slice_from_cstr_unsafe(char *str) {
     slice slice = {0};
     slice.buffer = (uchar *)str;
