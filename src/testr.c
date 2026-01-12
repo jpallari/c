@@ -1,5 +1,6 @@
 #include "testr.h"
 #include "io.h"
+#include "std.h"
 #include <stdarg.h>
 #include <stddef.h>
 #include <unistd.h>
@@ -147,7 +148,95 @@ bool test_report_append_formatted_uint(
     return test_report_append(t, passed, buffer, fmt_res.len + 1, file, line);
 }
 
-void test_suite_report_pretty(test_suite_report *report, int fd) {
+static int test_suite_report_tap(test_suite_report *report, int fd) {
+    assert(report && "test suite report must not be null");
+    char txt_buf[4096];
+    cstr_fmt_result fmt_res;
+    io_result io_res;
+
+    // header
+    fmt_res = cstr_fmt(
+        txt_buf, sizeof(txt_buf), "TAP version 14\n1..%u\n", report->test_count
+    );
+    if (!fmt_res.ok) {
+        return -4;
+    }
+    io_res = io_write_all_sync(fd, txt_buf, fmt_res.len, 0);
+    if (io_res.err_code) {
+        return io_res.err_code;
+    }
+
+    const bytebuf *logs = report->logs;
+    for (ullong i = 0; i < report->test_count; i += 1) {
+        test_report tr = report->test_reports[i];
+
+        // sub test header
+        fmt_res =
+            cstr_fmt(txt_buf, sizeof(txt_buf), "# Subtest: %s\n", tr.name);
+        if (!fmt_res.ok) {
+            return -4;
+        }
+        io_res = io_write_all_sync(fd, txt_buf, fmt_res.len, 0);
+        if (io_res.err_code) {
+            return io_res.err_code;
+        }
+
+        // nr of sub-tests
+        fmt_res =
+            cstr_fmt(txt_buf, sizeof(txt_buf), "    1..%u\n", tr.assert_count);
+        if (!fmt_res.ok) {
+            return -4;
+        }
+        io_res = io_write_all_sync(fd, txt_buf, fmt_res.len, 0);
+        if (io_res.err_code) {
+            return io_res.err_code;
+        }
+
+        // asserts as sub-tests
+        for (uint j = 0; j < tr.assert_count; j += 1) {
+            test_assert ar = tr.asserts[j];
+            const char *status = "ok";
+            if (!ar.passed) {
+                status = "not ok";
+            }
+            fmt_res = cstr_fmt(
+                txt_buf,
+                sizeof(txt_buf),
+                "    %s %u - %s\n",
+                status,
+                j + 1,
+                &(logs->buffer[ar.logs_offset])
+            );
+            if (!fmt_res.ok) {
+                return -4;
+            }
+            io_res = io_write_all_sync(fd, txt_buf, fmt_res.len, 0);
+            if (io_res.err_code) {
+                return io_res.err_code;
+            }
+        }
+
+        // test status
+        const char *status = "ok";
+        if (tr.asserts_passed < tr.assert_count) {
+            status = "not ok";
+        }
+        fmt_res = cstr_fmt(
+            txt_buf, sizeof(txt_buf), "%s %lu - %s\n", status, i + 1, tr.name
+        );
+        if (!fmt_res.ok) {
+            return -4;
+        }
+        io_res = io_write_all_sync(fd, txt_buf, fmt_res.len, 0);
+        if (io_res.err_code) {
+            return io_res.err_code;
+        }
+    }
+
+    return 0;
+}
+
+static bool test_suite_report_pretty(test_suite_report *report, int fd) {
     assert(report && "test suite report must not be null");
 
     const char *color_ok = "\x1B[32m";
@@ -167,9 +256,9 @@ void test_suite_report_pretty(test_suite_report *report, int fd) {
     if (!report->test_count) {
         io_res = io_write_str_sync(fd, "No tests executed\n");
         if (io_res.err_code) {
-            panic();
+            return 0;
         }
-        return;
+        return 1;
     }
 
     const bytebuf *logs = report->logs;
@@ -204,11 +293,11 @@ void test_suite_report_pretty(test_suite_report *report, int fd) {
             color_reset
         );
         if (!fmt_res.ok) {
-            panic();
+            return 0;
         }
         io_res = io_write_all_sync(fd, msg_buffer, fmt_res.len, 0);
         if (io_res.err_code) {
-            panic();
+            return 0;
         }
 
         for (uint j = 0; j < tr.assert_count; j += 1) {
@@ -220,18 +309,20 @@ void test_suite_report_pretty(test_suite_report *report, int fd) {
                     "    %s:%d: %s\n",
                     ar.file,
                     ar.line,
-                    (const uchar *)(&(logs->buffer[ar.logs_offset]))
+                    &(logs->buffer[ar.logs_offset])
                 );
                 if (!fmt_res.ok) {
-                    panic();
+                    return 0;
                 }
                 io_res = io_write_all_sync(fd, msg_buffer, fmt_res.len, 0);
                 if (io_res.err_code) {
-                    panic();
+                    return 0;
                 }
             }
         }
     }
+
+    return 1;
 }
 
 int test_main(
@@ -241,7 +332,7 @@ int test_main(
     uint test_count,
     test_case *test_cases
 ) {
-    int log_fd = STDERR_FILENO;
+    int ret_val = 0;
 
     // settings
     const char *no_color = getenv("NO_COLOR");
@@ -339,12 +430,23 @@ int test_main(
         setup->after_all();
     }
 
-    test_suite_report_pretty(&report, log_fd);
+    int fail_count = (int)(report.test_count - report.tests_passed);
+    if (fail_count > 0) {
+        ret_val = 1; // Tests failed
+    }
 
+    if (!test_suite_report_pretty(&report, STDERR_FILENO)) {
+        ret_val = 2; // IO error
+    }
+    int err_code = test_suite_report_tap(&report, STDOUT_FILENO);
+    if (err_code) {
+        ret_val = 2; // IO error
+    }
+
+    // free all
     alloc_free(&std_allocator, report.test_reports);
     dynarr_free(asserts_handle.asserts);
     bytebuf_free(&logs);
 
-    int fail_count = (int)(report.test_count - report.tests_passed);
-    return fail_count;
+    return ret_val;
 }
