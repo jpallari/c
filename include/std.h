@@ -1116,6 +1116,23 @@ __attribute__((unused)) static inline bool bytebuf_is_growable(bytebuf *bbuf) {
     return bbuf && (bbuf->allocator != NULL);
 }
 
+__attribute__((unused)) static inline void bytebuf_clear(bytebuf *bbuf) {
+    bbuf->len = 0;
+}
+
+__attribute__((unused)) static inline void
+bytebuf_clear_last(bytebuf *bbuf, size_t len) {
+    if (bbuf->len > len) {
+        bbuf->len -= len;
+    }
+    bbuf->len = 0;
+}
+
+__attribute__((unused)) static inline size_t
+bytebuf_bytes_available(bytebuf *bbuf) {
+    return bbuf->cap - bbuf->len;
+}
+
 void bytebuf_free(bytebuf *bbuf);
 
 bool bytebuf_grow(bytebuf *bbuf, size_t capacity_increase);
@@ -1125,13 +1142,6 @@ bytebuf bytebuf_clone(bytebuf *bbuf, size_t capacity_increase);
 bool bytebuf_write(bytebuf *bbuf, const uchar *src, size_t len);
 
 bool bytebuf_write_grow(bytebuf *bbuf, const uchar *src, size_t len);
-
-void bytebuf_clear(bytebuf *bbuf);
-
-__attribute__((unused)) static inline size_t
-bytebuf_bytes_available(bytebuf *bbuf) {
-    return bbuf->cap - bbuf->len;
-}
 
 size_t bytebuf_write_int(bytebuf *bbuf, int src);
 size_t bytebuf_write_uint(bytebuf *bbuf, uint src);
