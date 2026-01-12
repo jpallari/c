@@ -1355,6 +1355,188 @@ size_t cstr_len_double(double src, uint decimals) {
     return len;
 }
 
+cstr_fmt_result cstr_fmt2_va(
+    char *restrict dest,
+    size_t len,
+    const char *restrict format,
+    va_list va_args
+) {
+    assert(dest && "dest must not be null");
+    assert(len > 0 && "len must be higher than 0");
+    assert(format && "format must not be null");
+
+    cstr_fmt_result res = {
+        .ok = 1,
+        .len = 0,
+        .is_truncated = 0,
+    };
+    size_t bytes_written = 0;
+
+    if (!format || !len) {
+        res.ok = 0;
+        return res;
+    }
+
+    slice_const s;
+    size_t field_bytes = 0;
+    cstr_fmt_float fmt_float;
+    while (res.ok && bytes_written < len && *format != '\0') {
+        switch (*format) {
+        case 'c':
+            dest[bytes_written] = (char)va_arg(va_args, int);
+            field_bytes = 1;
+            break;
+        case 's':
+            s = va_arg(va_args, slice_const);
+            field_bytes = min(s.len, len - bytes_written);
+            bytes_copy(dest + bytes_written, s.buffer, field_bytes);
+            res.ok = s.len <= len - bytes_written;
+            break;
+        case 'h':
+            s = va_arg(va_args, slice_const);
+            field_bytes = min(s.len, len - bytes_written);
+            bytes_to_hex((uchar *)dest + bytes_written, s.buffer, field_bytes);
+            res.ok = s.len <= len - bytes_written;
+            break;
+        case 'f':
+            fmt_float.v = va_arg(va_args, double);
+            fmt_float.precision = 6;
+            field_bytes = cstr_from_double(
+                dest + bytes_written,
+                len - bytes_written,
+                fmt_float.v,
+                fmt_float.precision
+            );
+            if (field_bytes == 0) {
+                res.ok = 0;
+            }
+            break;
+        case 'F':
+            fmt_float = va_arg(va_args, cstr_fmt_float);
+            field_bytes = cstr_from_double(
+                dest + bytes_written,
+                len - bytes_written,
+                fmt_float.v,
+                fmt_float.precision
+            );
+            if (field_bytes == 0) {
+                res.ok = 0;
+            }
+            break;
+        case 'i':
+            field_bytes = cstr_from_int(
+                dest + bytes_written, len - bytes_written, va_arg(va_args, int)
+            );
+            if (field_bytes == 0) {
+                res.ok = 0;
+            }
+            break;
+        case 'u':
+            field_bytes = cstr_from_uint(
+                dest + bytes_written, len - bytes_written, va_arg(va_args, uint)
+            );
+            if (field_bytes == 0) {
+                res.ok = 0;
+            }
+            break;
+        case 'I':
+            field_bytes = cstr_from_llong(
+                dest + bytes_written,
+                len - bytes_written,
+                va_arg(va_args, llong)
+            );
+            if (field_bytes == 0) {
+                res.ok = 0;
+            }
+            break;
+        case 'U':
+            field_bytes = cstr_from_ullong(
+                dest + bytes_written,
+                len - bytes_written,
+                va_arg(va_args, ullong)
+            );
+            if (field_bytes == 0) {
+                res.ok = 0;
+            }
+            break;
+        default:
+            dest[bytes_written] = *format;
+            field_bytes = 1;
+            break;
+        }
+        bytes_written += field_bytes;
+        format += 1;
+    }
+
+    // null termination
+    if (bytes_written + 1 < len) {
+        // null termination is not included in length
+        dest[bytes_written] = '\0';
+    } else {
+        // always null terminate
+        dest[len - 1] = '\0';
+        bytes_written -= 1;
+        res.ok = 0; // truncated
+    }
+
+    res.len = bytes_written;
+    return res;
+}
+
+size_t cstr_fmt2_len_va(const char *restrict format, va_list va_args) {
+    assert(format && "format must not be null");
+
+    if (!format) {
+        return 0;
+    }
+
+    slice_const s;
+    size_t len = 0;
+    cstr_fmt_float fmt_float;
+    while (*format != '\0') {
+        switch (*format) {
+        case 'c':
+            len += 1;
+            break;
+        case 's':
+            s = va_arg(va_args, slice_const);
+            len += s.len;
+            break;
+        case 'h':
+            s = va_arg(va_args, slice_const);
+            len += s.len * 2;
+            break;
+        case 'f':
+            fmt_float.v = va_arg(va_args, double);
+            fmt_float.precision = 6;
+            len += cstr_len_double(fmt_float.v, fmt_float.precision);
+            break;
+        case 'F':
+            fmt_float = va_arg(va_args, cstr_fmt_float);
+            len += cstr_len_double(fmt_float.v, fmt_float.precision);
+            break;
+        case 'i':
+            len += cstr_len_int(va_arg(va_args, int));
+            break;
+        case 'u':
+            len += cstr_len_uint(va_arg(va_args, uint));
+            break;
+        case 'I':
+            len += cstr_len_llong(va_arg(va_args, llong));
+            break;
+        case 'U':
+            len += cstr_len_ullong(va_arg(va_args, ullong));
+            break;
+        default:
+            len += 1;
+            break;
+        }
+        format += 1;
+    }
+
+    return len;
+}
+
 typedef enum {
     cstr_fmt_field_type_unknown,
     cstr_fmt_field_type_literal,
