@@ -2085,7 +2085,7 @@ size_t bytebuf_write_float(bytebuf *bbuf, float src, uint decimals) {
         }
     }
 
-    cstr_from_real_parts_to_buf(&parts, (char *)bbuf->buffer);
+    cstr_from_real_parts_to_buf(&parts, (char *)bbuf->buffer + bbuf->len);
     bbuf->len += bytes_to_write;
     return bytes_to_write;
 }
@@ -2114,7 +2114,7 @@ size_t bytebuf_write_double(bytebuf *bbuf, double src, uint decimals) {
         }
     }
 
-    cstr_from_real_parts_to_buf(&parts, (char *)bbuf->buffer);
+    cstr_from_real_parts_to_buf(&parts, (char *)bbuf->buffer + bbuf->len);
     bbuf->len += bytes_to_write;
     return bytes_to_write;
 }
