@@ -1375,7 +1375,6 @@ cstr_fmt_result cstr_fmt2_va(
     cstr_fmt_result res = {
         .ok = 1,
         .len = 0,
-        .is_truncated = 0,
     };
     size_t bytes_written = 0;
 
@@ -1399,10 +1398,10 @@ cstr_fmt_result cstr_fmt2_va(
             bytes_copy(dest + bytes_written, s.buffer, field_bytes);
             res.ok = s.len <= len - bytes_written;
             break;
-        case 'h':
-            s = va_arg(va_args, slice_const);
+        case 'S':
+            s = slice_const_from_cstr_unsafe(va_arg(va_args, char *));
             field_bytes = min(s.len, len - bytes_written);
-            bytes_to_hex((uchar *)dest + bytes_written, s.buffer, field_bytes);
+            bytes_copy(dest + bytes_written, s.buffer, field_bytes);
             res.ok = s.len <= len - bytes_written;
             break;
         case 'f':
@@ -1509,9 +1508,9 @@ size_t cstr_fmt2_len_va(const char *restrict format, va_list va_args) {
             s = va_arg(va_args, slice_const);
             len += s.len;
             break;
-        case 'h':
-            s = va_arg(va_args, slice_const);
-            len += s.len * 2;
+        case 'S':
+            s = slice_const_from_cstr_unsafe(va_arg(va_args, char *));
+            len += s.len;
             break;
         case 'f':
             fmt_float.v = va_arg(va_args, double);
