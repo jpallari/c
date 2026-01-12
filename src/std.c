@@ -1993,37 +1993,20 @@ bool bytebuf_write(bytebuf *bbuf, const uchar *src, size_t len) {
     if (!src || len == 0) {
         return 1; // nothing to write
     }
-    if (len > bbuf->cap - bbuf->len) {
-        return 0; // no capacity left
-    }
-    bytes_copy(bbuf->buffer + bbuf->len, src, len);
-    bbuf->len += len;
-    return 1;
-}
-
-bool bytebuf_write_grow(bytebuf *bbuf, const uchar *src, size_t len) {
-    assert(bbuf && "bytebuf must not be null");
-    assert(bbuf->buffer && "bytebuf's buffer must not be null");
-    assert(src && "source must not be null");
-    assert(len > 0 && "length must be more than 0");
-
-    if (!src || len == 0) {
-        return 1; // nothing to write
-    }
-    if (len > bbuf->cap - bbuf->len) {
-        size_t capacity_increase = bbuf->cap + len;
-        bool ok = bytebuf_grow(bbuf, capacity_increase);
-        if (!ok) {
-            return 0; // grow failed
+    if (len > bytebuf_bytes_available(bbuf)) {
+        if (bytebuf_is_growable(bbuf)) {
+            size_t capacity_increase = bbuf->cap + len;
+            bool ok = bytebuf_grow(bbuf, capacity_increase);
+            if (!ok) {
+                return 0; // grow failed
+            }
+        } else {
+            return 0; // no capacity left
         }
     }
     bytes_copy(bbuf->buffer + bbuf->len, src, len);
     bbuf->len += len;
     return 1;
-}
-
-void bytebuf_clear(bytebuf *bbuf) {
-    bbuf->len = 0;
 }
 
 size_t bytebuf_write_int(bytebuf *bbuf, int src) {
@@ -2082,11 +2065,6 @@ size_t bytebuf_write_float(bytebuf *bbuf, float src, uint decimals) {
     assert(bbuf && "bbuf must not be null");
     assert(bbuf->buffer && "bytebuf's buffer must not be null");
 
-    size_t bytes_available = bytebuf_bytes_available(bbuf);
-    if (bytes_available < 3) {
-        return 0;
-    }
-
     char integer_cstr[32];
     char fractional_cstr[32];
     struct cstr_from_real_parts parts = {0};
@@ -2095,8 +2073,16 @@ size_t bytebuf_write_float(bytebuf *bbuf, float src, uint decimals) {
     cstr_from_float_parts(&parts, src, decimals);
     size_t bytes_to_write = cstr_from_real_parts_len(&parts);
 
-    if (bytes_to_write > bytes_available) {
-        return 0;
+    if (bytes_to_write > bytebuf_bytes_available(bbuf)) {
+        if (bytebuf_is_growable(bbuf)) {
+            size_t capacity_increase = bbuf->cap + bytes_to_write * 2;
+            bool ok = bytebuf_grow(bbuf, capacity_increase);
+            if (!ok) {
+                return 0; // grow failed
+            }
+        } else {
+            return 0; // no capacity left
+        }
     }
 
     cstr_from_real_parts_to_buf(&parts, (char *)bbuf->buffer);
@@ -2108,107 +2094,6 @@ size_t bytebuf_write_double(bytebuf *bbuf, double src, uint decimals) {
     assert(bbuf && "bbuf must not be null");
     assert(bbuf->buffer && "bytebuf's buffer must not be null");
 
-    size_t bytes_available = bytebuf_bytes_available(bbuf);
-    if (bytes_available < 3) {
-        return 0;
-    }
-
-    char integer_cstr[32];
-    char fractional_cstr[32];
-    struct cstr_from_real_parts parts = {0};
-    parts.integer_cursor = integer_cstr + sizeof(integer_cstr);
-    parts.fractional_cursor = fractional_cstr + sizeof(fractional_cstr);
-    cstr_from_double_parts(&parts, src, decimals);
-    size_t bytes_to_write = cstr_from_real_parts_len(&parts);
-
-    if (bytes_to_write > bytes_available) {
-        return 0;
-    }
-
-    cstr_from_real_parts_to_buf(&parts, (char *)bbuf->buffer);
-    bbuf->len += bytes_to_write;
-    return bytes_to_write;
-}
-
-size_t bytebuf_write_grow_int(bytebuf *bbuf, int src) {
-    assert(bbuf && "bbuf must not be null");
-    assert(bbuf->buffer && "bytebuf's buffer must not be null");
-
-    char tmp[16];
-    char *end = tmp + sizeof(tmp);
-    size_t bytes_to_copy = cstr_from_int_unsafe(end, src);
-    if (bytebuf_write_grow(bbuf, (uchar *)end - bytes_to_copy, bytes_to_copy)) {
-        return bytes_to_copy;
-    }
-    return 0;
-}
-
-size_t bytebuf_write_grow_uint(bytebuf *bbuf, uint src) {
-    assert(bbuf && "bbuf must not be null");
-    assert(bbuf->buffer && "bytebuf's buffer must not be null");
-
-    char tmp[16];
-    char *end = tmp + sizeof(tmp);
-    size_t bytes_to_copy = cstr_from_uint_unsafe(end, src);
-    if (bytebuf_write_grow(bbuf, (uchar *)end - bytes_to_copy, bytes_to_copy)) {
-        return bytes_to_copy;
-    }
-    return 0;
-}
-
-size_t bytebuf_write_grow_llong(bytebuf *bbuf, llong src) {
-    assert(bbuf && "bbuf must not be null");
-    assert(bbuf->buffer && "bytebuf's buffer must not be null");
-
-    char tmp[32];
-    char *end = tmp + sizeof(tmp);
-    size_t bytes_to_copy = cstr_from_llong_unsafe(end, src);
-    if (bytebuf_write_grow(bbuf, (uchar *)end - bytes_to_copy, bytes_to_copy)) {
-        return bytes_to_copy;
-    }
-    return 0;
-}
-
-size_t bytebuf_write_grow_ullong(bytebuf *bbuf, ullong src) {
-    assert(bbuf && "bbuf must not be null");
-    assert(bbuf->buffer && "bytebuf's buffer must not be null");
-
-    char tmp[32];
-    char *end = tmp + sizeof(tmp);
-    size_t bytes_to_copy = cstr_from_ullong_unsafe(end, src);
-    if (bytebuf_write_grow(bbuf, (uchar *)end - bytes_to_copy, bytes_to_copy)) {
-        return bytes_to_copy;
-    }
-    return 0;
-}
-
-size_t bytebuf_write_grow_float(bytebuf *bbuf, float src, uint decimals) {
-    assert(bbuf && "bbuf must not be null");
-    assert(bbuf->buffer && "bytebuf's buffer must not be null");
-
-    char integer_cstr[32];
-    char fractional_cstr[32];
-    struct cstr_from_real_parts parts = {0};
-    parts.integer_cursor = integer_cstr + sizeof(integer_cstr);
-    parts.fractional_cursor = fractional_cstr + sizeof(fractional_cstr);
-    cstr_from_float_parts(&parts, src, decimals);
-    size_t bytes_to_write = cstr_from_real_parts_len(&parts);
-
-    if (bytes_to_write > bytebuf_bytes_available(bbuf)) {
-        if (!bytebuf_grow(bbuf, bbuf->cap + bytes_to_write)) {
-            return 0;
-        }
-    }
-
-    cstr_from_real_parts_to_buf(&parts, (char *)bbuf->buffer);
-    bbuf->len += bytes_to_write;
-    return bytes_to_write;
-}
-
-size_t bytebuf_write_grow_double(bytebuf *bbuf, double src, uint decimals) {
-    assert(bbuf && "bbuf must not be null");
-    assert(bbuf->buffer && "bytebuf's buffer must not be null");
-
     char integer_cstr[32];
     char fractional_cstr[32];
     struct cstr_from_real_parts parts = {0};
@@ -2218,8 +2103,14 @@ size_t bytebuf_write_grow_double(bytebuf *bbuf, double src, uint decimals) {
     size_t bytes_to_write = cstr_from_real_parts_len(&parts);
 
     if (bytes_to_write > bytebuf_bytes_available(bbuf)) {
-        if (!bytebuf_grow(bbuf, bbuf->cap + bytes_to_write)) {
-            return 0;
+        if (bytebuf_is_growable(bbuf)) {
+            size_t capacity_increase = bbuf->cap + bytes_to_write * 2;
+            bool ok = bytebuf_grow(bbuf, capacity_increase);
+            if (!ok) {
+                return 0; // grow failed
+            }
+        } else {
+            return 0; // no capacity left
         }
     }
 

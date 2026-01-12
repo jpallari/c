@@ -1141,8 +1141,6 @@ bytebuf bytebuf_clone(bytebuf *bbuf, size_t capacity_increase);
 
 bool bytebuf_write(bytebuf *bbuf, const uchar *src, size_t len);
 
-bool bytebuf_write_grow(bytebuf *bbuf, const uchar *src, size_t len);
-
 size_t bytebuf_write_int(bytebuf *bbuf, int src);
 size_t bytebuf_write_uint(bytebuf *bbuf, uint src);
 size_t bytebuf_write_llong(bytebuf *bbuf, llong src);
@@ -1161,24 +1159,6 @@ bytebuf_write_str(bytebuf *bbuf, const char *str, size_t len) {
 #define bytebuf_write_sstr(bbuf, str) \
     bytebuf_write_str((bbuf), (str), lengthof(str))
 
-size_t bytebuf_write_grow_int(bytebuf *bbuf, int src);
-size_t bytebuf_write_grow_uint(bytebuf *bbuf, uint src);
-size_t bytebuf_write_grow_llong(bytebuf *bbuf, llong src);
-size_t bytebuf_write_grow_ullong(bytebuf *bbuf, ullong src);
-size_t bytebuf_write_grow_float(bytebuf *bbuf, float src, uint decimals);
-size_t bytebuf_write_grow_double(bytebuf *bbuf, double src, uint decimals);
-
-__attribute__((unused)) static inline size_t
-bytebuf_write_str_grow(bytebuf *bbuf, const char *str, size_t len) {
-    if (bytebuf_write_grow(bbuf, (const uchar *)str, len)) {
-        return len;
-    }
-    return 0;
-}
-
-#define bytebuf_write_grow_sstr(bbuf, str) \
-    bytebuf_write_grow_str((bbuf), (str), lengthof(str))
-
 cstr_fmt_result
 bytebuf_fmt_va(bytebuf *bbuf, const char *restrict format, va_list va_args);
 
@@ -1187,19 +1167,6 @@ bytebuf_fmt(bytebuf *bbuf, const char *restrict format, ...) {
     va_list va_args;
     va_start(va_args, format);
     cstr_fmt_result res = bytebuf_fmt_va(bbuf, format, va_args);
-    va_end(va_args);
-    return res;
-}
-
-cstr_fmt_result bytebuf_fmt_grow_va(
-    bytebuf *bbuf, const char *restrict format, va_list va_args
-);
-
-__attribute__((unused)) static inline cstr_fmt_result
-bytebuf_fmt_grow(bytebuf *bbuf, const char *restrict format, ...) {
-    va_list va_args;
-    va_start(va_args, format);
-    cstr_fmt_result res = bytebuf_fmt_grow_va(bbuf, format, va_args);
     va_end(va_args);
     return res;
 }
