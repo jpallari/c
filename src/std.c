@@ -1756,7 +1756,7 @@ void bytebuf_init_fixed(
     bytebuf *bbuf, uchar *buffer, size_t len, size_t capacity
 ) {
     assert(bbuf && "bytebuf must not be null");
-    bytes_set(&bbuf, 0, sizeof(*bbuf));
+    bytes_set(bbuf, 0, sizeof(*bbuf));
     bbuf->buffer = buffer;
     bbuf->len = len;
     bbuf->cap = capacity;
@@ -2135,7 +2135,6 @@ bufstream_write(bufstream *bstream, const uchar *src, size_t len) {
         if (bstream->cap == bstream->len) {
             bytesink_result bs_res = bufstream_flush(bstream);
             res.err_code = bs_res.err_code;
-            res.len += bs_res.len;
             if (res.err_code) {
                 return res;
             }

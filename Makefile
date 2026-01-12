@@ -39,6 +39,7 @@ CMD_FILES = \
 	$(CMD_DIR)/reals.c
 TEST_FILES = \
 	$(TEST_DIR)/arena.c \
+	$(TEST_DIR)/bufstream.c \
 	$(TEST_DIR)/bytes.c \
 	$(TEST_DIR)/cliargs.c \
 	$(TEST_DIR)/cstr.c \
@@ -163,12 +164,14 @@ $(RELEASE_DIR)/reals: $(RELEASE_CMD_OBJ_DIR)/reals.o $(RELEASE_OBJ_DIR)/io.o $(R
 
 test: \
 	$(DEBUG_TEST_REPORT_DIR)/arena.txt \
+	$(DEBUG_TEST_REPORT_DIR)/bufstream.txt \
 	$(DEBUG_TEST_REPORT_DIR)/bytes.txt \
 	$(DEBUG_TEST_REPORT_DIR)/cliargs.txt \
 	$(DEBUG_TEST_REPORT_DIR)/cstr.txt \
 	$(DEBUG_TEST_REPORT_DIR)/dynarr.txt \
 	$(DEBUG_TEST_REPORT_DIR)/slice.txt \
 	$(RELEASE_TEST_REPORT_DIR)/arena.txt \
+	$(RELEASE_TEST_REPORT_DIR)/bufstream.txt \
 	$(RELEASE_TEST_REPORT_DIR)/bytes.txt \
 	$(RELEASE_TEST_REPORT_DIR)/cliargs.txt \
 	$(RELEASE_TEST_REPORT_DIR)/cstr.txt \
@@ -183,6 +186,16 @@ $(DEBUG_TEST_DIR)/arena: $(DEBUG_TEST_DIR)/arena.o $(DEBUG_OBJ_DIR)/testr.o $(DE
 	@mkdir -p $(DEBUG_TEST_DIR)
 	$(CC) $(LDFLAGS) $(DEBUG_LDFLAGS) $^ -o $@
 $(DEBUG_TEST_REPORT_DIR)/arena.txt: $(DEBUG_TEST_DIR)/arena
+	@mkdir -p $(DEBUG_TEST_REPORT_DIR)
+	./$< $(TEST_FILTERS) > $@
+
+# Buffered stream (debug)
+$(DEBUG_TEST_DIR)/bufstream.o: $(TEST_DIR)/bufstream.c $(INCLUDE_DIR)/testr.h $(INCLUDE_DIR)/std.h
+	@mkdir -p $(DEBUG_TEST_DIR)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
+$(DEBUG_TEST_DIR)/bufstream: $(DEBUG_TEST_DIR)/bufstream.o $(DEBUG_OBJ_DIR)/testr.o $(DEBUG_OBJ_DIR)/std.o $(DEBUG_OBJ_DIR)/io.o
+	$(CC) $(LDFLAGS) $(DEBUG_LDFLAGS) $^ -o $@
+$(DEBUG_TEST_REPORT_DIR)/bufstream.txt: $(DEBUG_TEST_DIR)/bufstream
 	@mkdir -p $(DEBUG_TEST_REPORT_DIR)
 	./$< $(TEST_FILTERS) > $@
 
@@ -244,6 +257,16 @@ $(RELEASE_TEST_DIR)/arena: $(RELEASE_TEST_DIR)/arena.o $(RELEASE_OBJ_DIR)/testr.
 	@mkdir -p $(RELEASE_TEST_DIR)
 	$(CC) $(LDFLAGS) $(RELEASE_LDFLAGS) $^ -o $@
 $(RELEASE_TEST_REPORT_DIR)/arena.txt: $(RELEASE_TEST_DIR)/arena
+	@mkdir -p $(RELEASE_TEST_REPORT_DIR)
+	./$< $(TEST_FILTERS) > $@
+
+# Buffered stream (release)
+$(RELEASE_TEST_DIR)/bufstream.o: $(TEST_DIR)/bufstream.c $(INCLUDE_DIR)/testr.h $(INCLUDE_DIR)/std.h
+	@mkdir -p $(RELEASE_TEST_DIR)
+	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) -c $< -o $@
+$(RELEASE_TEST_DIR)/bufstream: $(RELEASE_TEST_DIR)/bufstream.o $(RELEASE_OBJ_DIR)/testr.o $(RELEASE_OBJ_DIR)/std.o $(RELEASE_OBJ_DIR)/io.o
+	$(CC) $(LDFLAGS) $(RELEASE_LDFLAGS) $^ -o $@
+$(RELEASE_TEST_REPORT_DIR)/bufstream.txt: $(RELEASE_TEST_DIR)/bufstream
 	@mkdir -p $(RELEASE_TEST_REPORT_DIR)
 	./$< $(TEST_FILTERS) > $@
 
