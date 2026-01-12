@@ -191,6 +191,14 @@ static bufstream io_stderr_bufstream = {
     },
 };
 
+bufstream *io_stdout_get(void) {
+    return &io_stdout_bufstream;
+}
+
+bufstream *io_stderr_get(void) {
+    return &io_stderr_bufstream;
+}
+
 bufstream_write_result io_stdout_write_str(const char *src, size_t len) {
     return bufstream_write(&io_stdout_bufstream, (const uchar *)src, len);
 }

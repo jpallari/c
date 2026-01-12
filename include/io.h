@@ -62,6 +62,8 @@ io_file_bytesink(io_file_bytesink_context *ctx) {
 #define JP_IO_STDERR_BUF_SIZE 1024
 #endif // JP_IO_STDERR_BUF_SIZE
 
+bufstream *io_stdout_get(void);
+bufstream *io_stderr_get(void);
 bufstream_write_result io_stdout_write_str(const char *src, size_t len);
 bufstream_write_result io_stderr_write_str(const char *src, size_t len);
 bufstream_write_result io_stdout_fmt(const char *restrict format, ...);

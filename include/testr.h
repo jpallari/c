@@ -17,7 +17,8 @@
 ////////////////////////
 
 typedef struct {
-    ullong logs_offset;
+    size_t logs_offset;
+    size_t logs_len; 
     const char *file;
     int line;
     bool passed;
