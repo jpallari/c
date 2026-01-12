@@ -32,19 +32,45 @@ void test_slice_equal(test *t) {
     assert_true(t, slice_eq(s1_1, s2_1), "equals with similar");
 }
 
-void test_slice_from(test *t) {
+void test_slice_from_arr(test *t) {
     char str[] = "hello world!";
     int arr[] = {100, 200, 300, 400};
-    slice s1 = slice_from(str);
-    slice s2 = slice_from(arr);
+    slice s1 = slice_arr(str);
+    slice s2 = slice_arr(arr);
 
     assert_eq_uint(t, s1.len, 13L, "s1 len must be size of string");
     assert_eq_uint(t, s2.len, sizeof(int) * 4, "s2 len must be size of array");
     assert_eq_cstr(
-        t, (char *)s1.buffer, "hello world!", "s1 contents should be the same"
+        t, (char *)s1.buffer, "hello world!", "s1 contents must be the same"
     );
     assert_eq_bytes(
-        t, s2.buffer, (uchar *)arr, s2.len, "s2 contents should be the same"
+        t, s2.buffer, (uchar *)arr, s2.len, "s2 contents must be the same"
+    );
+}
+
+void test_slice_from_static_cstr(test *t) {
+    slice_const s1 = slice_sstr("hello world!");
+
+    assert_eq_uint(t, s1.len, 12L, "s1 len must be length of string");
+    assert_eq_cstr(
+        t,
+        (const char *)s1.buffer,
+        "hello world!",
+        "s1 contents must be the same"
+    );
+}
+
+void test_slice_const_conversion(test *t) {
+    char text[] = "hello world!";
+    slice s_mut = slice_arr(text);
+    slice_const *s_const = (slice_const *)&s_mut;
+
+    assert_eq_uint(t, s_mut.len, s_const->len, "same length");
+    assert_eq_cstr(
+        t,
+        (const char *)s_mut.buffer,
+        (const char *)s_const->buffer,
+        "same text"
     );
 }
 
@@ -120,7 +146,9 @@ void test_slice_from_cstr_unsafe(test *t) {
 static test_case tests[] = {
     {"Slice span", test_slice_span},
     {"Slice equal", test_slice_equal},
-    {"Slice from", test_slice_from},
+    {"Slice from array", test_slice_from_arr},
+    {"Slice from static C-string", test_slice_from_static_cstr},
+    {"Slice const conversion", test_slice_const_conversion},
     {"Slice copy to larger", test_slice_copy_larger},
     {"Slice copy to smaller", test_slice_copy_smaller},
     {"Slice move overlapping", test_slice_move_overlapping},

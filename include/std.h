@@ -353,6 +353,21 @@ __attribute__((unused)) static inline void alloc_free(allocator *a, void *ptr) {
 ////////////////////////
 
 /**
+ * Immutable slice (aka fat pointer aka string)
+ */
+typedef struct {
+    /**
+     * Buffer containing the data
+     */
+    const uchar *buffer;
+
+    /**
+     * Length of the slice in bytes
+     */
+    size_t len;
+} slice_const;
+
+/**
  * Slice (aka fat pointer aka string)
  */
 typedef struct {
@@ -368,15 +383,58 @@ typedef struct {
 } slice;
 
 /**
- * Create a slice from an array or a static string
+ * Create a slice from an array
  *
- * @param x an array or a static string
+ * @param arr an array
  * @returns a new slice
  */
-#define slice_from(x) \
+#define slice_arr(arr) \
     (slice) { \
-        (uchar *)(x), sizeof(x) \
+        .buffer = (uchar *)(arr), .len = sizeof(arr), \
     }
+
+/**
+ * Create a slice from a static string
+ *
+ * @param str a static string
+ * @returns a new slice
+ */
+#define slice_sstr(str) \
+    (slice_const) { \
+        .buffer = (const uchar *)(str), .len = lengthof(str), \
+    }
+
+/**
+ * Create a slice from a pointer to a data and length
+ *
+ * @param buffer a pointer to data
+ * @param len length of the data
+ * @returns a new slice
+ */
+__attribute__((unused)) static inline slice
+slice_new(void *buffer, size_t len) {
+    slice s = {
+        .buffer = (uchar *)buffer,
+        .len = len,
+    };
+    return s;
+}
+
+/**
+ * Create a const slice from a pointer to a data and length
+ *
+ * @param buffer a pointer to data
+ * @param len length of the data
+ * @returns a new slice
+ */
+__attribute__((unused)) static inline slice_const
+slice_const_new(const void *buffer, size_t len) {
+    slice_const s = {
+        .buffer = (const uchar *)buffer,
+        .len = len,
+    };
+    return s;
+}
 
 /**
  * Create a slice from a span between two pointers
@@ -386,6 +444,14 @@ typedef struct {
  * @returns slice of data between the given pointers
  */
 slice slice_span(uchar *start, uchar *end);
+
+/**
+ * Check if two slices are equal
+ *
+ * @param a,b slices to compare
+ * @returns true when the slices are equal and false otherwise
+ */
+bool slice_const_eq(const slice_const a, const slice_const b);
 
 /**
  * Check if two slices are equal

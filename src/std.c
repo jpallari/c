@@ -78,6 +78,13 @@ slice slice_span(uchar *start, uchar *end) {
     return s;
 }
 
+bool slice_const_eq(const slice_const a, const slice_const b) {
+    if (a.len != b.len) {
+        return 0;
+    }
+    return bytes_eq(a.buffer, b.buffer, a.len);
+}
+
 bool slice_eq(const slice a, const slice b) {
     if (a.len != b.len) {
         return 0;
