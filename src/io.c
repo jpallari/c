@@ -147,7 +147,7 @@ end:
     return res;
 }
 
-bytesink_result io_file_bytesink(void *context, const uchar *bytes, size_t len) {
+bytesink_result io_file_bytesink_fn(void *context, const uchar *bytes, size_t len) {
     io_file_bytesink_context *ctx = (io_file_bytesink_context *)context;
     bytesink_result res;
     io_result io_res = io_write_all_sync(ctx->fd, bytes, len, ctx->chunk_size);

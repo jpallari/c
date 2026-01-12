@@ -38,6 +38,16 @@ typedef struct {
     size_t chunk_size;
 } io_file_bytesink_context;
 
-bytesink_result io_file_bytesink(void *context, const uchar *bytes, size_t len);
+bytesink_result
+io_file_bytesink_fn(void *context, const uchar *bytes, size_t len);
+
+__attribute__((unused)) static inline bytesink
+io_file_bytesink(io_file_bytesink_context *ctx) {
+    bytesink sink = {
+        .context = ctx,
+        .fn = io_file_bytesink_fn,
+    };
+    return sink;
+}
 
 #endif // JP_IO_H
