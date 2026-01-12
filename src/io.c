@@ -14,6 +14,9 @@ io_result os_read_all(int fd, uchar *buffer, size_t len, size_t chunk_len) {
 
     io_result res = {0};
 
+    if (len == 0) {
+        return res;
+    }
     if (chunk_len == 0) {
         chunk_len = len;
     }
@@ -36,11 +39,13 @@ io_result os_read_all(int fd, uchar *buffer, size_t len, size_t chunk_len) {
 
 io_result io_write_all_sync(int fd, const void *buffer, size_t len, size_t chunk_len) {
     assert(buffer && "buffer may not be null");
-    assert(len > 0 && "len must be > 0");
 
     const uchar *buf_ = buffer;
     io_result res = {0};
 
+    if (len == 0) {
+        return res;
+    }
     if (chunk_len == 0) {
         chunk_len = len;
     }
