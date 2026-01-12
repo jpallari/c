@@ -33,8 +33,6 @@ typedef struct {
 file_read_result file_read_sync(const char *filename, allocator *allocator);
 io_result file_write_sync(const char *filename, const void *data, size_t len);
 
-io_result bytebuf_flush_sync(bytebuf *bbuf, int fd, size_t chunk_size);
-
 typedef struct {
     int fd;
     size_t chunk_size;
