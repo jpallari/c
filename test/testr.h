@@ -1,10 +1,10 @@
 #ifndef JP_TESTR_H
 #define JP_TESTR_H
 
+#include "io.h"
 #include "std.h"
 #include <stdarg.h>
 #include <stddef.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -37,15 +37,11 @@ typedef struct {
 } test_assert;
 
 typedef struct {
-    uchar *logs; // dynamic array
-} logs_handle;
-
-typedef struct {
     test_assert *asserts; // dynamic array
 } asserts_handle;
 
 typedef struct {
-    logs_handle *logs_handle;
+    bytebuf *logs;
     asserts_handle *asserts_handle;
     uint assert_count;
     uint asserts_passed;
@@ -59,7 +55,7 @@ typedef struct {
 } test_report;
 
 typedef struct {
-    logs_handle *logs_handle;
+    bytebuf *logs;
     asserts_handle *asserts_handle;
     test_report *test_reports;
     uint test_count;
@@ -77,13 +73,10 @@ bool test_report_append(
     const int line
 ) {
     assert(t && "test report must not be null");
-    assert(t->logs_handle && "logs handle must not be null");
-    assert(t->logs_handle->logs && "logs storage must not be null");
-
-    ullong logs_offset = dynarr_len(t->logs_handle->logs);
+    assert(t->logs && "logs must not be null");
 
     test_assert assert_report = {
-        .logs_offset = logs_offset,
+        .logs_offset = t->logs->len,
         .passed = passed,
         .file = file,
         .line = line,
@@ -97,12 +90,9 @@ bool test_report_append(
         panic();
     }
 
-    uchar *next_logs = dynarr_push_grow(
-        t->logs_handle->logs, log_message, log_message_size, uchar
-    );
-    if (next_logs) {
-        t->logs_handle->logs = next_logs;
-    } else {
+    if (!bytebuf_write_grow(
+            t->logs, (const uchar *)log_message, log_message_size
+        )) {
         panic();
     }
 
@@ -128,14 +118,14 @@ bool test_report_append_formatted_cstr(
     const char *right
 ) {
     char buffer[1024] = {0};
-    int len = snprintf(
+    cstr_fmt_result fmt_res = cstr_fmt(
         buffer, sizeof(buffer), "%s %s %s // %s", left, cmp, right, log_message
     );
-    if (len < 0) {
+    if (!fmt_res.ok) {
         panic();
     }
-    buffer[len] = '\0';
-    return test_report_append(t, passed, buffer, (size_t)len + 1, file, line);
+    buffer[fmt_res.len] = '\0';
+    return test_report_append(t, passed, buffer, fmt_res.len + 1, file, line);
 }
 
 bool test_report_append_formatted_float(
@@ -149,14 +139,14 @@ bool test_report_append_formatted_float(
     const double right
 ) {
     char buffer[1024] = {0};
-    int len = snprintf(
+    cstr_fmt_result fmt_res = cstr_fmt(
         buffer, sizeof(buffer), "%f %s %f // %s", left, cmp, right, log_message
     );
-    if (len < 0) {
+    if (!fmt_res.ok) {
         panic();
     }
-    buffer[len] = '\0';
-    return test_report_append(t, passed, buffer, (size_t)len + 1, file, line);
+    buffer[fmt_res.len] = '\0';
+    return test_report_append(t, passed, buffer, fmt_res.len + 1, file, line);
 }
 
 bool test_report_append_formatted_int(
@@ -170,7 +160,7 @@ bool test_report_append_formatted_int(
     const llong right
 ) {
     char buffer[1024] = {0};
-    int len = snprintf(
+    cstr_fmt_result fmt_res = cstr_fmt(
         buffer,
         sizeof(buffer),
         "%lld %s %lld // %s",
@@ -179,11 +169,11 @@ bool test_report_append_formatted_int(
         right,
         log_message
     );
-    if (len < 0) {
+    if (!fmt_res.ok) {
         panic();
     }
-    buffer[len] = '\0';
-    return test_report_append(t, passed, buffer, (size_t)len + 1, file, line);
+    buffer[fmt_res.len] = '\0';
+    return test_report_append(t, passed, buffer, fmt_res.len + 1, file, line);
 }
 
 bool test_report_append_formatted_uint(
@@ -197,7 +187,7 @@ bool test_report_append_formatted_uint(
     const ullong right
 ) {
     char buffer[1024] = {0};
-    int len = snprintf(
+    cstr_fmt_result fmt_res = cstr_fmt(
         buffer,
         sizeof(buffer),
         "%llu %s %llu // %s",
@@ -206,14 +196,14 @@ bool test_report_append_formatted_uint(
         right,
         log_message
     );
-    if (len < 0) {
+    if (!fmt_res.ok) {
         panic();
     }
-    buffer[len] = '\0';
-    return test_report_append(t, passed, buffer, (size_t)len + 1, file, line);
+    buffer[fmt_res.len] = '\0';
+    return test_report_append(t, passed, buffer, fmt_res.len + 1, file, line);
 }
 
-void test_suite_report_pretty(test_suite_report *report, FILE *stream) {
+void test_suite_report_pretty(test_suite_report *report, int fd) {
     assert(report && "test suite report must not be null");
 
     const char *color_ok = "\x1B[32m";
@@ -229,13 +219,18 @@ void test_suite_report_pretty(test_suite_report *report, FILE *stream) {
         color_info = "";
     }
 
+    io_result io_res = {0};
     if (!report->test_count) {
-        fprintf(stream, "No tests executed");
+        io_res = io_write_str_sync(fd, "No tests executed\n");
+        if (io_res.err_code) {
+            panic();
+        }
         return;
     }
 
-    const uchar *logs = report->logs_handle->logs;
-
+    const bytebuf *logs = report->logs;
+    char msg_buffer[2048];
+    cstr_fmt_result fmt_res = {0};
     for (ullong i = 0; i < report->test_count; i += 1) {
         test_report tr = report->test_reports[i];
         const char *prefix = "";
@@ -250,9 +245,11 @@ void test_suite_report_pretty(test_suite_report *report, FILE *stream) {
             prefix = " OK ";
             color = color_ok;
         }
-        fprintf(
-            stream,
-            "%s[%s]%s %s %s(%d/%d passed)%s\n",
+
+        fmt_res = cstr_fmt(
+            msg_buffer,
+            sizeof(msg_buffer),
+            "%s[%s]%s %s %s(%u/%u passed)%s\n",
             color,
             prefix,
             color_reset,
@@ -262,16 +259,32 @@ void test_suite_report_pretty(test_suite_report *report, FILE *stream) {
             tr.assert_count,
             color_reset
         );
+        if (!fmt_res.ok) {
+            panic();
+        }
+        io_res = io_write_all_sync(fd, msg_buffer, fmt_res.len, 0);
+        if (io_res.err_code) {
+            panic();
+        }
+
         for (uint j = 0; j < tr.assert_count; j += 1) {
             test_assert ar = tr.asserts[j];
             if (!ar.passed || print_all_asserts) {
-                fprintf(
-                    stream,
+                fmt_res = cstr_fmt(
+                    msg_buffer,
+                    sizeof(msg_buffer),
                     "    %s:%d: %s\n",
                     ar.file,
                     ar.line,
-                    (const unsigned char *)(&(logs[ar.logs_offset]))
+                    (const uchar *)(&(logs->buffer[ar.logs_offset]))
                 );
+                if (!fmt_res.ok) {
+                    panic();
+                }
+                io_res = io_write_all_sync(fd, msg_buffer, fmt_res.len, 0);
+                if (io_res.err_code) {
+                    panic();
+                }
             }
         }
     }
@@ -302,7 +315,7 @@ int test_main(
     uint test_count,
     test_case *test_cases
 ) {
-    FILE *stream = stderr;
+    int log_fd = STDERR_FILENO;
 
     // settings
     const char *no_color = getenv("NO_COLOR");
@@ -321,12 +334,7 @@ int test_main(
     }
 
     // buffer to back logs
-    logs_handle logs_handle = {
-        .logs = dynarr_new(4096, uchar, &std_allocator),
-    };
-    if (!logs_handle.logs) {
-        panic();
-    }
+    bytebuf logs = bytebuf_new(4096, &std_allocator);
 
     // buffer to back assert data
     asserts_handle asserts_handle = {
@@ -338,7 +346,6 @@ int test_main(
 
     // init report
     test_suite_report report = {
-        .logs_handle = &logs_handle,
         .asserts_handle = &asserts_handle,
         .test_reports = alloc_new(&std_allocator, test_report, test_count),
         .test_count = test_count,
@@ -363,7 +370,7 @@ int test_main(
             &asserts_handle.asserts[dynarr_len(asserts_handle.asserts)];
 
         test t = {
-            .logs_handle = &logs_handle,
+            .logs = &logs,
             .asserts_handle = &asserts_handle,
             .assert_count = 0,
             .asserts_passed = 0,
@@ -405,11 +412,11 @@ int test_main(
         setup->after_all();
     }
 
-    test_suite_report_pretty(&report, stream);
+    test_suite_report_pretty(&report, log_fd);
 
     alloc_free(&std_allocator, report.test_reports);
     dynarr_free(asserts_handle.asserts);
-    dynarr_free(logs_handle.logs);
+    bytebuf_free(&logs);
 
     int fail_count = (int)(report.test_count - report.tests_passed);
     return fail_count;
