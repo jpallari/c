@@ -2258,7 +2258,6 @@ bufstream_write(bufstream *bstream, const uchar *src, size_t len) {
     assert(bstream && "bstream must not be null");
     assert(bstream->buffer && "bstream's buffer must not be null");
     assert(src && "source must not be null");
-    assert(len > 0 && "length must be more than 0");
     assert(bstream->sink.fn && "sink fn must not be null");
 
     bufstream_write_result res = {0};
