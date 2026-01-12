@@ -45,9 +45,9 @@ int main(int argc, char **argv) {
         bool ok = 0;
 
         if (mode == 2) {
-            ok = cstr_to_float((char *)s.buffer, s.len, &f);
+            ok = cstr_to_float((char *)s.buffer, s.len, &f) > 0;
         } else {
-            ok = cstr_to_double((char *)s.buffer, s.len, &d);
+            ok = cstr_to_double((char *)s.buffer, s.len, &d) > 0;
         }
 
         if (ok && mode == 2) {

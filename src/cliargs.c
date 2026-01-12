@@ -90,19 +90,19 @@ cliargs_error cliargs_parse_value(
         }
         return cliargs_error_none;
     case cliargs_type_float:
-        ok = cstr_to_double(arg, arg_len, &value->real);
+        ok = cstr_to_double(arg, arg_len, &value->real) > 0;
         if (!ok) {
             return cliargs_error_parse_fail;
         }
         return cliargs_error_none;
     case cliargs_type_int:
-        ok = cstr_to_llong(arg, arg_len, &value->sint);
+        ok = cstr_to_llong(arg, arg_len, &value->sint) > 0;
         if (!ok) {
             return cliargs_error_parse_fail;
         }
         return cliargs_error_none;
     case cliargs_type_uint:
-        ok = cstr_to_ullong(arg, arg_len, &value->uint);
+        ok = cstr_to_ullong(arg, arg_len, &value->uint) > 0;
         if (!ok) {
             return cliargs_error_parse_fail;
         }

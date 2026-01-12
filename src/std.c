@@ -1,6 +1,7 @@
 #include "std.h"
 #include <float.h>
 #include <limits.h>
+#include <stdarg.h>
 
 ////////////////////////
 // Bytes
@@ -628,133 +629,127 @@ bool cstr_match_wild_ascii_unsafe(const char *txt, const char *pat) {
     return cstr_match_wild_ascii(txt, txt_len, pat, pat_len);
 }
 
-bool cstr_to_int(const char *s, size_t len, int *v) {
+bool char_is_digit(char c) {
+    return c >= '0' && c <= '9';
+}
+
+size_t cstr_to_int(const char *s, size_t len, int *v) {
     assert(s && "string must not be null");
     assert(len && "length must be 1 or more");
     assert(v && "value storage must not be null");
     if (!s || !len || !v) {
         return 0;
     }
-    int v_ = 0;
+    size_t bytes_parsed = 0;
     size_t i = 0;
+    int v_ = 0;
     int sign = 1;
 
     if (s[0] == '-') {
         i += 1;
         sign = -1;
+        bytes_parsed += 1;
     }
 
-    for (; i < len && s[i]; i += 1) {
-        if (s[i] >= '0' && s[i] <= '9') {
-            int n = s[i] - '0';
-            if ((INT_MAX - n) / 10 < v_) {
-                // exceeds int size
-                return 0;
-            }
-            v_ *= 10;
-            v_ += n;
-        } else {
-            // invalid character
+    for (; i < len && char_is_digit(s[i]); i += 1) {
+        int n = s[i] - '0';
+        if ((INT_MAX - n) / 10 < v_) {
+            // exceeds int size
             return 0;
         }
+        v_ *= 10;
+        v_ += n;
+        bytes_parsed += 1;
     }
 
     *v = sign * v_;
-    return 1;
+    return bytes_parsed;
 }
 
-bool cstr_to_uint(const char *s, size_t len, uint *v) {
+size_t cstr_to_uint(const char *s, size_t len, uint *v) {
     assert(s && "string must not be null");
     assert(len && "length must be 1 or more");
     assert(v && "value storage must not be null");
     if (!s || !len || !v) {
         return 0;
     }
+    size_t bytes_parsed = 0;
     uint v_ = 0;
 
-    for (size_t i = 0; i < len && s[i]; i += 1) {
-        if (s[i] >= '0' && s[i] <= '9') {
-            uint n = (uchar)s[i] - '0';
-            if ((UINT_MAX - n) / 10 < v_) {
-                // exceeds int size
-                return 0;
-            }
-            v_ *= 10;
-            v_ += n;
-        } else {
-            // invalid character
+    for (size_t i = 0; i < len && char_is_digit(s[i]); i += 1) {
+        uint n = (uchar)s[i] - '0';
+        if ((UINT_MAX - n) / 10 < v_) {
+            // exceeds int size
             return 0;
         }
+        v_ *= 10;
+        v_ += n;
+        bytes_parsed += 1;
     }
 
     *v = v_;
-    return 1;
+    return bytes_parsed;
 }
 
-bool cstr_to_llong(const char *s, size_t len, llong *v) {
+size_t cstr_to_llong(const char *s, size_t len, llong *v) {
     assert(s && "string must not be null");
     assert(len && "length must be 1 or more");
     assert(v && "value storage must not be null");
     if (!s || !len || !v) {
         return 0;
     }
-    llong v_ = 0;
+    size_t bytes_parsed = 0;
     size_t i = 0;
+    llong v_ = 0;
     llong sign = 1;
 
     if (s[0] == '-') {
         i += 1;
         sign = -1;
+        bytes_parsed += 1;
     }
 
-    for (; i < len && s[i]; i += 1) {
-        if (s[i] >= '0' && s[i] <= '9') {
-            llong n = s[i] - '0';
-            if ((LLONG_MAX - n) / 10 < v_) {
-                // exceeds int size
-                return 0;
-            }
-            v_ *= 10;
-            v_ += n;
-        } else {
-            // invalid character
+    for (; i < len && char_is_digit(s[i]); i += 1) {
+        llong n = s[i] - '0';
+        if ((LLONG_MAX - n) / 10 < v_) {
+            // exceeds int size
             return 0;
         }
+        v_ *= 10;
+        v_ += n;
+        bytes_parsed += 1;
     }
 
     *v = sign * v_;
-    return 1;
+    return bytes_parsed;
 }
 
-bool cstr_to_ullong(const char *s, size_t len, ullong *v) {
+size_t cstr_to_ullong(const char *s, size_t len, ullong *v) {
     assert(s && "string must not be null");
     assert(len && "length must be 1 or more");
     assert(v && "value storage must not be null");
     if (!s || !len || !v) {
         return 0;
     }
+    size_t bytes_parsed = 0;
     ullong v_ = 0;
 
-    for (size_t i = 0; i < len && s[i]; i += 1) {
-        if (s[i] >= '0' && s[i] <= '9') {
-            ullong n = (uchar)s[i] - '0';
-            if ((ULLONG_MAX - n) / 10 < v_) {
-                // exceeds int size
-                return 0;
-            }
-            v_ *= 10;
-            v_ += n;
-        } else {
-            // invalid character
+    for (size_t i = 0; i < len && char_is_digit(s[i]); i += 1) {
+        ullong n = (uchar)s[i] - '0';
+        if ((ULLONG_MAX - n) / 10 < v_) {
+            // exceeds int size
             return 0;
         }
+        v_ *= 10;
+        v_ += n;
+        bytes_parsed += 1;
     }
 
     *v = v_;
-    return 1;
+    return bytes_parsed;
 }
 
-static const double pow10d[] = {
+static const double pow10_double[] = {
     1e0,   1e1,   1e2,   1e3,   1e4,   1e5,   1e6,   1e7,   1e8,   1e9,   1e10,
     1e11,  1e12,  1e13,  1e14,  1e15,  1e16,  1e17,  1e18,  1e19,  1e20,  1e21,
     1e22,  1e23,  1e24,  1e25,  1e26,  1e27,  1e28,  1e29,  1e30,  1e31,  1e32,
@@ -786,7 +781,7 @@ static const double pow10d[] = {
     1e308
 };
 
-static const ullong pow10ullong[] = {
+static const ullong pow10_ullong[] = {
     1e0L,
     1e1L,
     1e2L,
@@ -808,7 +803,7 @@ static const ullong pow10ullong[] = {
     1e18L
 };
 
-bool cstr_to_float(const char *s, size_t len, float *v) {
+size_t cstr_to_float(const char *s, size_t len, float *v) {
     assert(s && "string must not be null");
     assert(len && "length must be 1 or more");
     assert(v && "value storage must not be null");
@@ -822,15 +817,15 @@ bool cstr_to_float(const char *s, size_t len, float *v) {
     ullong exp = 0;
     size_t i = 0;
 
-    if (s[0] == '-') {
+    if (i < len && s[0] == '-') {
         i += 1;
         sign = -1.0;
-    } else if (s[0] == '+') {
+    } else if (i < len && s[0] == '+') {
         i += 1;
     }
 
     // integer part
-    for (; i < len && s[i] >= '0' && s[i] <= '9'; i += 1) {
+    for (; i < len && char_is_digit(s[i]); i += 1) {
         ullong n = (uchar)s[i] - '0';
         if ((INT64_MAX - n) / 10 < integer) {
             // exceeds int size
@@ -841,10 +836,10 @@ bool cstr_to_float(const char *s, size_t len, float *v) {
     }
 
     // decimals
-    if (s[i] == '.') {
+    if (i < len && s[i] == '.') {
         i += 1;
         float divisor = 10.0;
-        for (; i < len && s[i] >= '0' && s[i] <= '9'; i += 1) {
+        for (; i < len && char_is_digit(s[i]); i += 1) {
             ullong n = (uchar)s[i] - '0';
             if ((INT64_MAX - n) / 10 < integer) {
                 // exceeds int size, use fractions instead
@@ -860,18 +855,18 @@ bool cstr_to_float(const char *s, size_t len, float *v) {
     }
 
     // exponent
-    if (s[i] == 'e' || s[i] == 'E') {
+    if (i < len && (s[i] == 'e' || s[i] == 'E')) {
         i += 1;
 
         int exp_sign = 1;
-        if (s[i] == '-') {
+        if (i < len && s[i] == '-') {
             exp_sign = -1;
             i += 1;
-        } else if (s[i] == '+') {
+        } else if (i < len && s[i] == '+') {
             i += 1;
         }
 
-        for (; i < len && s[i] >= '0' && s[i] <= '9'; i += 1) {
+        for (; i < len && char_is_digit(s[i]); i += 1) {
             ullong n = (uchar)s[i] - '0';
             if ((INT64_MAX - n) / 10 < exp) {
                 // exceeds int size
@@ -901,19 +896,14 @@ bool cstr_to_float(const char *s, size_t len, float *v) {
         }
     }
 
-    if (i < len && s[i] != '\0') {
-        // failed to parse all the way to the end
-        return 0;
-    }
-
     // collect results
     float v_ = (float)integer;
-    if (v_ > FLT_MAX / (float)pow10d[exp]) {
+    if (v_ > FLT_MAX / (float)pow10_double[exp]) {
         // exceeds float max
         return 0;
     }
-    v_ *= (float)pow10d[exp];
-    v_ /= (float)pow10d[decimals];
+    v_ *= (float)pow10_double[exp];
+    v_ /= (float)pow10_double[decimals];
     if (v_ > FLT_MAX - fraction) {
         // exceeds float max
         return 0;
@@ -922,10 +912,10 @@ bool cstr_to_float(const char *s, size_t len, float *v) {
     v_ *= sign;
 
     *v = v_;
-    return 1;
+    return i;
 }
 
-bool cstr_to_double(const char *s, size_t len, double *v) {
+size_t cstr_to_double(const char *s, size_t len, double *v) {
     assert(s && "string must not be null");
     assert(len && "length must be 1 or more");
     assert(v && "value storage must not be null");
@@ -939,15 +929,15 @@ bool cstr_to_double(const char *s, size_t len, double *v) {
     ullong exp = 0;
     size_t i = 0;
 
-    if (s[0] == '-') {
+    if (i < len && s[0] == '-') {
         i += 1;
         sign = -1.0;
-    } else if (s[0] == '+') {
+    } else if (i < len && s[0] == '+') {
         i += 1;
     }
 
     // integer part
-    for (; i < len && s[i] >= '0' && s[i] <= '9'; i += 1) {
+    for (; i < len && char_is_digit(s[i]); i += 1) {
         ullong n = (uchar)s[i] - '0';
         if ((INT64_MAX - n) / 10 < integer) {
             // exceeds int size
@@ -958,10 +948,10 @@ bool cstr_to_double(const char *s, size_t len, double *v) {
     }
 
     // decimals
-    if (s[i] == '.') {
+    if (i < len && s[i] == '.') {
         i += 1;
         double divisor = 10.0;
-        for (; i < len && s[i] >= '0' && s[i] <= '9'; i += 1) {
+        for (; i < len && char_is_digit(s[i]); i += 1) {
             ullong n = (uchar)s[i] - '0';
             if ((INT64_MAX - n) / 10 < integer) {
                 // exceeds int size, use fractions instead
@@ -977,18 +967,18 @@ bool cstr_to_double(const char *s, size_t len, double *v) {
     }
 
     // exponent
-    if (s[i] == 'e' || s[i] == 'E') {
+    if (i < len && (s[i] == 'e' || s[i] == 'E')) {
         i += 1;
 
         int exp_sign = 1;
-        if (s[i] == '-') {
+        if (i < len && s[i] == '-') {
             exp_sign = -1;
             i += 1;
-        } else if (s[i] == '+') {
+        } else if (i < len && s[i] == '+') {
             i += 1;
         }
 
-        for (; i < len && s[i] >= '0' && s[i] <= '9'; i += 1) {
+        for (; i < len && char_is_digit(s[i]); i += 1) {
             ullong n = (uchar)s[i] - '0';
             if ((INT64_MAX - n) / 10 < exp) {
                 // exceeds int size
@@ -1018,19 +1008,14 @@ bool cstr_to_double(const char *s, size_t len, double *v) {
         }
     }
 
-    if (i < len && s[i] != '\0') {
-        // failed to parse all the way to the end
-        return 0;
-    }
-
     // collect results
     double v_ = (double)integer;
-    if (v_ > DBL_MAX / pow10d[exp]) {
+    if (v_ > DBL_MAX / pow10_double[exp]) {
         // exceeds double max
         return 0;
     }
-    v_ *= pow10d[exp];
-    v_ /= pow10d[decimals];
+    v_ *= pow10_double[exp];
+    v_ /= pow10_double[decimals];
     if (v_ > DBL_MAX - fraction) {
         // exceeds double max
         return 0;
@@ -1039,7 +1024,7 @@ bool cstr_to_double(const char *s, size_t len, double *v) {
     v_ *= sign;
 
     *v = v_;
-    return 1;
+    return i;
 }
 
 size_t cstr_from_int(char *dest, size_t len, int src) {
@@ -1152,11 +1137,10 @@ size_t cstr_from_float(char *dest, size_t len, float src, uint decimals) {
         return bytes_written;
     }
 
-    double precision_d = pow10d[decimals];
+    double precision_d = pow10_double[decimals];
 
     src += 0.5f / (float)precision_d;
     if (src >= (float)(-1UL >> 1)) {
-        // necessary?
         size_t bytes_to_copy = min(len, sizeof("inf"));
         bytes_copy(dest + bytes_written, "inf", bytes_to_copy);
         bytes_written += bytes_to_copy;
@@ -1181,7 +1165,7 @@ size_t cstr_from_float(char *dest, size_t len, float src, uint decimals) {
 
     // fractional part
     ullong fractional = (ullong)((src - (double)integer) * precision_d);
-    ullong precision_ullong = pow10ullong[decimals];
+    ullong precision_ullong = pow10_ullong[decimals];
     for (ullong i = precision_ullong / 10; i > 1; i /= 10) {
         if (i > fractional) {
             dest[bytes_written] = '0';
@@ -1215,11 +1199,10 @@ size_t cstr_from_double(char *dest, size_t len, double src, uint decimals) {
         return bytes_written;
     }
 
-    double precision_d = pow10d[decimals];
+    double precision_d = pow10_double[decimals];
 
     src += 0.5 / precision_d;
     if (src >= (double)(-1UL >> 1)) {
-        // necessary?
         size_t bytes_to_copy = min(len, sizeof("inf"));
         bytes_copy(dest + bytes_written, "inf", bytes_to_copy);
         bytes_written += bytes_to_copy;
@@ -1244,7 +1227,7 @@ size_t cstr_from_double(char *dest, size_t len, double src, uint decimals) {
 
     // fractional part
     ullong fractional = (ullong)((src - (double)integer) * precision_d);
-    ullong precision_ullong = pow10ullong[decimals];
+    ullong precision_ullong = pow10_ullong[decimals];
     for (ullong i = precision_ullong / 10; i > 1; i /= 10) {
         if (i > fractional) {
             dest[bytes_written] = '0';
@@ -1257,5 +1240,367 @@ size_t cstr_from_double(char *dest, size_t len, double src, uint decimals) {
     bytes_written +=
         cstr_from_ullong(dest + bytes_written, len - bytes_written, fractional);
 
+    return bytes_written;
+}
+
+size_t cstr_len_int(int src) {
+    size_t len = 1;
+    if (src < 0) {
+        len += 1;
+        src = -src;
+    }
+    do {
+        len += 1;
+        src /= 10;
+    } while (src > 0);
+    return len;
+}
+
+size_t cstr_len_uint(uint src) {
+    size_t len = 1;
+    do {
+        len += 1;
+        src /= 10;
+    } while (src > 0);
+    return len;
+}
+
+size_t cstr_len_llong(llong src) {
+    size_t len = 1;
+    if (src < 0) {
+        len += 1;
+        src = -src;
+    }
+    do {
+        len += 1;
+        src /= 10;
+    } while (src > 0);
+    return len;
+}
+
+size_t cstr_len_ullong(ullong src) {
+    size_t len = 1;
+    do {
+        len += 1;
+        src /= 10;
+    } while (src > 0);
+    return len;
+}
+
+size_t cstr_len_float(float src, uint decimals) {
+    assert(decimals < 19 && "decimals up to 19 are supported");
+
+    size_t len = 0;
+    if (src < 0) {
+        len += 1;
+        src = -src;
+    }
+
+    double precision_d = pow10_double[decimals];
+
+    src += 0.5f / (float)precision_d;
+    if (src >= (float)(-1UL >> 1)) {
+        return len + sizeof("inf");
+    }
+
+    // integer part
+    ullong integer = (ullong)src;
+    len += cstr_len_ullong(integer) - 1;
+
+    // decimal point
+    len += 1;
+
+    // fractional part
+    ullong fractional = (ullong)((src - (double)integer) * precision_d);
+    ullong precision_ullong = pow10_ullong[decimals];
+    for (ullong i = precision_ullong / 10; i > 1; i /= 10) {
+        if (i > fractional) {
+            len += 1;
+        }
+    }
+    len += cstr_len_ullong(fractional);
+
+    return len;
+}
+
+size_t cstr_len_double(double src, uint decimals) {
+    assert(decimals < 19 && "decimals up to 19 are supported");
+
+    size_t len = 0;
+    if (src < 0) {
+        len += 1;
+        src = -src;
+    }
+
+    double precision_d = pow10_double[decimals];
+
+    src += 0.5 / precision_d;
+    if (src >= (double)(-1UL >> 1)) {
+        return len + sizeof("inf");
+    }
+
+    // integer part
+    ullong integer = (ullong)src;
+    len += cstr_len_ullong(integer) - 1;
+
+    // decimal point
+    len += 1;
+
+    // fractional part
+    ullong fractional = (ullong)((src - (double)integer) * precision_d);
+    ullong precision_ullong = pow10_ullong[decimals];
+    for (ullong i = precision_ullong / 10; i > 1; i /= 10) {
+        if (i > fractional) {
+            len += 1;
+        }
+    }
+    len += cstr_len_ullong(fractional);
+
+    return len;
+}
+
+typedef enum {
+    cstr_fmt_field_type_unknown,
+    cstr_fmt_field_type_literal,
+    cstr_fmt_field_type_char,
+    cstr_fmt_field_type_int,
+    cstr_fmt_field_type_uint,
+    cstr_fmt_field_type_llong,
+    cstr_fmt_field_type_ullong,
+    cstr_fmt_field_type_float,
+    cstr_fmt_field_type_str,
+} cstr_fmt_field_type;
+
+const uint cstr_fmt_field_flag_str_len = 1;
+const uint cstr_fmt_field_flag_width = 2;
+const uint cstr_fmt_field_flag_precision = 4;
+
+typedef struct {
+    size_t len;
+    uint width;
+    uint precision;
+    uint flags;
+    cstr_fmt_field_type type;
+} cstr_fmt_field;
+
+void cstr_fmt_parse_fmt_field(cstr_fmt_field *field, const char *format) {
+    assert(field && "field must not be null");
+    assert(format && "format must not be null");
+
+    field->len = 0;
+    field->flags = 0;
+
+    // empty string
+    if (*format == '\0') {
+        field->type = cstr_fmt_field_type_unknown;
+        return;
+    }
+
+    // literal %
+    if (*format == '%') {
+        field->len += 1;
+        field->type = cstr_fmt_field_type_literal;
+        return;
+    }
+
+    // next field is string length?
+    if (*format == '*') {
+        format += 1;
+        field->flags |= cstr_fmt_field_flag_str_len;
+        field->len += 1;
+    } else {
+        field->flags &= ~cstr_fmt_field_flag_str_len;
+    }
+
+    // width
+    if (char_is_digit(*format)) {
+        const char *cursor = format;
+        while (char_is_digit(*cursor)) { cursor += 1; }
+        size_t len = (size_t)(format - cursor);
+        len = cstr_to_uint(format, len, &field->width);
+        assert(len > 0 && "len must be greater than 0");
+        format += len;
+        field->len += len;
+        field->flags |= cstr_fmt_field_flag_width;
+    } else {
+        field->flags &= ~cstr_fmt_field_flag_width;
+    }
+
+    // precision
+    if (*format == '.') {
+        format += 1;
+        field->len += 1;
+        const char *cursor = format;
+        while (char_is_digit(*cursor)) { cursor += 1; }
+        size_t len = (size_t)(format - cursor);
+        if (len > 0) {
+            len = cstr_to_uint(format, len, &field->precision);
+            assert(len > 0 && "len must be greater than 0");
+            format += len;
+            field->len += len;
+        } else {
+            field->precision = 0;
+        }
+        field->flags |= cstr_fmt_field_flag_precision;
+    } else {
+        field->flags &= ~cstr_fmt_field_flag_precision;
+    }
+
+    // type
+    int done = 0;
+    int wide_int = 0;
+    while (!done) {
+        switch (*format) {
+        case 'd':
+        case 'i':
+            if (wide_int) {
+                field->type = cstr_fmt_field_type_llong;
+            } else {
+                field->type = cstr_fmt_field_type_int;
+            }
+            done = 1;
+            break;
+        case 'u':
+            if (wide_int) {
+                field->type = cstr_fmt_field_type_ullong;
+            } else {
+                field->type = cstr_fmt_field_type_uint;
+            }
+            done = 1;
+            break;
+        case 'f':
+            field->type = cstr_fmt_field_type_float;
+            done = 1;
+            break;
+        case 'c':
+            field->type = cstr_fmt_field_type_char;
+            done = 1;
+            break;
+        case 'l':
+            wide_int = 1;
+            break;
+        default:
+            field->type = cstr_fmt_field_type_unknown;
+            return;
+        }
+        format += 1;
+        field->len += 1;
+    }
+}
+
+size_t
+cstr_fmt(char *restrict dest, size_t len, const char *restrict format, ...) {
+    assert(dest && "dest must not be null");
+    assert(len > 0 && "len must be higher than 0");
+    assert(format && "format must not be null");
+
+    if (len == 0) {
+        return 0;
+    }
+
+    const char *cursor = format;
+    cstr_fmt_field field = {0};
+    size_t bytes_written = 0;
+
+    va_list va_args;
+    va_start(va_args, format);
+
+    while (bytes_written < len && *cursor != '\0') {
+        const char *chunk_start = cursor;
+
+        // find the next position of string format start
+        for (size_t i = 0; i < len - bytes_written && *cursor != '\0';
+             i += 1, cursor += 1) {
+            if (*cursor == '%') {
+                break;
+            }
+        }
+
+        // copy chunk to destination
+        size_t bytes_to_copy = (size_t)(cursor - chunk_start);
+        bytes_to_copy = min(bytes_to_copy, len - bytes_written);
+        if (bytes_to_copy == 0) { // nothing to copy
+            break;
+        }
+        if (bytes_to_copy > 1) { // 1 because we are on %
+            bytes_to_copy -= 1;
+            bytes_copy(dest + bytes_written, chunk_start, bytes_to_copy);
+            bytes_written += bytes_to_copy;
+        }
+        if (bytes_written >= len || *cursor == '\0') {
+            break;
+        }
+        cursor += 1;
+
+        // parse and handle format string
+        cstr_fmt_parse_fmt_field(&field, cursor);
+        uint precision = 9;
+        const char *s;
+        size_t s_len;
+        switch (field.type) {
+        case cstr_fmt_field_type_literal:
+            dest[bytes_written] = '%';
+            bytes_written += 1;
+            break;
+        case cstr_fmt_field_type_char:
+            dest[bytes_written] = *cursor;
+            bytes_written += 1;
+            break;
+        case cstr_fmt_field_type_int:
+            bytes_written +=
+                cstr_from_int(dest, len - bytes_written, va_arg(va_args, int));
+            break;
+        case cstr_fmt_field_type_uint:
+            bytes_written += cstr_from_uint(
+                dest, len - bytes_written, va_arg(va_args, uint)
+            );
+            break;
+        case cstr_fmt_field_type_llong:
+            bytes_written += cstr_from_llong(
+                dest, len - bytes_written, va_arg(va_args, llong)
+            );
+            break;
+        case cstr_fmt_field_type_ullong:
+            bytes_written += cstr_from_ullong(
+                dest, len - bytes_written, va_arg(va_args, ullong)
+            );
+            break;
+        case cstr_fmt_field_type_float:
+            if (field.flags & cstr_fmt_field_flag_precision) {
+                precision = field.precision;
+            }
+            bytes_written += cstr_from_double(
+                dest, len - bytes_written, va_arg(va_args, double), precision
+            );
+            break;
+        case cstr_fmt_field_type_str:
+            if (field.flags & cstr_fmt_field_flag_str_len) {
+                s_len = va_arg(va_args, size_t);
+                s = va_arg(va_args, char *);
+            } else {
+                s = va_arg(va_args, char *);
+                s_len = cstr_len_unsafe(s);
+            }
+            size_t bytes_to_copy = min(s_len, len - bytes_written);
+            bytes_copy(dest + bytes_written, s, bytes_to_copy);
+            bytes_written += bytes_to_copy;
+            break;
+        case cstr_fmt_field_type_unknown:
+        default:
+            dest[bytes_written] = '?';
+            bytes_written += 1;
+            break;
+        }
+
+        cursor += field.len;
+    }
+
+    // null termination
+    if (bytes_written + 1 < len) {
+        dest[bytes_written] = '\0';
+        bytes_written += 1;
+    }
+
+    va_end(va_args);
     return bytes_written;
 }

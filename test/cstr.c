@@ -239,42 +239,52 @@ void test_cstr_split_collect_strings(test *t) {
 
 void test_cstr_to_int(test *t) {
     int v = 0;
-    assert_true(t, cstr_to_int("127", 3, &v), "convert exact length");
+    assert_eq_uint(t, cstr_to_int("127", 3, &v), 3, "convert exact length");
     assert_eq_sint(t, v, 127, "value after conversion");
-    assert_true(t, cstr_to_int("1279", 3, &v), "convert short length");
+    assert_eq_uint(t, cstr_to_int("1279", 3, &v), 3, "convert short length");
     assert_eq_sint(t, v, 127, "value after conversion");
-    assert_true(t, cstr_to_int("12\0 123", 4, &v), "convert null terminated");
+    assert_eq_uint(
+        t, cstr_to_int("12\0 123", 4, &v), 2, "convert null terminated"
+    );
     assert_eq_sint(t, v, 12, "value after conversion");
-    assert_true(t, cstr_to_int("-127", 4, &v), "convert negative");
+    assert_eq_uint(t, cstr_to_int("-127", 4, &v), 4, "convert negative");
     assert_eq_sint(t, v, -127, "value after conversion");
-    assert_true(t, cstr_to_int("0", 1, &v), "convert 0");
+    assert_eq_uint(t, cstr_to_int("0", 1, &v), 1, "convert 0");
     assert_eq_sint(t, v, 0, "value after conversion");
-    assert_true(t, cstr_to_int("2147483647", 11, &v), "convert max int");
+    assert_eq_uint(t, cstr_to_int("2147483647", 11, &v), 10, "convert max int");
     assert_eq_sint(t, v, 2147483647, "value after conversion");
-    assert_true(t, cstr_to_int("-2147483647", 12, &v), "convert min int");
+    assert_eq_uint(
+        t, cstr_to_int("-2147483647", 12, &v), 11, "convert min int"
+    );
     assert_eq_sint(t, v, -2147483647, "value after conversion");
+    assert_eq_uint(t, cstr_to_int("102a", 4, &v), 3, "convert invalid chars");
+    assert_eq_sint(t, v, 102, "prefix is converted");
 
     v = 0;
     assert_false(t, cstr_to_int("2147483648", 11, &v), "convert too long int");
     assert_false(t, v, "value remains unchanged");
     assert_false(t, cstr_to_int("a110", 4, &v), "convert invalid chars");
     assert_false(t, v, "value remains unchanged");
-    assert_false(t, cstr_to_int("102a", 4, &v), "convert invalid chars");
-    assert_false(t, v, "value remains unchanged");
 }
 
 void test_cstr_to_uint(test *t) {
     uint v = 0;
-    assert_true(t, cstr_to_uint("255", 3, &v), "convert exact length");
-    assert_eq_sint(t, v, 255, "value after conversion");
-    assert_true(t, cstr_to_uint("2559", 3, &v), "convert short length");
-    assert_eq_sint(t, v, 255, "value after conversion");
-    assert_true(t, cstr_to_uint("24\0 123", 4, &v), "convert null terminated");
-    assert_eq_sint(t, v, 24, "value after conversion");
-    assert_true(t, cstr_to_uint("0", 1, &v), "convert 0");
-    assert_eq_sint(t, v, 0, "value after conversion");
-    assert_true(t, cstr_to_uint("4294967295", 11, &v), "convert max int");
-    assert_eq_sint(t, v, 4294967295, "value after conversion");
+    assert_eq_uint(t, cstr_to_uint("255", 3, &v), 3, "convert exact length");
+    assert_eq_uint(t, v, 255, "value after conversion");
+    assert_eq_uint(t, cstr_to_uint("2559", 3, &v), 3, "convert short length");
+    assert_eq_uint(t, v, 255, "value after conversion");
+    assert_eq_uint(
+        t, cstr_to_uint("24\0 123", 4, &v), 2, "convert null terminated"
+    );
+    assert_eq_uint(t, v, 24, "value after conversion");
+    assert_eq_uint(t, cstr_to_uint("0", 1, &v), 1, "convert 0");
+    assert_eq_uint(t, v, 0, "value after conversion");
+    assert_eq_uint(
+        t, cstr_to_uint("4294967295", 11, &v), 10, "convert max int"
+    );
+    assert_eq_uint(t, v, 4294967295, "value after conversion");
+    assert_eq_uint(t, cstr_to_uint("102a", 4, &v), 3, "convert invalid chars");
+    assert_eq_uint(t, v, 102, "prefix is converted");
 
     v = 0;
     assert_false(t, cstr_to_uint("4294967296", 11, &v), "convert too long int");
@@ -282,8 +292,6 @@ void test_cstr_to_uint(test *t) {
     assert_false(t, cstr_to_uint("-1", 4, &v), "convert negative number");
     assert_false(t, v, "value remains unchanged");
     assert_false(t, cstr_to_uint("a110", 4, &v), "convert invalid chars");
-    assert_false(t, v, "value remains unchanged");
-    assert_false(t, cstr_to_uint("102a", 4, &v), "convert invalid chars");
     assert_false(t, v, "value remains unchanged");
 }
 

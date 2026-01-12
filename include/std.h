@@ -879,12 +879,12 @@ bool cstr_match_wild_ascii(
  */
 bool cstr_match_wild_ascii_unsafe(const char *txt, const char *pat);
 
-bool cstr_to_int(const char *s, size_t len, int *v);
-bool cstr_to_uint(const char *s, size_t len, uint *v);
-bool cstr_to_llong(const char *s, size_t len, llong *v);
-bool cstr_to_ullong(const char *s, size_t len, ullong *v);
-bool cstr_to_float(const char *s, size_t len, float *v);
-bool cstr_to_double(const char *s, size_t len, double *v);
+size_t cstr_to_int(const char *s, size_t len, int *v);
+size_t cstr_to_uint(const char *s, size_t len, uint *v);
+size_t cstr_to_llong(const char *s, size_t len, llong *v);
+size_t cstr_to_ullong(const char *s, size_t len, ullong *v);
+size_t cstr_to_float(const char *s, size_t len, float *v);
+size_t cstr_to_double(const char *s, size_t len, double *v);
 
 size_t cstr_from_int(char *dest, size_t len, int src);
 size_t cstr_from_uint(char *dest, size_t len, uint src);
@@ -892,5 +892,16 @@ size_t cstr_from_llong(char *dest, size_t len, llong src);
 size_t cstr_from_ullong(char *dest, size_t len, ullong src);
 size_t cstr_from_float(char *dest, size_t len, float src, uint decimals);
 size_t cstr_from_double(char *dest, size_t len, double src, uint decimals);
+
+size_t cstr_len_int(int src);
+size_t cstr_len_uint(uint src);
+size_t cstr_len_llong(llong src);
+size_t cstr_len_ullong(ullong src);
+size_t cstr_len_float(float src, uint decimals);
+size_t cstr_len_double(double src, uint decimals);
+
+size_t
+cstr_fmt(char *restrict dest, size_t len, const char *restrict format, ...);
+size_t cstr_fmt_len(const char *restrict format, ...);
 
 #endif // JP_STD_H
