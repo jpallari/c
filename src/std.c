@@ -2119,6 +2119,110 @@ size_t bytebuf_write_double(bytebuf *bbuf, double src, uint decimals) {
     return bytes_to_write;
 }
 
+cstr_fmt_result
+bytebuf_fmt_va(bytebuf *bbuf, const char *restrict format, va_list va_args) {
+    assert(bbuf && "bbuf must not be null");
+    assert(bbuf->buffer && "bbuf's buffer must not be null");
+    assert(format && "format must not be null");
+
+    cstr_fmt_result res = {
+        .ok = 1,
+        .len = 0,
+    };
+
+    if (!format) {
+        res.ok = 0;
+        return res;
+    }
+
+    slice_const s;
+    char c;
+    size_t field_bytes = 0;
+    cstr_fmt_float fmt_float;
+    while (res.ok && *format != '\0') {
+        switch (*format) {
+        case 'c':
+            c = (char)va_arg(va_args, int);
+            res.ok = bytebuf_write(bbuf, (const uchar *)&c, 1);
+            field_bytes = 1;
+            break;
+        case 's':
+            s = va_arg(va_args, slice_const);
+            res.ok = bytebuf_write(bbuf, s.buffer, s.len);
+            field_bytes = s.len;
+            break;
+        case 'S':
+            s = slice_const_from_cstr_unsafe(va_arg(va_args, char *));
+            res.ok = bytebuf_write(bbuf, s.buffer, s.len);
+            field_bytes = s.len;
+            break;
+        case 'f':
+            fmt_float.v = va_arg(va_args, double);
+            fmt_float.precision = 6;
+            field_bytes =
+                bytebuf_write_double(bbuf, fmt_float.v, fmt_float.precision);
+            if (field_bytes == 0) {
+                res.ok = 0;
+            }
+            break;
+        case 'F':
+            fmt_float = va_arg(va_args, cstr_fmt_float);
+            field_bytes =
+                bytebuf_write_double(bbuf, fmt_float.v, fmt_float.precision);
+            if (field_bytes == 0) {
+                res.ok = 0;
+            }
+            break;
+        case 'i':
+            field_bytes = bytebuf_write_int(bbuf, va_arg(va_args, int));
+            if (field_bytes == 0) {
+                res.ok = 0;
+            }
+            break;
+        case 'u':
+            field_bytes = bytebuf_write_uint(bbuf, va_arg(va_args, uint));
+            if (field_bytes == 0) {
+                res.ok = 0;
+            }
+            break;
+        case 'I':
+            field_bytes = bytebuf_write_llong(bbuf, va_arg(va_args, llong));
+            if (field_bytes == 0) {
+                res.ok = 0;
+            }
+            break;
+        case 'U':
+            field_bytes = bytebuf_write_ullong(bbuf, va_arg(va_args, ullong));
+            if (field_bytes == 0) {
+                res.ok = 0;
+            }
+            break;
+        default:
+            res.ok = bytebuf_write(bbuf, (const uchar *)format, 1);
+            field_bytes = 1;
+            break;
+        }
+        if (res.ok) {
+            res.len += field_bytes;
+        }
+        format += 1;
+    }
+
+    // null termination
+    res.ok = bytebuf_write(bbuf, (const uchar *)"\0", 1);
+    if (res.ok) {
+        // null termination is not included in length
+        bbuf->len -= 1;
+    } else {
+        // always null terminate
+        bbuf->buffer[bbuf->len - 1] = '\0';
+        bbuf->len -= 1;
+        res.len -= 1;
+    }
+
+    return res;
+}
+
 ////////////////////////
 // Buffered byte stream
 ////////////////////////
@@ -2324,4 +2428,76 @@ bufstream_write_double(bufstream *bstream, double src, uint decimals) {
     parts.fractional_cursor = fractional_cstr + sizeof(fractional_cstr);
     cstr_from_double_parts(&parts, src, decimals);
     return cstr_from_real_parts_to_bufstream(&parts, bstream);
+}
+
+bufstream_write_result bufstream_fmt_va(
+    bufstream *bstream, const char *restrict format, va_list va_args
+) {
+    assert(bstream && "bufstream must not be null");
+    assert(format && "format must not be null");
+
+    bufstream_write_result res = {
+        .err_code = 0,
+        .len = 0,
+    };
+
+    if (!format) {
+        return res;
+    }
+
+    slice_const s;
+    char c;
+    cstr_fmt_float fmt_float;
+    bufstream_write_result temp_res;
+    while (res.err_code == 0 && *format != '\0') {
+        switch (*format) {
+        case 'c':
+            c = (char)va_arg(va_args, int);
+            temp_res = bufstream_write(bstream, (const uchar *)&c, 1);
+            break;
+        case 's':
+            s = va_arg(va_args, slice_const);
+            temp_res = bufstream_write(bstream, s.buffer, s.len);
+            break;
+        case 'S':
+            s = slice_const_from_cstr_unsafe(va_arg(va_args, char *));
+            temp_res = bufstream_write(bstream, s.buffer, s.len);
+            break;
+        case 'f':
+            fmt_float.v = va_arg(va_args, double);
+            fmt_float.precision = 6;
+            temp_res = bufstream_write_double(
+                bstream, fmt_float.v, fmt_float.precision
+            );
+            break;
+        case 'F':
+            fmt_float = va_arg(va_args, cstr_fmt_float);
+            temp_res = bufstream_write_double(
+                bstream, fmt_float.v, fmt_float.precision
+            );
+            break;
+        case 'i':
+            temp_res = bufstream_write_int(bstream, va_arg(va_args, int));
+            break;
+        case 'u':
+            temp_res = bufstream_write_uint(bstream, va_arg(va_args, uint));
+            break;
+        case 'I':
+            temp_res = bufstream_write_llong(bstream, va_arg(va_args, llong));
+            break;
+        case 'U':
+            temp_res = bufstream_write_ullong(bstream, va_arg(va_args, ullong));
+            break;
+        default:
+            temp_res = bufstream_write(bstream, (const uchar *)format, 1);
+            break;
+        }
+        res.err_code = temp_res.err_code;
+        if (temp_res.err_code == 0) {
+            res.len += temp_res.len;
+        }
+        format += 1;
+    }
+
+    return res;
 }
