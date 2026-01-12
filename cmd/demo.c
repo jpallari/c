@@ -3,10 +3,9 @@
 #include <string.h>
 #include <unistd.h>
 
-int array_demo(void) {
+int array_demo(bufstream *stdout) {
     int exit_code = 0;
-    char txt_buf[1024] = {0};
-    cstr_fmt_result fmt_res = {0};
+
     uchar *buffer = alloc_new(&std_allocator, uchar, 1024 * 1024);
     arena arena = arena_new(buffer, 1024 * 1024);
     allocator allocator = arena_allocator_new(&arena);
@@ -32,29 +31,19 @@ int array_demo(void) {
     dynarr_pop(arr, last);
 
     for (i = 0; i < dynarr_len(arr); i += 1) {
-        fmt_res =
-            cstr_fmt(txt_buf, sizeof(txt_buf), "data %llu: %f\n", i, arr[i]);
-        if (!fmt_res.ok) {
-            exit_code = 1;
-            goto end;
-        }
-        io_write_all_sync(STDOUT_FILENO, txt_buf, fmt_res.len, 0);
+        bufstream_fmt(stdout, "s U: f\n", slice_sstr("data"), i, arr[i]);
     }
 
-    fmt_res = cstr_fmt(
-        txt_buf,
-        sizeof(txt_buf),
-        "2: %f, 15: %f, last: %f\n",
+    bufstream_fmt(
+        stdout,
+        "u: f, u: f, s: f\n",
+        2,
         arr[2],
+        15,
         arr[15],
+        slice_sstr("last"),
         last
     );
-    if (!fmt_res.ok) {
-        exit_code = 1;
-        goto end;
-    }
-    io_write_all_sync(STDOUT_FILENO, txt_buf, fmt_res.len, 0);
-
 end:
     dynarr_free(arr);
     arena_clear(&arena);
@@ -63,45 +52,41 @@ end:
     return exit_code;
 }
 
-void print_file_error(const char *filename, int err_code) {
-    char txt_buf[1024];
-    cstr_fmt_result fmt_res;
+void print_file_error(bufstream *stderr, const char *filename, int err_code) {
     if (err_code == file_err_invalid_stat) {
-        fmt_res = cstr_fmt(
-            txt_buf,
-            sizeof(txt_buf),
-            "Failed to get details for file %s\n",
+        bufstream_fmt(
+            stderr,
+            "s S\n",
+            slice_sstr("Failed to get details for file"),
             filename
         );
     } else if (err_code == file_err_failed_alloc) {
-        fmt_res = cstr_fmt(
-            txt_buf,
-            sizeof(txt_buf),
-            "Failed to allocate memory for file %s\n",
+        bufstream_fmt(
+            stderr,
+            "s S\n",
+            slice_sstr("Failed to allocate memory for file"),
             filename
         );
     } else {
         const char *err_msg = strerror(err_code);
-        fmt_res = cstr_fmt(
-            txt_buf,
-            sizeof(txt_buf),
-            "File error for file %s: %s\n",
+        bufstream_fmt(
+            stderr,
+            "s S: S\n",
+            slice_sstr("File error for file"),
             filename,
             err_msg
         );
     }
-    io_write_all_sync(STDERR_FILENO, txt_buf, fmt_res.len, 0);
 }
 
-int file_demo(int argc, char **argv) {
+int file_demo(int argc, char **argv, bufstream *stdout, bufstream *stderr) {
     assert(argc > 1 && "expected at least one cli param");
 
-    const int fd = STDOUT_FILENO;
     const char *filename_read = argv[1];
 
     file_read_result read_res = file_read_sync(filename_read, &std_allocator);
     if (read_res.err_code) {
-        print_file_error(filename_read, read_res.err_code);
+        print_file_error(stderr, filename_read, read_res.err_code);
         return 1;
     }
 
@@ -110,16 +95,18 @@ int file_demo(int argc, char **argv) {
         io_result write_res =
             file_write_sync(filename_write, read_res.data, read_res.len);
         if (write_res.err_code) {
-            print_file_error(filename_write, write_res.err_code);
+            print_file_error(stderr, filename_write, write_res.err_code);
             return 1;
         }
     } else {
-        char buffer[1024];
-        cstr_fmt_result fmt_res =
-            cstr_fmt(buffer, sizeof(buffer), "File size: %lu\n", read_res.len);
-        io_write_all_sync(fd, buffer, fmt_res.len, 0);
-        io_write_str_sync(fd, "File contents: \n");
-        io_write_all_sync(fd, read_res.data, read_res.len, 0);
+        bufstream_fmt(
+            stdout,
+            "s: U\ns:\ns\n",
+            slice_sstr("File size"),
+            read_res.len,
+            slice_sstr("File contents"),
+            slice_new(read_res.data, read_res.len)
+        );
     }
 
     if (read_res.data) {
@@ -129,8 +116,38 @@ int file_demo(int argc, char **argv) {
 }
 
 int main(int argc, char **argv) {
+    uchar buf_stdout[4 * 1024];
+    io_file_bytesink_context stdout_ctx = {
+        .fd = STDOUT_FILENO,
+        .chunk_size = 0,
+    };
+    bufstream bstream_stdout = {
+        .buffer = buf_stdout,
+        .len = 0,
+        .cap = sizeof(buf_stdout),
+        .sink = io_file_bytesink(&stdout_ctx),
+    };
+    uchar buf_stderr[4 * 1024];
+    io_file_bytesink_context stderr_ctx = {
+        .fd = STDERR_FILENO,
+        .chunk_size = 0,
+    };
+    bufstream bstream_stderr = {
+        .buffer = buf_stderr,
+        .len = 0,
+        .cap = sizeof(buf_stderr),
+        .sink = io_file_bytesink(&stderr_ctx),
+    };
+
+    int ret_code = 0;
     if (argc > 1) {
-        return file_demo(argc, argv);
+        ret_code = file_demo(argc, argv, &bstream_stdout, &bstream_stderr);
+    } else {
+        ret_code = array_demo(&bstream_stdout);
     }
-    return array_demo();
+
+    bufstream_flush(&bstream_stdout);
+    bufstream_flush(&bstream_stderr);
+
+    return ret_code;
 }
