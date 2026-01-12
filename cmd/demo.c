@@ -2,6 +2,7 @@
 #include "std.h"
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 int array_demo(void) {
     uchar *buffer = alloc_new(&std_allocator, uchar, 1024 * 1024);
@@ -55,9 +56,10 @@ void print_file_error(const char *filename, int err_code) {
 int file_demo(int argc, char **argv) {
     assert(argc > 1 && "expected at least one cli param");
 
+    const int fd = STDOUT_FILENO;
     const char *filename_read = argv[1];
 
-    file_read_result read_res = file_read(filename_read, &std_allocator);
+    file_read_result read_res = file_read_sync(filename_read, &std_allocator);
     if (read_res.err_code) {
         print_file_error(filename_read, read_res.err_code);
         return 1;
@@ -65,15 +67,19 @@ int file_demo(int argc, char **argv) {
 
     if (argc > 2) {
         const char *filename_write = argv[2];
-        os_io_result write_res = file_write(filename_write, read_res.data, read_res.len);
+        io_result write_res =
+            file_write_sync(filename_write, read_res.data, read_res.len);
         if (write_res.err_code) {
             print_file_error(filename_write, write_res.err_code);
             return 1;
         }
     } else {
-        printf("File size: %ld\n", read_res.len);
-        printf("File contents:\n");
-        os_write_all(1, read_res.data, read_res.len, 0);
+        char buffer[1024];
+        cstr_fmt_result fmt_res =
+            cstr_fmt(buffer, sizeof(buffer), "File size: %lu\n", read_res.len);
+        io_write_all_sync(fd, buffer, fmt_res.len, 0);
+        io_write_str_sync(fd, "File contents: \n");
+        io_write_all_sync(fd, read_res.data, read_res.len, 0);
     }
 
     if (read_res.data) {

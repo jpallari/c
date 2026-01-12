@@ -8,11 +8,11 @@
 // File I/O (blocking)
 ////////////////////////
 
-os_io_result os_read_all(int fd, uchar *buffer, size_t len, size_t chunk_len) {
+io_result os_read_all(int fd, uchar *buffer, size_t len, size_t chunk_len) {
     assert(buffer && "buffer may not be null");
     assert(len > 0 && "len must be > 0");
 
-    os_io_result res = {0};
+    io_result res = {0};
 
     if (chunk_len == 0) {
         chunk_len = len;
@@ -34,12 +34,12 @@ os_io_result os_read_all(int fd, uchar *buffer, size_t len, size_t chunk_len) {
     return res;
 }
 
-os_io_result os_write_all(int fd, void *buffer, size_t len, size_t chunk_len) {
+io_result io_write_all_sync(int fd, const void *buffer, size_t len, size_t chunk_len) {
     assert(buffer && "buffer may not be null");
     assert(len > 0 && "len must be > 0");
 
-    uchar *buf_ = buffer;
-    os_io_result res = {0};
+    const uchar *buf_ = buffer;
+    io_result res = {0};
 
     if (chunk_len == 0) {
         chunk_len = len;
@@ -58,7 +58,7 @@ os_io_result os_write_all(int fd, void *buffer, size_t len, size_t chunk_len) {
     return res;
 }
 
-file_read_result file_read(const char *filename, allocator *allocator) {
+file_read_result file_read_sync(const char *filename, allocator *allocator) {
     assert(filename && "filename must not be null");
     assert(allocator && "allocator must not be null");
 
@@ -92,7 +92,7 @@ file_read_result file_read(const char *filename, allocator *allocator) {
         goto end;
     }
 
-    os_io_result io_read_res = os_read_all(fd, res.data, len, block_size);
+    io_result io_read_res = os_read_all(fd, res.data, len, block_size);
     res.len = io_read_res.len;
     res.err_code = io_read_res.err_code;
 
@@ -105,11 +105,11 @@ end:
     return res;
 }
 
-os_io_result file_write(const char *filename, void *data, size_t len) {
+io_result file_write_sync(const char *filename, const void *data, size_t len) {
     assert(filename && "filename must not be null");
     assert(data && "data must not be null");
 
-    os_io_result res = {0};
+    io_result res = {0};
 
     int fd = open(
         filename,
@@ -132,7 +132,7 @@ os_io_result file_write(const char *filename, void *data, size_t len) {
         goto end;
     }
 
-    res = os_write_all(fd, data, len, (size_t)file_stat.st_blksize);
+    res = io_write_all_sync(fd, data, len, (size_t)file_stat.st_blksize);
 
 end:
     io_res = close(fd);
@@ -142,10 +142,10 @@ end:
     return res;
 }
 
-os_io_result bytebuf_flush(bytebuf *bbuf, int fd, size_t chunk_size) {
+io_result bytebuf_flush_sync(bytebuf *bbuf, int fd, size_t chunk_size) {
     assert(bbuf && "bbuf must not be null");
 
-    os_io_result res = os_write_all(fd, bbuf->buffer, bbuf->len, chunk_size);
+    io_result res = io_write_all_sync(fd, bbuf->buffer, bbuf->len, chunk_size);
     assert(res.len <= bbuf->len);
 
     if (res.len < bbuf->len) {

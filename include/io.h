@@ -13,9 +13,13 @@
 typedef struct {
     size_t len;
     int err_code;
-} os_io_result;
+} io_result;
 
-os_io_result os_write_all(int fd, void *buffer, size_t len, size_t chunk_size);
+io_result
+io_write_all_sync(int fd, const void *buffer, size_t len, size_t chunk_size);
+
+#define io_write_str_sync(fd, str) \
+    io_write_all_sync((fd), (str), sizeof(str), 0)
 
 typedef struct {
     uchar *data;
@@ -26,9 +30,9 @@ typedef struct {
 #define file_err_failed_alloc (int)(-2)
 #define file_err_invalid_stat (int)(-3)
 
-file_read_result file_read(const char *filename, allocator *allocator);
-os_io_result file_write(const char *filename, void *data, size_t len);
+file_read_result file_read_sync(const char *filename, allocator *allocator);
+io_result file_write_sync(const char *filename, const void *data, size_t len);
 
-os_io_result bytebuf_flush(bytebuf *bbuf, int fd, size_t chunk_size);
+io_result bytebuf_flush_sync(bytebuf *bbuf, int fd, size_t chunk_size);
 
 #endif // JP_IO_H
