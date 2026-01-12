@@ -955,18 +955,6 @@ size_t cstr_from_int(char *dest, size_t len, int src) {
     return bytes_to_copy;
 }
 
-size_t cstr_from_int_trunc(char *dest, size_t len, int src) {
-    assert(dest && "dest must not be null");
-    assert(len > 0 && "len must be more than 0");
-
-    char tmp[16];
-    char *end = tmp + sizeof(tmp);
-    size_t tmp_len = cstr_from_int_unsafe(end, src);
-    size_t bytes_to_copy = min(len, tmp_len);
-    bytes_copy(dest, end - tmp_len, bytes_to_copy);
-    return bytes_to_copy;
-}
-
 static size_t cstr_from_uint_unsafe(char *cursor, uint src) {
     char *start = cursor;
 
@@ -992,18 +980,6 @@ size_t cstr_from_uint(char *dest, size_t len, uint src) {
     }
 
     bytes_copy(dest, end - bytes_to_copy, bytes_to_copy);
-    return bytes_to_copy;
-}
-
-size_t cstr_from_uint_trunc(char *dest, size_t len, uint src) {
-    assert(dest && "dest must not be null");
-    assert(len > 0 && "len must be more than 0");
-
-    char tmp[16];
-    char *end = tmp + sizeof(tmp);
-    size_t tmp_len = cstr_from_uint_unsafe(end, src);
-    size_t bytes_to_copy = min(len, tmp_len);
-    bytes_copy(dest, end - tmp_len, bytes_to_copy);
     return bytes_to_copy;
 }
 
@@ -1043,18 +1019,6 @@ size_t cstr_from_llong(char *dest, size_t len, llong src) {
     return bytes_to_copy;
 }
 
-size_t cstr_from_llong_trunc(char *dest, size_t len, llong src) {
-    assert(dest && "dest must not be null");
-    assert(len > 0 && "len must be more than 0");
-
-    char tmp[32];
-    char *end = tmp + sizeof(tmp);
-    size_t tmp_len = cstr_from_llong_unsafe(end, src);
-    size_t bytes_to_copy = min(len, tmp_len);
-    bytes_copy(dest, end - tmp_len, bytes_to_copy);
-    return bytes_to_copy;
-}
-
 static size_t cstr_from_ullong_unsafe(char *cursor, ullong src) {
     char *start = cursor;
 
@@ -1083,325 +1047,196 @@ size_t cstr_from_ullong(char *dest, size_t len, ullong src) {
     return bytes_to_copy;
 }
 
-size_t cstr_from_ullong_trunc(char *dest, size_t len, ullong src) {
-    assert(dest && "dest must not be null");
-    assert(len > 0 && "len must be more than 0");
+struct cstr_from_real_parts {
+    char *integer_cursor;
+    char *fractional_cursor;
+    size_t integer_len;
+    size_t fractional_len;
+    uint decimal_zeros;
+    bool is_neg;
+    bool is_inf;
+};
 
-    char tmp[32];
-    char *end = tmp + sizeof(tmp);
-    size_t tmp_len = cstr_from_ullong_unsafe(end, src);
-    size_t bytes_to_copy = min(len, tmp_len);
-    bytes_copy(dest, end - tmp_len, bytes_to_copy);
-    return bytes_to_copy;
+static size_t cstr_from_real_parts_len(struct cstr_from_real_parts *parts) {
+    size_t neg_len = parts->is_neg ? 1UL : 0UL;
+    if (parts->is_inf) {
+        return neg_len + 3; // len('inf') == 3
+    }
+
+    return neg_len + parts->integer_len + 1 + parts->decimal_zeros
+        + parts->fractional_len;
+}
+
+static void
+cstr_from_real_parts_to_buf(struct cstr_from_real_parts *parts, char *dest) {
+    if (parts->is_inf) {
+        const char *text = "inf";
+        size_t bytes_to_write = sizeof("inf") - 1;
+        if (parts->is_neg) {
+            text = "-inf";
+            bytes_to_write = sizeof("-inf") - 1;
+        }
+        bytes_copy(dest, text, bytes_to_write);
+        return;
+    }
+
+    char *cursor = dest;
+    if (parts->is_neg) {
+        cursor[0] = '-';
+        cursor += 1;
+    }
+    bytes_copy(
+        cursor, parts->integer_cursor - parts->integer_len, parts->integer_len
+    );
+    cursor += parts->integer_len;
+    cursor[0] = '.';
+    cursor += 1;
+    for (uint i = 0; i < parts->decimal_zeros; i += 1) { cursor[i] += '0'; }
+    cursor += parts->decimal_zeros;
+    bytes_copy(
+        cursor,
+        parts->fractional_cursor - parts->fractional_len,
+        parts->fractional_len
+    );
+    cursor += parts->fractional_len;
+
+    assert((size_t)(cursor - dest) == cstr_from_real_parts_len(parts));
+    return;
+}
+
+static uint count_decimal_zeros(ullong fractional, uint decimals) {
+    ullong precision_ullong = pow10_ullong[decimals];
+    uint decimal_zeros = 0;
+    for (ullong i = precision_ullong / 10; i > 1; i /= 10) {
+        if (i > fractional) {
+            decimal_zeros += 1;
+        } else {
+            break;
+        }
+    }
+    return decimal_zeros;
+}
+
+static void cstr_from_float_parts(
+    struct cstr_from_real_parts *parts, float src, uint decimals
+) {
+    assert(parts->integer_cursor && "integer cursor must not be null");
+    assert(parts->fractional_cursor && "integer cursor must not be null");
+    assert(decimals <= 19 && "decimals up to 18 are supported");
+
+    if (decimals > 19) {
+        return;
+    }
+
+    if (src < 0) {
+        parts->is_neg = 1;
+        src = -src;
+    }
+
+    double precision_d = pow10_double[decimals];
+    src += (float)(0.5 / precision_d);
+
+    // infinity check
+    if (src >= (float)(-1UL >> 1)) {
+        parts->is_inf = 1;
+        return;
+    }
+
+    // integer part
+    ullong integer = (ullong)src;
+    parts->integer_len =
+        cstr_from_ullong_unsafe(parts->integer_cursor, integer);
+
+    // fractional part
+    ullong fractional = (ullong)(((double)src - (double)integer) * precision_d);
+    parts->decimal_zeros = count_decimal_zeros(fractional, decimals);
+    parts->fractional_len =
+        cstr_from_ullong_unsafe(parts->fractional_cursor, fractional);
 }
 
 size_t cstr_from_float(char *dest, size_t len, float src, uint decimals) {
     assert(dest && "dest must not be null");
     assert(len > 2 && "len must be more than 2");
-    assert(decimals <= 19 && "decimals up to 18 are supported");
 
-    if (len < 3 || decimals > 19) {
+    if (len < 3) {
         return 0;
     }
 
-    bool is_neg = 0;
-    size_t bytes_to_write = 1; // includes the decimal point
-
-    if (src < 0) {
-        is_neg = 1;
-        src = -src;
-        bytes_to_write += 1;
-    }
-
-    double precision_d = pow10_double[decimals];
-    src += (float)(0.5 / precision_d);
-
-    // infinity check
-    if (src >= (float)(-1UL >> 1)) {
-        const char *text = "inf";
-        bytes_to_write = sizeof("inf");
-        if (is_neg) {
-            text = "-inf";
-            bytes_to_write = sizeof("-inf");
-        }
-
-        if (len < bytes_to_write) {
-            return 0;
-        }
-        bytes_copy(dest, text, bytes_to_write);
-        return bytes_to_write;
-    }
-
-    // integer part
-    ullong integer = (ullong)src;
     char integer_cstr[32];
-    char *integer_cstr_end = integer_cstr + sizeof(integer_cstr);
-    size_t integer_len = cstr_from_ullong_unsafe(integer_cstr_end, integer);
-    bytes_to_write += integer_len;
-    if (len < bytes_to_write) {
-        return 0;
-    }
-
-    // fractional part
-    ullong fractional = (ullong)((src - (double)integer) * precision_d);
-    ullong precision_ullong = pow10_ullong[decimals];
-    uint decimal_zeros = 0;
-    for (ullong i = precision_ullong / 10; i > 1; i /= 10) {
-        if (i > fractional) {
-            decimal_zeros += 1;
-            bytes_to_write += 1;
-            if (len < bytes_to_write) {
-                return 0;
-            }
-        } else {
-            break;
-        }
-    }
     char fractional_cstr[32];
-    char *fractional_cstr_end = fractional_cstr + sizeof(fractional_cstr);
-    size_t fractional_len =
-        cstr_from_ullong_unsafe(fractional_cstr_end, fractional);
-    bytes_to_write += fractional_len;
-    if (len < bytes_to_write) {
+    struct cstr_from_real_parts parts = {0};
+    parts.integer_cursor = integer_cstr + sizeof(integer_cstr);
+    parts.fractional_cursor = fractional_cstr + sizeof(fractional_cstr);
+    cstr_from_float_parts(&parts, src, decimals);
+    size_t bytes_to_write = cstr_from_real_parts_len(&parts);
+
+    if (bytes_to_write > len) {
         return 0;
     }
 
-    // copy
-    char *cursor = dest;
-    if (is_neg) {
-        cursor[0] = '-';
-        cursor += 1;
-    }
-    bytes_copy(cursor, integer_cstr_end - integer_len, integer_len);
-    cursor += integer_len;
-    cursor[0] = '.';
-    cursor += 1;
-    for (uint i = 0; i < decimal_zeros; i += 1) { cursor[i] += '0'; }
-    cursor += decimal_zeros;
-    bytes_copy(cursor, fractional_cstr_end - fractional_len, fractional_len);
-    cursor += fractional_len;
-    assert((size_t)(cursor - dest) == bytes_to_write);
-
+    cstr_from_real_parts_to_buf(&parts, dest);
     return bytes_to_write;
 }
 
-size_t cstr_from_float_trunc(char *dest, size_t len, float src, uint decimals) {
-    assert(dest && "dest must not be null");
-    assert(len > 2 && "len must be more than 2");
-    assert(decimals <= 19 && "decimals up to 19 are supported");
+static void cstr_from_double_parts(
+    struct cstr_from_real_parts *parts, double src, uint decimals
+) {
+    assert(parts->integer_cursor && "integer cursor must not be null");
+    assert(parts->fractional_cursor && "integer cursor must not be null");
+    assert(decimals <= 19 && "decimals up to 18 are supported");
 
-    if (len == 0) {
-        return 0;
+    if (decimals > 19) {
+        return;
     }
 
-    size_t bytes_written = 0;
     if (src < 0) {
-        dest[bytes_written] = '-';
-        bytes_written += 1;
+        parts->is_neg = 1;
         src = -src;
-    }
-    if (bytes_written == len) {
-        return bytes_written;
     }
 
     double precision_d = pow10_double[decimals];
+    src += 0.5 / precision_d;
 
-    src += (float)(0.5 / precision_d);
-    if (src >= (float)(-1UL >> 1)) {
-        size_t bytes_to_copy = min(len, sizeof("inf"));
-        bytes_copy(dest + bytes_written, "inf", bytes_to_copy);
-        bytes_written += bytes_to_copy;
-        return bytes_written;
+    // infinity check
+    if (src >= (double)(-1UL >> 1)) {
+        parts->is_inf = 1;
+        return;
     }
 
     // integer part
     ullong integer = (ullong)src;
-    bytes_written +=
-        cstr_from_ullong(dest + bytes_written, len - bytes_written, integer);
-    if (bytes_written == len) {
-        return bytes_written;
-    }
-
-    // decimal point
-    dest[bytes_written] = '.';
-    bytes_written += 1;
-    if (bytes_written == len) {
-        return bytes_written;
-    }
+    parts->integer_len =
+        cstr_from_ullong_unsafe(parts->integer_cursor, integer);
 
     // fractional part
     ullong fractional = (ullong)((src - (double)integer) * precision_d);
-    ullong precision_ullong = pow10_ullong[decimals];
-    for (ullong i = precision_ullong / 10; i > 1; i /= 10) {
-        if (i > fractional) {
-            dest[bytes_written] = '0';
-            bytes_written += 1;
-            if (bytes_written == len) {
-                return bytes_written;
-            }
-        } else {
-            break;
-        }
-    }
-    bytes_written +=
-        cstr_from_ullong(dest + bytes_written, len - bytes_written, fractional);
-
-    return bytes_written;
+    parts->decimal_zeros = count_decimal_zeros(fractional, decimals);
+    parts->fractional_len =
+        cstr_from_ullong_unsafe(parts->fractional_cursor, fractional);
 }
 
 size_t cstr_from_double(char *dest, size_t len, double src, uint decimals) {
     assert(dest && "dest must not be null");
     assert(len > 2 && "len must be more than 2");
-    assert(decimals <= 19 && "decimals up to 18 are supported");
 
-    if (len < 3 || decimals > 19) {
+    if (len < 3) {
         return 0;
     }
 
-    bool is_neg = 0;
-    size_t bytes_to_write = 1; // includes the decimal point
-
-    if (src < 0) {
-        is_neg = 1;
-        src = -src;
-        bytes_to_write += 1;
-    }
-
-    double precision_d = pow10_double[decimals];
-    src += 0.5f / precision_d;
-
-    // infinity check
-    if (src >= (double)(-1UL >> 1)) {
-        const char *text = "inf";
-        bytes_to_write = sizeof("inf");
-        if (is_neg) {
-            text = "-inf";
-            bytes_to_write = sizeof("-inf");
-        }
-
-        if (len < bytes_to_write) {
-            return 0;
-        }
-        bytes_copy(dest, text, bytes_to_write);
-        return bytes_to_write;
-    }
-
-    // integer part
-    ullong integer = (ullong)src;
     char integer_cstr[32];
-    char *integer_cstr_end = integer_cstr + sizeof(integer_cstr);
-    size_t integer_len = cstr_from_ullong_unsafe(integer_cstr_end, integer);
-    bytes_to_write += integer_len;
-    if (len < bytes_to_write) {
-        return 0;
-    }
-
-    // fractional part
-    ullong fractional = (ullong)((src - (double)integer) * precision_d);
-    ullong precision_ullong = pow10_ullong[decimals];
-    uint decimal_zeros = 0;
-    for (ullong i = precision_ullong / 10; i > 1; i /= 10) {
-        if (i > fractional) {
-            decimal_zeros += 1;
-            bytes_to_write += 1;
-            if (len < bytes_to_write) {
-                return 0;
-            }
-        } else {
-            break;
-        }
-    }
     char fractional_cstr[32];
-    char *fractional_cstr_end = fractional_cstr + sizeof(fractional_cstr);
-    size_t fractional_len =
-        cstr_from_ullong_unsafe(fractional_cstr_end, fractional);
-    bytes_to_write += fractional_len;
-    if (len < bytes_to_write) {
+    struct cstr_from_real_parts parts = {0};
+    parts.integer_cursor = integer_cstr + sizeof(integer_cstr);
+    parts.fractional_cursor = fractional_cstr + sizeof(fractional_cstr);
+    cstr_from_double_parts(&parts, src, decimals);
+    size_t bytes_to_write = cstr_from_real_parts_len(&parts);
+
+    if (bytes_to_write > len) {
         return 0;
     }
 
-    // copy
-    char *cursor = dest;
-    if (is_neg) {
-        cursor[0] = '-';
-        cursor += 1;
-    }
-    bytes_copy(cursor, integer_cstr_end - integer_len, integer_len);
-    cursor += integer_len;
-    cursor[0] = '.';
-    cursor += 1;
-    for (uint i = 0; i < decimal_zeros; i += 1) { cursor[i] += '0'; }
-    cursor += decimal_zeros;
-    bytes_copy(cursor, fractional_cstr_end - fractional_len, fractional_len);
-    cursor += fractional_len;
-    assert((size_t)(cursor - dest) == bytes_to_write);
-
+    cstr_from_real_parts_to_buf(&parts, dest);
     return bytes_to_write;
-}
-
-size_t
-cstr_from_double_trunc(char *dest, size_t len, double src, uint decimals) {
-    assert(dest && "dest must not be null");
-    assert(len > 2 && "len must be more than 2");
-    assert(decimals <= 19 && "decimals up to 19 are supported");
-
-    if (len == 0) {
-        return 0;
-    }
-
-    size_t bytes_written = 0;
-    if (src < 0) {
-        dest[bytes_written] = '-';
-        bytes_written += 1;
-        src = -src;
-    }
-    if (bytes_written == len) {
-        return bytes_written;
-    }
-
-    double precision_d = pow10_double[decimals];
-
-    src += 0.5 / precision_d;
-    if (src >= (double)(-1UL >> 1)) {
-        size_t bytes_to_copy = min(len, sizeof("inf"));
-        bytes_copy(dest + bytes_written, "inf", bytes_to_copy);
-        bytes_written += bytes_to_copy;
-        return bytes_written;
-    }
-
-    // integer part
-    ullong integer = (ullong)src;
-    bytes_written +=
-        cstr_from_ullong(dest + bytes_written, len - bytes_written, integer);
-    if (bytes_written == len) {
-        return bytes_written;
-    }
-
-    // decimal point
-    dest[bytes_written] = '.';
-    bytes_written += 1;
-    if (bytes_written == len) {
-        return bytes_written;
-    }
-
-    // fractional part
-    ullong fractional = (ullong)((src - (double)integer) * precision_d);
-    ullong precision_ullong = pow10_ullong[decimals];
-    for (ullong i = precision_ullong / 10; i > 1; i /= 10) {
-        if (i > fractional) {
-            dest[bytes_written] = '0';
-            bytes_written += 1;
-            if (bytes_written == len) {
-                return bytes_written;
-            }
-        } else {
-            break;
-        }
-    }
-    bytes_written +=
-        cstr_from_ullong(dest + bytes_written, len - bytes_written, fractional);
-
-    return bytes_written;
 }
 
 size_t cstr_len_int(int src) {
@@ -1461,7 +1296,7 @@ size_t cstr_len_float(float src, uint decimals) {
 
     src += 0.5f / (float)precision_d;
     if (src >= (float)(-1UL >> 1)) {
-        return len + sizeof("inf");
+        return len + sizeof("inf") - 1;
     }
 
     // integer part
@@ -1473,12 +1308,7 @@ size_t cstr_len_float(float src, uint decimals) {
 
     // fractional part
     ullong fractional = (ullong)((src - (double)integer) * precision_d);
-    ullong precision_ullong = pow10_ullong[decimals];
-    for (ullong i = precision_ullong / 10; i > 1; i /= 10) {
-        if (i > fractional) {
-            len += 1;
-        }
-    }
+    len += count_decimal_zeros(fractional, decimals);
     len += cstr_len_ullong(fractional);
 
     return len;
@@ -1497,7 +1327,7 @@ size_t cstr_len_double(double src, uint decimals) {
 
     src += 0.5 / precision_d;
     if (src >= (double)(-1UL >> 1)) {
-        return len + sizeof("inf");
+        return len + sizeof("inf") - 1;
     }
 
     // integer part
@@ -1509,12 +1339,7 @@ size_t cstr_len_double(double src, uint decimals) {
 
     // fractional part
     ullong fractional = (ullong)((src - (double)integer) * precision_d);
-    ullong precision_ullong = pow10_ullong[decimals];
-    for (ullong i = precision_ullong / 10; i > 1; i /= 10) {
-        if (i > fractional) {
-            len += 1;
-        }
-    }
+    len += count_decimal_zeros(fractional, decimals);
     len += cstr_len_ullong(fractional);
 
     return len;
@@ -1653,7 +1478,7 @@ void cstr_fmt_parse_fmt_field(cstr_fmt_field *field, const char *format) {
     }
 }
 
-size_t cstr_fmt_va(
+cstr_fmt_result cstr_fmt_va(
     char *restrict dest,
     size_t len,
     const char *restrict format,
@@ -1663,15 +1488,19 @@ size_t cstr_fmt_va(
     assert(len > 0 && "len must be higher than 0");
     assert(format && "format must not be null");
 
+    cstr_fmt_result res = {
+        .len = 0,
+        .ok = 1,
+    };
     if (len == 0) {
-        return 0;
+        return res;
     }
 
     const char *cursor = format;
     cstr_fmt_field field = {0};
     size_t bytes_written = 0;
 
-    while (bytes_written < len && *cursor != '\0') {
+    while (res.ok && bytes_written < len && *cursor != '\0') {
         const char *chunk_start = cursor;
 
         // find the next position of string format start
@@ -1702,34 +1531,35 @@ size_t cstr_fmt_va(
         uint precision = 9;
         const char *s;
         size_t s_len;
+        size_t field_bytes = 0;
         switch (field.type) {
         case cstr_fmt_field_type_literal:
             dest[bytes_written] = '%';
-            bytes_written += 1;
+            field_bytes = 1;
             break;
         case cstr_fmt_field_type_char:
             dest[bytes_written] = (char)va_arg(va_args, int);
-            bytes_written += 1;
+            field_bytes = 1;
             break;
         case cstr_fmt_field_type_int:
-            bytes_written += cstr_from_int_trunc(
+            field_bytes = cstr_from_int(
                 dest + bytes_written, len - bytes_written, va_arg(va_args, int)
             );
             break;
         case cstr_fmt_field_type_uint:
-            bytes_written += cstr_from_uint_trunc(
+            field_bytes = cstr_from_uint(
                 dest + bytes_written, len - bytes_written, va_arg(va_args, uint)
             );
             break;
         case cstr_fmt_field_type_llong:
-            bytes_written += cstr_from_llong_trunc(
+            field_bytes = cstr_from_llong(
                 dest + bytes_written,
                 len - bytes_written,
                 va_arg(va_args, llong)
             );
             break;
         case cstr_fmt_field_type_ullong:
-            bytes_written += cstr_from_ullong_trunc(
+            field_bytes = cstr_from_ullong(
                 dest + bytes_written,
                 len - bytes_written,
                 va_arg(va_args, ullong)
@@ -1739,7 +1569,7 @@ size_t cstr_fmt_va(
             if (field.flags & cstr_fmt_field_flag_precision) {
                 precision = field.precision;
             }
-            bytes_written += cstr_from_double_trunc(
+            field_bytes = cstr_from_double(
                 dest + bytes_written,
                 len - bytes_written,
                 va_arg(va_args, double),
@@ -1754,18 +1584,22 @@ size_t cstr_fmt_va(
                 s = va_arg(va_args, char *);
                 s_len = cstr_len_unsafe(s);
             }
-            size_t bytes_to_copy = min(s_len, len - bytes_written);
-            bytes_copy(dest + bytes_written, s, bytes_to_copy);
-            bytes_written += bytes_to_copy;
+            field_bytes = min(s_len, len - bytes_written);
+            bytes_copy(dest + bytes_written, s, field_bytes);
             break;
         case cstr_fmt_field_type_unknown:
         default:
             dest[bytes_written] = '?';
-            bytes_written += 1;
+            field_bytes = 1;
             break;
         }
 
-        cursor += field.len;
+        if (field_bytes) {
+            bytes_written += field_bytes;
+            cursor += field.len;
+        } else {
+            res.ok = 0;
+        }
     }
 
     // null termination
@@ -1774,7 +1608,8 @@ size_t cstr_fmt_va(
         bytes_written += 1;
     }
 
-    return bytes_written;
+    res.len = bytes_written;
+    return res;
 }
 
 size_t cstr_fmt_len_va(const char *restrict format, va_list va_args) {
@@ -1937,7 +1772,7 @@ bytebuf bytebuf_clone(bytebuf *bbuf, size_t capacity_increase) {
     return newbbuf;
 }
 
-bool bytebuf_write(bytebuf *bbuf, uchar *src, size_t len) {
+bool bytebuf_write(bytebuf *bbuf, const uchar *src, size_t len) {
     assert(bbuf && "bytebuf must not be null");
     assert(bbuf->buffer && "bytebuf's buffer must not be null");
     assert(src && "source must not be null");
@@ -1954,7 +1789,7 @@ bool bytebuf_write(bytebuf *bbuf, uchar *src, size_t len) {
     return 1;
 }
 
-bool bytebuf_write_grow(bytebuf *bbuf, uchar *src, size_t len) {
+bool bytebuf_write_grow(bytebuf *bbuf, const uchar *src, size_t len) {
     assert(bbuf && "bytebuf must not be null");
     assert(bbuf->buffer && "bytebuf's buffer must not be null");
     assert(src && "source must not be null");
@@ -2035,20 +1870,148 @@ size_t bytebuf_write_float(bytebuf *bbuf, float src, uint decimals) {
     assert(bbuf && "bbuf must not be null");
     assert(bbuf->buffer && "bytebuf's buffer must not be null");
 
-    size_t bytes_to_copy = cstr_from_float(
-        (char *)bbuf->buffer, bytebuf_bytes_available(bbuf), src, decimals
-    );
-    bbuf->len += bytes_to_copy;
-    return bytes_to_copy;
+    size_t bytes_available = bytebuf_bytes_available(bbuf);
+    if (bytes_available < 3) {
+        return 0;
+    }
+
+    char integer_cstr[32];
+    char fractional_cstr[32];
+    struct cstr_from_real_parts parts = {0};
+    parts.integer_cursor = integer_cstr + sizeof(integer_cstr);
+    parts.fractional_cursor = fractional_cstr + sizeof(fractional_cstr);
+    cstr_from_float_parts(&parts, src, decimals);
+    size_t bytes_to_write = cstr_from_real_parts_len(&parts);
+
+    if (bytes_to_write > bytes_available) {
+        return 0;
+    }
+
+    cstr_from_real_parts_to_buf(&parts, (char *)bbuf->buffer);
+    bbuf->len += bytes_to_write;
+    return bytes_to_write;
 }
 
 size_t bytebuf_write_double(bytebuf *bbuf, double src, uint decimals) {
     assert(bbuf && "bbuf must not be null");
     assert(bbuf->buffer && "bytebuf's buffer must not be null");
 
-    size_t bytes_to_copy = cstr_from_double(
-        (char *)bbuf->buffer, bytebuf_bytes_available(bbuf), src, decimals
-    );
-    bbuf->len += bytes_to_copy;
-    return bytes_to_copy;
+    size_t bytes_available = bytebuf_bytes_available(bbuf);
+    if (bytes_available < 3) {
+        return 0;
+    }
+
+    char integer_cstr[32];
+    char fractional_cstr[32];
+    struct cstr_from_real_parts parts = {0};
+    parts.integer_cursor = integer_cstr + sizeof(integer_cstr);
+    parts.fractional_cursor = fractional_cstr + sizeof(fractional_cstr);
+    cstr_from_double_parts(&parts, src, decimals);
+    size_t bytes_to_write = cstr_from_real_parts_len(&parts);
+
+    if (bytes_to_write > bytes_available) {
+        return 0;
+    }
+
+    cstr_from_real_parts_to_buf(&parts, (char *)bbuf->buffer);
+    bbuf->len += bytes_to_write;
+    return bytes_to_write;
+}
+
+size_t bytebuf_write_grow_int(bytebuf *bbuf, int src) {
+    assert(bbuf && "bbuf must not be null");
+    assert(bbuf->buffer && "bytebuf's buffer must not be null");
+
+    char tmp[16];
+    char *end = tmp + sizeof(tmp);
+    size_t bytes_to_copy = cstr_from_int_unsafe(end, src);
+    if (bytebuf_write_grow(bbuf, (uchar *)end - bytes_to_copy, bytes_to_copy)) {
+        return bytes_to_copy;
+    }
+    return 0;
+}
+
+size_t bytebuf_write_grow_uint(bytebuf *bbuf, uint src) {
+    assert(bbuf && "bbuf must not be null");
+    assert(bbuf->buffer && "bytebuf's buffer must not be null");
+
+    char tmp[16];
+    char *end = tmp + sizeof(tmp);
+    size_t bytes_to_copy = cstr_from_uint_unsafe(end, src);
+    if (bytebuf_write_grow(bbuf, (uchar *)end - bytes_to_copy, bytes_to_copy)) {
+        return bytes_to_copy;
+    }
+    return 0;
+}
+
+size_t bytebuf_write_grow_llong(bytebuf *bbuf, llong src) {
+    assert(bbuf && "bbuf must not be null");
+    assert(bbuf->buffer && "bytebuf's buffer must not be null");
+
+    char tmp[32];
+    char *end = tmp + sizeof(tmp);
+    size_t bytes_to_copy = cstr_from_llong_unsafe(end, src);
+    if (bytebuf_write_grow(bbuf, (uchar *)end - bytes_to_copy, bytes_to_copy)) {
+        return bytes_to_copy;
+    }
+    return 0;
+}
+
+size_t bytebuf_write_grow_ullong(bytebuf *bbuf, ullong src) {
+    assert(bbuf && "bbuf must not be null");
+    assert(bbuf->buffer && "bytebuf's buffer must not be null");
+
+    char tmp[32];
+    char *end = tmp + sizeof(tmp);
+    size_t bytes_to_copy = cstr_from_ullong_unsafe(end, src);
+    if (bytebuf_write_grow(bbuf, (uchar *)end - bytes_to_copy, bytes_to_copy)) {
+        return bytes_to_copy;
+    }
+    return 0;
+}
+
+size_t bytebuf_write_grow_float(bytebuf *bbuf, float src, uint decimals) {
+    assert(bbuf && "bbuf must not be null");
+    assert(bbuf->buffer && "bytebuf's buffer must not be null");
+
+    char integer_cstr[32];
+    char fractional_cstr[32];
+    struct cstr_from_real_parts parts = {0};
+    parts.integer_cursor = integer_cstr + sizeof(integer_cstr);
+    parts.fractional_cursor = fractional_cstr + sizeof(fractional_cstr);
+    cstr_from_float_parts(&parts, src, decimals);
+    size_t bytes_to_write = cstr_from_real_parts_len(&parts);
+
+    if (bytes_to_write > bytebuf_bytes_available(bbuf)) {
+        if (!bytebuf_grow(bbuf, bbuf->cap + bytes_to_write)) {
+            return 0;
+        }
+    }
+
+    cstr_from_real_parts_to_buf(&parts, (char *)bbuf->buffer);
+    bbuf->len += bytes_to_write;
+    return bytes_to_write;
+}
+
+size_t bytebuf_write_grow_double(bytebuf *bbuf, double src, uint decimals) {
+    assert(bbuf && "bbuf must not be null");
+    assert(bbuf->buffer && "bytebuf's buffer must not be null");
+
+    char integer_cstr[32];
+    char fractional_cstr[32];
+    struct cstr_from_real_parts parts = {0};
+    parts.integer_cursor = integer_cstr + sizeof(integer_cstr);
+    parts.fractional_cursor = fractional_cstr + sizeof(fractional_cstr);
+    cstr_from_double_parts(&parts, src, decimals);
+    size_t bytes_to_write = cstr_from_real_parts_len(&parts);
+
+    if (bytes_to_write > bytebuf_bytes_available(bbuf)) {
+        if (!bytebuf_grow(bbuf, bbuf->cap + bytes_to_write)) {
+            return 0;
+        }
+    }
+
+    cstr_from_real_parts_to_buf(&parts, (char *)bbuf->buffer);
+    bbuf->len += bytes_to_write;
+    return bytes_to_write;
 }

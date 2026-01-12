@@ -869,13 +869,6 @@ size_t cstr_from_ullong(char *dest, size_t len, ullong src);
 size_t cstr_from_float(char *dest, size_t len, float src, uint decimals);
 size_t cstr_from_double(char *dest, size_t len, double src, uint decimals);
 
-size_t cstr_from_int_trunc(char *dest, size_t len, int src);
-size_t cstr_from_uint_trunc(char *dest, size_t len, uint src);
-size_t cstr_from_llong_trunc(char *dest, size_t len, llong src);
-size_t cstr_from_ullong_trunc(char *dest, size_t len, ullong src);
-size_t cstr_from_float_trunc(char *dest, size_t len, float src, uint decimals);
-size_t cstr_from_double_trunc(char *dest, size_t len, double src, uint decimals);
-
 __attribute__((unused)) static inline size_t
 cstr_from_int_nt(char *dest, size_t len, int src) {
     size_t bytes_written = cstr_from_int(dest, len, src);
@@ -936,56 +929,6 @@ cstr_from_double_nt(char *dest, size_t len, double src, uint decimals) {
     return bytes_written;
 }
 
-__attribute__((unused)) static inline size_t
-cstr_from_uint_nt_trunc(char *dest, size_t len, uint src) {
-    size_t bytes_written = cstr_from_uint_trunc(dest, len, src);
-    if (bytes_written + 1 < len) {
-        dest[bytes_written] = '\0';
-        bytes_written += 1;
-    }
-    return bytes_written;
-}
-
-__attribute__((unused)) static inline size_t
-cstr_from_llong_nt_trunc(char *dest, size_t len, llong src) {
-    size_t bytes_written = cstr_from_llong_trunc(dest, len, src);
-    if (bytes_written + 1 < len) {
-        dest[bytes_written] = '\0';
-        bytes_written += 1;
-    }
-    return bytes_written;
-}
-
-__attribute__((unused)) static inline size_t
-cstr_from_ullong_nt_trunc(char *dest, size_t len, ullong src) {
-    size_t bytes_written = cstr_from_ullong_trunc(dest, len, src);
-    if (bytes_written + 1 < len) {
-        dest[bytes_written] = '\0';
-        bytes_written += 1;
-    }
-    return bytes_written;
-}
-
-__attribute__((unused)) static inline size_t
-cstr_from_float_nt_trunc(char *dest, size_t len, float src, uint decimals) {
-    size_t bytes_written = cstr_from_float_trunc(dest, len, src, decimals);
-    if (bytes_written + 1 < len) {
-        dest[bytes_written] = '\0';
-        bytes_written += 1;
-    }
-    return bytes_written;
-}
-
-__attribute__((unused)) static inline size_t
-cstr_from_double_nt_trunc(char *dest, size_t len, double src, uint decimals) {
-    size_t bytes_written = cstr_from_double_trunc(dest, len, src, decimals);
-    if (bytes_written + 1 < len) {
-        dest[bytes_written] = '\0';
-        bytes_written += 1;
-    }
-    return bytes_written;
-}
-
 size_t cstr_len_int(int src);
 size_t cstr_len_uint(uint src);
 size_t cstr_len_llong(llong src);
@@ -993,20 +936,25 @@ size_t cstr_len_ullong(ullong src);
 size_t cstr_len_float(float src, uint decimals);
 size_t cstr_len_double(double src, uint decimals);
 
-size_t cstr_fmt_va(
+typedef struct {
+    size_t len;
+    bool ok;
+} cstr_fmt_result;
+
+cstr_fmt_result cstr_fmt_va(
     char *restrict dest,
     size_t len,
     const char *restrict format,
     va_list va_args
 );
 
-__attribute__((unused)) static inline size_t
+__attribute__((unused)) static inline cstr_fmt_result
 cstr_fmt(char *restrict dest, size_t len, const char *restrict format, ...) {
     va_list va_args;
     va_start(va_args, format);
-    size_t bytes_written = cstr_fmt_va(dest, len, format, va_args);
+    cstr_fmt_result res = cstr_fmt_va(dest, len, format, va_args);
     va_end(va_args);
-    return bytes_written;
+    return res;
 }
 
 size_t cstr_fmt_len_va(const char *restrict format, va_list va_args);
@@ -1041,9 +989,9 @@ bool bytebuf_grow(bytebuf *bbuf, size_t capacity_increase);
 
 bytebuf bytebuf_clone(bytebuf *bbuf, size_t capacity_increase);
 
-bool bytebuf_write(bytebuf *bbuf, uchar *src, size_t len);
+bool bytebuf_write(bytebuf *bbuf, const uchar *src, size_t len);
 
-bool bytebuf_write_grow(bytebuf *bbuf, uchar *src, size_t len);
+bool bytebuf_write_grow(bytebuf *bbuf, const uchar *src, size_t len);
 
 void bytebuf_clear(bytebuf *bbuf);
 
