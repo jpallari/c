@@ -339,114 +339,6 @@ bool dynarr_remove_uo_ut(void *array, ullong index, size_t item_size) {
 }
 
 ////////////////////////
-// Byte buffer
-////////////////////////
-
-bytebuf bytebuf_new(size_t capacity, allocator *allocator) {
-    assert(allocator && "allocator must not be null");
-    assert(capacity > 0 && "capacity must be larger than 0");
-    bytebuf b;
-    bytes_set(&b, 0, sizeof(b));
-    b.allocator = allocator;
-    b.buffer = alloc_malloc(allocator, capacity, _Alignof(uchar));
-    if (b.buffer) {
-        b.cap = capacity;
-    }
-    return b;
-}
-
-void bytebuf_free(bytebuf *bbuf) {
-    assert(bbuf && "bytebuf must not be null");
-    assert(bbuf->buffer && "bytebuf's buffer must not be null");
-    assert(bbuf->allocator && "allocator must not be null");
-    if (!bbuf && !bbuf->buffer) {
-        return;
-    }
-    alloc_free(bbuf->allocator, bbuf->buffer);
-    bbuf->cap = 0;
-    bbuf->len = 0;
-    bbuf->buffer = 0;
-}
-
-bool bytebuf_grow(bytebuf *bbuf, size_t capacity_increase) {
-    assert(bbuf && "bytebuf must not be null");
-    assert(bbuf->buffer && "bytebuf's buffer must not be null");
-    assert(capacity_increase > 0 && "capacity increase must be larger than 0");
-    if (capacity_increase == 0) {
-        return 1;
-    }
-
-    uchar *newbuf = alloc_malloc(
-        bbuf->allocator, bbuf->cap + capacity_increase, _Alignof(uchar)
-    );
-    if (!newbuf) {
-        return 0;
-    }
-
-    bytes_copy(newbuf, bbuf->buffer, bbuf->len);
-    bbuf->buffer = newbuf;
-    bbuf->cap += capacity_increase;
-    return 1;
-}
-
-bytebuf bytebuf_clone(bytebuf *bbuf, size_t capacity_increase) {
-    assert(bbuf && "bytebuf must not be null");
-    assert(bbuf->buffer && "bytebuf's buffer must not be null");
-    assert(bbuf->allocator && "allocator must not be null");
-
-    bytebuf newbbuf =
-        bytebuf_new(bbuf->cap + capacity_increase, bbuf->allocator);
-    if (!newbbuf.buffer) {
-        return newbbuf; // failed new
-    }
-    bytes_copy(newbbuf.buffer, bbuf->buffer, bbuf->len);
-    newbbuf.len = bbuf->len;
-    return newbbuf;
-}
-
-bool bytebuf_write(bytebuf *bbuf, uchar *src, size_t len) {
-    assert(bbuf && "bytebuf must not be null");
-    assert(bbuf->buffer && "bytebuf's buffer must not be null");
-    assert(src && "source must not be null");
-    assert(len > 0 && "length must be more than 0");
-
-    if (!src || len == 0) {
-        return 1; // nothing to write
-    }
-    if (len > bbuf->cap - bbuf->len) {
-        return 0; // no capacity left
-    }
-    bytes_copy(bbuf->buffer + bbuf->len, src, len);
-    bbuf->len += len;
-    return 1;
-}
-
-bool bytebuf_write_grow(bytebuf *bbuf, uchar *src, size_t len) {
-    assert(bbuf && "bytebuf must not be null");
-    assert(bbuf->buffer && "bytebuf's buffer must not be null");
-    assert(src && "source must not be null");
-    assert(len > 0 && "length must be more than 0");
-
-    if (!src || len == 0) {
-        return 1; // nothing to write
-    }
-    if (len > bbuf->cap - bbuf->len) {
-        size_t capacity_increase = bbuf->cap + len;
-        bool ok = bytebuf_grow(bbuf, capacity_increase);
-        if (!ok) {
-            return 0; // grow failed
-        }
-    }
-    bytes_copy(bbuf->buffer + bbuf->len, src, len);
-    bbuf->len += len;
-    return 1;
-}
-
-void bytebuf_clear(bytebuf *bbuf) {
-    bbuf->len = 0;
-}
-
-////////////////////////
 // C strings
 ////////////////////////
 
@@ -1027,12 +919,8 @@ size_t cstr_to_double(const char *s, size_t len, double *v) {
     return i;
 }
 
-size_t cstr_from_int(char *dest, size_t len, int src) {
-    assert(dest && "dest must not be null");
-    assert(len > 0 && "len must be more than 0");
-    char tmp[16] = {0};
-    char *end = tmp + sizeof(tmp);
-    char *cursor = end - 1;
+static size_t cstr_from_int_unsafe(char *cursor, int src) {
+    char *start = cursor;
     bool is_neg = src < 0;
     if (is_neg) {
         src = -src;
@@ -1048,37 +936,55 @@ size_t cstr_from_int(char *dest, size_t len, int src) {
         *cursor = '-';
     }
 
-    size_t tmp_len = (size_t)((uintptr_t)end - (uintptr_t)cursor);
-    size_t bytes_to_copy = min(len, tmp_len);
-    bytes_copy(dest, cursor, bytes_to_copy);
+    return (size_t)(start - cursor);
+}
+
+size_t cstr_from_int(char *dest, size_t len, int src) {
+    assert(dest && "dest must not be null");
+    assert(len > 0 && "len must be more than 0");
+
+    char tmp[16];
+    char *end = tmp + sizeof(tmp);
+    size_t bytes_to_copy = cstr_from_int_unsafe(end, src);
+
+    if (len < bytes_to_copy) {
+        return 0;
+    }
+
+    bytes_copy(dest, end - bytes_to_copy, bytes_to_copy);
     return bytes_to_copy;
+}
+
+static size_t cstr_from_uint_unsafe(char *cursor, uint src) {
+    char *start = cursor;
+
+    do {
+        cursor -= 1;
+        *cursor = '0' + (char)(src % 10);
+        src /= 10;
+    } while (src > 0);
+
+    return (size_t)(start - cursor);
 }
 
 size_t cstr_from_uint(char *dest, size_t len, uint src) {
     assert(dest && "dest must not be null");
     assert(len > 0 && "len must be more than 0");
-    char tmp[16] = {0};
+
+    char tmp[16];
     char *end = tmp + sizeof(tmp);
-    char *cursor = end - 1;
+    size_t bytes_to_copy = cstr_from_uint_unsafe(end, src);
 
-    do {
-        cursor -= 1;
-        *cursor = '0' + (char)(src % 10);
-        src /= 10;
-    } while (src > 0);
+    if (len < bytes_to_copy) {
+        return 0;
+    }
 
-    size_t tmp_len = (size_t)((uintptr_t)end - (uintptr_t)cursor);
-    size_t bytes_to_copy = min(len, tmp_len);
-    bytes_copy(dest, cursor, bytes_to_copy);
+    bytes_copy(dest, end - bytes_to_copy, bytes_to_copy);
     return bytes_to_copy;
 }
 
-size_t cstr_from_llong(char *dest, size_t len, llong src) {
-    assert(dest && "dest must not be null");
-    assert(len > 0 && "len must be more than 0");
-    char tmp[32] = {0};
-    char *end = tmp + sizeof(tmp);
-    char *cursor = end - 1;
+static size_t cstr_from_llong_unsafe(char *cursor, llong src) {
+    char *start = cursor;
     bool is_neg = src < 0;
     if (is_neg) {
         src = -src;
@@ -1094,18 +1000,27 @@ size_t cstr_from_llong(char *dest, size_t len, llong src) {
         *cursor = '-';
     }
 
-    size_t tmp_len = (size_t)((uintptr_t)end - (uintptr_t)cursor);
-    size_t bytes_to_copy = min(len, tmp_len);
-    bytes_copy(dest, cursor, bytes_to_copy);
+    return (size_t)(start - cursor);
+}
+
+size_t cstr_from_llong(char *dest, size_t len, llong src) {
+    assert(dest && "dest must not be null");
+    assert(len > 0 && "len must be more than 0");
+
+    char tmp[32];
+    char *end = tmp + sizeof(tmp);
+    size_t bytes_to_copy = cstr_from_llong_unsafe(end, src);
+
+    if (len < bytes_to_copy) {
+        return 0;
+    }
+
+    bytes_copy(dest, end - bytes_to_copy, bytes_to_copy);
     return bytes_to_copy;
 }
 
-size_t cstr_from_ullong(char *dest, size_t len, ullong src) {
-    assert(dest && "dest must not be null");
-    assert(len > 0 && "len must be more than 0");
-    char tmp[32] = {0};
-    char *end = tmp + sizeof(tmp);
-    char *cursor = end - 1;
+static size_t cstr_from_ullong_unsafe(char *cursor, ullong src) {
+    char *start = cursor;
 
     do {
         cursor -= 1;
@@ -1113,16 +1028,121 @@ size_t cstr_from_ullong(char *dest, size_t len, ullong src) {
         src /= 10;
     } while (src > 0);
 
-    size_t tmp_len = (size_t)((uintptr_t)end - (uintptr_t)cursor);
-    size_t bytes_to_copy = min(len, tmp_len);
-    bytes_copy(dest, cursor, bytes_to_copy);
+    return (size_t)(start - cursor);
+}
+
+size_t cstr_from_ullong(char *dest, size_t len, ullong src) {
+    assert(dest && "dest must not be null");
+    assert(len > 0 && "len must be more than 0");
+
+    char tmp[32];
+    char *end = tmp + sizeof(tmp);
+    size_t bytes_to_copy = cstr_from_ullong_unsafe(end, src);
+
+    if (len < bytes_to_copy) {
+        return 0;
+    }
+
+    bytes_copy(dest, end - bytes_to_copy, bytes_to_copy);
     return bytes_to_copy;
 }
 
 size_t cstr_from_float(char *dest, size_t len, float src, uint decimals) {
     assert(dest && "dest must not be null");
-    assert(len > 0 && "len must be more than 0");
-    assert(decimals < 19 && "decimals up to 18 are supported");
+    assert(len > 2 && "len must be more than 2");
+    assert(decimals <= 19 && "decimals up to 18 are supported");
+
+    if (len < 3 || decimals > 19) {
+        return 0;
+    }
+
+    bool is_neg = 0;
+    size_t bytes_to_write = 1; // includes the decimal point
+
+    if (src < 0) {
+        is_neg = 1;
+        src = -src;
+        bytes_to_write += 1;
+    }
+
+    double precision_d = pow10_double[decimals];
+    src += (float)(0.5 / precision_d);
+
+    // infinity check
+    if (src >= (float)(-1UL >> 1)) {
+        const char *text = "inf";
+        bytes_to_write = sizeof("inf");
+        if (is_neg) {
+            text = "-inf";
+            bytes_to_write = sizeof("-inf");
+        }
+
+        if (len < bytes_to_write) {
+            return 0;
+        }
+        bytes_copy(dest, text, bytes_to_write);
+        return bytes_to_write;
+    }
+
+    // integer part
+    ullong integer = (ullong)src;
+    char integer_cstr[32];
+    char *integer_cstr_end = integer_cstr + sizeof(integer_cstr);
+    size_t integer_len = cstr_from_ullong_unsafe(integer_cstr_end, integer);
+    bytes_to_write += integer_len;
+    if (len < bytes_to_write) {
+        return 0;
+    }
+
+    // fractional part
+    ullong fractional = (ullong)((src - (double)integer) * precision_d);
+    ullong precision_ullong = pow10_ullong[decimals];
+    uint decimal_zeros = 0;
+    for (ullong i = precision_ullong / 10; i > 1; i /= 10) {
+        if (i > fractional) {
+            decimal_zeros += 1;
+            bytes_to_write += 1;
+            if (len < bytes_to_write) {
+                return 0;
+            }
+        } else {
+            break;
+        }
+    }
+    char fractional_cstr[32];
+    char *fractional_cstr_end = fractional_cstr + sizeof(fractional_cstr);
+    size_t fractional_len = cstr_from_ullong_unsafe(fractional_cstr_end, fractional);
+    bytes_to_write += fractional_len;
+    if (len < bytes_to_write) {
+        return 0;
+    }
+
+    // copy
+    char *cursor = dest;
+    if (is_neg) {
+        cursor[0] = '-';
+        cursor += 1;
+    }
+    bytes_copy(cursor, integer_cstr_end - integer_len, integer_len);
+    cursor += integer_len;
+    cursor[0] = '.';
+    cursor += 1;
+    for (uint i = 0; i < decimal_zeros; i += 1) {
+        cursor[i] += '0';
+    }
+    cursor += decimal_zeros;
+    bytes_copy(cursor, fractional_cstr_end - fractional_len, fractional_len);
+    cursor += fractional_len;
+    assert((size_t)(cursor - dest) == bytes_to_write);
+
+    return bytes_to_write;
+}
+
+size_t cstr_from_float_trunc(char *dest, size_t len, float src, uint decimals) {
+    assert(dest && "dest must not be null");
+    assert(len > 2 && "len must be more than 2");
+    assert(decimals <= 19 && "decimals up to 19 are supported");
+
     if (len == 0) {
         return 0;
     }
@@ -1139,7 +1159,7 @@ size_t cstr_from_float(char *dest, size_t len, float src, uint decimals) {
 
     double precision_d = pow10_double[decimals];
 
-    src += 0.5f / (float)precision_d;
+    src += (float)(0.5 / precision_d);
     if (src >= (float)(-1UL >> 1)) {
         size_t bytes_to_copy = min(len, sizeof("inf"));
         bytes_copy(dest + bytes_written, "inf", bytes_to_copy);
@@ -1150,8 +1170,7 @@ size_t cstr_from_float(char *dest, size_t len, float src, uint decimals) {
     // integer part
     ullong integer = (ullong)src;
     bytes_written +=
-        cstr_from_ullong(dest + bytes_written, len - bytes_written, integer)
-        - 1;
+        cstr_from_ullong(dest + bytes_written, len - bytes_written, integer);
     if (bytes_written == len) {
         return bytes_written;
     }
@@ -1173,6 +1192,8 @@ size_t cstr_from_float(char *dest, size_t len, float src, uint decimals) {
             if (bytes_written == len) {
                 return bytes_written;
             }
+        } else {
+            break;
         }
     }
     bytes_written +=
@@ -1183,8 +1204,100 @@ size_t cstr_from_float(char *dest, size_t len, float src, uint decimals) {
 
 size_t cstr_from_double(char *dest, size_t len, double src, uint decimals) {
     assert(dest && "dest must not be null");
-    assert(len > 0 && "len must be more than 0");
-    assert(decimals < 19 && "decimals up to 19 are supported");
+    assert(len > 2 && "len must be more than 2");
+    assert(decimals <= 19 && "decimals up to 18 are supported");
+
+    if (len < 3 || decimals > 19) {
+        return 0;
+    }
+
+    bool is_neg = 0;
+    size_t bytes_to_write = 1; // includes the decimal point
+
+    if (src < 0) {
+        is_neg = 1;
+        src = -src;
+        bytes_to_write += 1;
+    }
+
+    double precision_d = pow10_double[decimals];
+    src += 0.5f / precision_d;
+
+    // infinity check
+    if (src >= (double)(-1UL >> 1)) {
+        const char *text = "inf";
+        bytes_to_write = sizeof("inf");
+        if (is_neg) {
+            text = "-inf";
+            bytes_to_write = sizeof("-inf");
+        }
+
+        if (len < bytes_to_write) {
+            return 0;
+        }
+        bytes_copy(dest, text, bytes_to_write);
+        return bytes_to_write;
+    }
+
+    // integer part
+    ullong integer = (ullong)src;
+    char integer_cstr[32];
+    char *integer_cstr_end = integer_cstr + sizeof(integer_cstr);
+    size_t integer_len = cstr_from_ullong_unsafe(integer_cstr_end, integer);
+    bytes_to_write += integer_len;
+    if (len < bytes_to_write) {
+        return 0;
+    }
+
+    // fractional part
+    ullong fractional = (ullong)((src - (double)integer) * precision_d);
+    ullong precision_ullong = pow10_ullong[decimals];
+    uint decimal_zeros = 0;
+    for (ullong i = precision_ullong / 10; i > 1; i /= 10) {
+        if (i > fractional) {
+            decimal_zeros += 1;
+            bytes_to_write += 1;
+            if (len < bytes_to_write) {
+                return 0;
+            }
+        } else {
+            break;
+        }
+    }
+    char fractional_cstr[32];
+    char *fractional_cstr_end = fractional_cstr + sizeof(fractional_cstr);
+    size_t fractional_len = cstr_from_ullong_unsafe(fractional_cstr_end, fractional);
+    bytes_to_write += fractional_len;
+    if (len < bytes_to_write) {
+        return 0;
+    }
+
+    // copy
+    char *cursor = dest;
+    if (is_neg) {
+        cursor[0] = '-';
+        cursor += 1;
+    }
+    bytes_copy(cursor, integer_cstr_end - integer_len, integer_len);
+    cursor += integer_len;
+    cursor[0] = '.';
+    cursor += 1;
+    for (uint i = 0; i < decimal_zeros; i += 1) {
+        cursor[i] += '0';
+    }
+    cursor += decimal_zeros;
+    bytes_copy(cursor, fractional_cstr_end - fractional_len, fractional_len);
+    cursor += fractional_len;
+    assert((size_t)(cursor - dest) == bytes_to_write);
+
+    return bytes_to_write;
+}
+
+size_t cstr_from_double_trunc(char *dest, size_t len, double src, uint decimals) {
+    assert(dest && "dest must not be null");
+    assert(len > 2 && "len must be more than 2");
+    assert(decimals <= 19 && "decimals up to 19 are supported");
+
     if (len == 0) {
         return 0;
     }
@@ -1212,8 +1325,7 @@ size_t cstr_from_double(char *dest, size_t len, double src, uint decimals) {
     // integer part
     ullong integer = (ullong)src;
     bytes_written +=
-        cstr_from_ullong(dest + bytes_written, len - bytes_written, integer)
-        - 1;
+        cstr_from_ullong(dest + bytes_written, len - bytes_written, integer);
     if (bytes_written == len) {
         return bytes_written;
     }
@@ -1235,6 +1347,8 @@ size_t cstr_from_double(char *dest, size_t len, double src, uint decimals) {
             if (bytes_written == len) {
                 return bytes_written;
             }
+        } else {
+            break;
         }
     }
     bytes_written +=
@@ -1244,7 +1358,7 @@ size_t cstr_from_double(char *dest, size_t len, double src, uint decimals) {
 }
 
 size_t cstr_len_int(int src) {
-    size_t len = 1;
+    size_t len = 0;
     if (src < 0) {
         len += 1;
         src = -src;
@@ -1257,7 +1371,7 @@ size_t cstr_len_int(int src) {
 }
 
 size_t cstr_len_uint(uint src) {
-    size_t len = 1;
+    size_t len = 0;
     do {
         len += 1;
         src /= 10;
@@ -1266,7 +1380,7 @@ size_t cstr_len_uint(uint src) {
 }
 
 size_t cstr_len_llong(llong src) {
-    size_t len = 1;
+    size_t len = 0;
     if (src < 0) {
         len += 1;
         src = -src;
@@ -1279,7 +1393,7 @@ size_t cstr_len_llong(llong src) {
 }
 
 size_t cstr_len_ullong(ullong src) {
-    size_t len = 1;
+    size_t len = 0;
     do {
         len += 1;
         src /= 10;
@@ -1305,7 +1419,7 @@ size_t cstr_len_float(float src, uint decimals) {
 
     // integer part
     ullong integer = (ullong)src;
-    len += cstr_len_ullong(integer) - 1;
+    len += cstr_len_ullong(integer);
 
     // decimal point
     len += 1;
@@ -1341,7 +1455,7 @@ size_t cstr_len_double(double src, uint decimals) {
 
     // integer part
     ullong integer = (ullong)src;
-    len += cstr_len_ullong(integer) - 1;
+    len += cstr_len_ullong(integer);
 
     // decimal point
     len += 1;
@@ -1476,6 +1590,10 @@ void cstr_fmt_parse_fmt_field(cstr_fmt_field *field, const char *format) {
             field->type = cstr_fmt_field_type_char;
             done = 1;
             break;
+        case 's':
+            field->type = cstr_fmt_field_type_str;
+            done = 1;
+            break;
         case 'l':
             wide_int = 1;
             break;
@@ -1488,8 +1606,12 @@ void cstr_fmt_parse_fmt_field(cstr_fmt_field *field, const char *format) {
     }
 }
 
-size_t
-cstr_fmt(char *restrict dest, size_t len, const char *restrict format, ...) {
+size_t cstr_fmt_va(
+    char *restrict dest,
+    size_t len,
+    const char *restrict format,
+    va_list va_args
+) {
     assert(dest && "dest must not be null");
     assert(len > 0 && "len must be higher than 0");
     assert(format && "format must not be null");
@@ -1501,9 +1623,6 @@ cstr_fmt(char *restrict dest, size_t len, const char *restrict format, ...) {
     const char *cursor = format;
     cstr_fmt_field field = {0};
     size_t bytes_written = 0;
-
-    va_list va_args;
-    va_start(va_args, format);
 
     while (bytes_written < len && *cursor != '\0') {
         const char *chunk_start = cursor;
@@ -1522,8 +1641,7 @@ cstr_fmt(char *restrict dest, size_t len, const char *restrict format, ...) {
         if (bytes_to_copy == 0) { // nothing to copy
             break;
         }
-        if (bytes_to_copy > 1) { // 1 because we are on %
-            bytes_to_copy -= 1;
+        if (bytes_to_copy > 0) {
             bytes_copy(dest + bytes_written, chunk_start, bytes_to_copy);
             bytes_written += bytes_to_copy;
         }
@@ -1543,26 +1661,31 @@ cstr_fmt(char *restrict dest, size_t len, const char *restrict format, ...) {
             bytes_written += 1;
             break;
         case cstr_fmt_field_type_char:
-            dest[bytes_written] = *cursor;
+            dest[bytes_written] = (char)va_arg(va_args, int);
             bytes_written += 1;
             break;
         case cstr_fmt_field_type_int:
-            bytes_written +=
-                cstr_from_int(dest, len - bytes_written, va_arg(va_args, int));
+            bytes_written += cstr_from_int(
+                dest + bytes_written, len - bytes_written, va_arg(va_args, int)
+            );
             break;
         case cstr_fmt_field_type_uint:
             bytes_written += cstr_from_uint(
-                dest, len - bytes_written, va_arg(va_args, uint)
+                dest + bytes_written, len - bytes_written, va_arg(va_args, uint)
             );
             break;
         case cstr_fmt_field_type_llong:
             bytes_written += cstr_from_llong(
-                dest, len - bytes_written, va_arg(va_args, llong)
+                dest + bytes_written,
+                len - bytes_written,
+                va_arg(va_args, llong)
             );
             break;
         case cstr_fmt_field_type_ullong:
             bytes_written += cstr_from_ullong(
-                dest, len - bytes_written, va_arg(va_args, ullong)
+                dest + bytes_written,
+                len - bytes_written,
+                va_arg(va_args, ullong)
             );
             break;
         case cstr_fmt_field_type_float:
@@ -1570,7 +1693,10 @@ cstr_fmt(char *restrict dest, size_t len, const char *restrict format, ...) {
                 precision = field.precision;
             }
             bytes_written += cstr_from_double(
-                dest, len - bytes_written, va_arg(va_args, double), precision
+                dest + bytes_written,
+                len - bytes_written,
+                va_arg(va_args, double),
+                precision
             );
             break;
         case cstr_fmt_field_type_str:
@@ -1601,6 +1727,207 @@ cstr_fmt(char *restrict dest, size_t len, const char *restrict format, ...) {
         bytes_written += 1;
     }
 
-    va_end(va_args);
     return bytes_written;
+}
+
+size_t cstr_fmt_len_va(const char *restrict format, va_list va_args) {
+    assert(format && "format must not be null");
+
+    const char *cursor = format;
+    cstr_fmt_field field = {0};
+    size_t len = 0;
+
+    while (*cursor != '\0') {
+        const char *chunk_start = cursor;
+
+        // find the next position of string format start
+        for (; *cursor != '\0'; cursor += 1) {
+            if (*cursor == '%') {
+                break;
+            }
+        }
+
+        // copy chunk to destination
+        size_t bytes_to_copy = (size_t)(cursor - chunk_start);
+        if (bytes_to_copy == 0) { // nothing to copy
+            break;
+        }
+        if (bytes_to_copy > 0) {
+            len += bytes_to_copy;
+        }
+        if (*cursor == '\0') {
+            break;
+        }
+        cursor += 1;
+
+        // parse and handle format string
+        cstr_fmt_parse_fmt_field(&field, cursor);
+        uint precision = 9;
+        const char *s;
+        size_t s_len;
+        switch (field.type) {
+        case cstr_fmt_field_type_literal:
+            len += 1;
+            break;
+        case cstr_fmt_field_type_char:
+            len += 1;
+            break;
+        case cstr_fmt_field_type_int:
+            len += cstr_len_int(va_arg(va_args, int));
+            break;
+        case cstr_fmt_field_type_uint:
+            len += cstr_len_uint(va_arg(va_args, uint));
+            break;
+        case cstr_fmt_field_type_llong:
+            len += cstr_len_llong(va_arg(va_args, llong));
+            break;
+        case cstr_fmt_field_type_ullong:
+            len += cstr_len_ullong(va_arg(va_args, ullong));
+            break;
+        case cstr_fmt_field_type_float:
+            if (field.flags & cstr_fmt_field_flag_precision) {
+                precision = field.precision;
+            }
+            len += cstr_len_double(va_arg(va_args, double), precision);
+            break;
+        case cstr_fmt_field_type_str:
+            if (field.flags & cstr_fmt_field_flag_str_len) {
+                s_len = va_arg(va_args, size_t);
+                s = va_arg(va_args, char *);
+            } else {
+                s = va_arg(va_args, char *);
+                s_len = cstr_len_unsafe(s);
+            }
+            len += s_len;
+            break;
+        case cstr_fmt_field_type_unknown:
+        default:
+            len += 1;
+            break;
+        }
+
+        cursor += field.len;
+    }
+
+    // null termination
+    len += 1;
+
+    return len;
+}
+
+////////////////////////
+// Byte buffer
+////////////////////////
+
+bytebuf bytebuf_new(size_t capacity, allocator *allocator) {
+    assert(allocator && "allocator must not be null");
+    assert(capacity > 0 && "capacity must be larger than 0");
+    bytebuf b;
+    bytes_set(&b, 0, sizeof(b));
+    b.allocator = allocator;
+    b.buffer = alloc_malloc(allocator, capacity, _Alignof(uchar));
+    if (b.buffer) {
+        b.cap = capacity;
+    }
+    return b;
+}
+
+bytebuf bytebuf_new_fixed(uchar *buffer, size_t len, size_t capacity) {
+    bytebuf b;
+    bytes_set(&b, 0, sizeof(b));
+    b.buffer = buffer;
+    b.len = len;
+    b.cap = capacity;
+    return b;
+}
+
+void bytebuf_free(bytebuf *bbuf) {
+    assert(bbuf && "bytebuf must not be null");
+    assert(bbuf->buffer && "bytebuf's buffer must not be null");
+    assert(bbuf->allocator && "allocator must not be null");
+    if (!bbuf && !bbuf->buffer) {
+        return;
+    }
+    alloc_free(bbuf->allocator, bbuf->buffer);
+    bbuf->cap = 0;
+    bbuf->len = 0;
+    bbuf->buffer = 0;
+}
+
+bool bytebuf_grow(bytebuf *bbuf, size_t capacity_increase) {
+    assert(bbuf && "bytebuf must not be null");
+    assert(bbuf->buffer && "bytebuf's buffer must not be null");
+    assert(capacity_increase > 0 && "capacity increase must be larger than 0");
+    if (capacity_increase == 0) {
+        return 1;
+    }
+
+    uchar *newbuf = alloc_malloc(
+        bbuf->allocator, bbuf->cap + capacity_increase, _Alignof(uchar)
+    );
+    if (!newbuf) {
+        return 0;
+    }
+
+    bytes_copy(newbuf, bbuf->buffer, bbuf->len);
+    bbuf->buffer = newbuf;
+    bbuf->cap += capacity_increase;
+    return 1;
+}
+
+bytebuf bytebuf_clone(bytebuf *bbuf, size_t capacity_increase) {
+    assert(bbuf && "bytebuf must not be null");
+    assert(bbuf->buffer && "bytebuf's buffer must not be null");
+    assert(bbuf->allocator && "allocator must not be null");
+
+    bytebuf newbbuf =
+        bytebuf_new(bbuf->cap + capacity_increase, bbuf->allocator);
+    if (!newbbuf.buffer) {
+        return newbbuf; // failed new
+    }
+    bytes_copy(newbbuf.buffer, bbuf->buffer, bbuf->len);
+    newbbuf.len = bbuf->len;
+    return newbbuf;
+}
+
+bool bytebuf_write(bytebuf *bbuf, uchar *src, size_t len) {
+    assert(bbuf && "bytebuf must not be null");
+    assert(bbuf->buffer && "bytebuf's buffer must not be null");
+    assert(src && "source must not be null");
+    assert(len > 0 && "length must be more than 0");
+
+    if (!src || len == 0) {
+        return 1; // nothing to write
+    }
+    if (len > bbuf->cap - bbuf->len) {
+        return 0; // no capacity left
+    }
+    bytes_copy(bbuf->buffer + bbuf->len, src, len);
+    bbuf->len += len;
+    return 1;
+}
+
+bool bytebuf_write_grow(bytebuf *bbuf, uchar *src, size_t len) {
+    assert(bbuf && "bytebuf must not be null");
+    assert(bbuf->buffer && "bytebuf's buffer must not be null");
+    assert(src && "source must not be null");
+    assert(len > 0 && "length must be more than 0");
+
+    if (!src || len == 0) {
+        return 1; // nothing to write
+    }
+    if (len > bbuf->cap - bbuf->len) {
+        size_t capacity_increase = bbuf->cap + len;
+        bool ok = bytebuf_grow(bbuf, capacity_increase);
+        if (!ok) {
+            return 0; // grow failed
+        }
+    }
+    bytes_copy(bbuf->buffer + bbuf->len, src, len);
+    bbuf->len += len;
+    return 1;
+}
+
+void bytebuf_clear(bytebuf *bbuf) {
+    bbuf->len = 0;
 }
