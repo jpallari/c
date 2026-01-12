@@ -9,19 +9,18 @@ static int color_enabled = 1;
 static int trap_on_assert_fail = 0;
 static int print_all_asserts = 0;
 
-bool test_report_append(
+static void test_report_append_no_log(
     test *t,
     const bool passed,
-    const char *log_message,
-    const size_t log_message_size,
+    const size_t logs_offset,
+    const size_t logs_len,
     const char *file,
     const int line
 ) {
     assert(t && "test report must not be null");
-    assert(t->logs && "logs must not be null");
-
     test_assert assert_report = {
-        .logs_offset = t->logs->len,
+        .logs_offset = logs_offset,
+        .logs_len = logs_len,
         .passed = passed,
         .file = file,
         .line = line,
@@ -35,15 +34,26 @@ bool test_report_append(
         panic();
     }
 
-    if (!bytebuf_write(t->logs, (const uchar *)log_message, log_message_size)) {
-        panic();
-    }
-
     t->assert_count += 1;
     if (passed) {
         t->asserts_passed += 1;
     }
+}
 
+bool test_report_append(
+    test *t,
+    const bool passed,
+    const char *log_message,
+    const size_t log_message_size,
+    const char *file,
+    const int line
+) {
+    assert(t->logs && "logs must not be null");
+    size_t logs_offset = t->logs->len;
+    if (!bytebuf_write_str(t->logs, log_message, log_message_size)) {
+        panic();
+    }
+    test_report_append_no_log(t, passed, logs_offset, log_message_size, file, line);
     return passed;
 }
 
@@ -57,15 +67,15 @@ bool test_report_append_formatted_cstr(
     const char *left,
     const char *right
 ) {
-    char buffer[1024] = {0};
-    cstr_fmt_result fmt_res = cstr_fmt(
-        buffer, sizeof(buffer), "%s %s %s // %s", left, cmp, right, log_message
-    );
+    assert(t->logs && "logs must not be null");
+    size_t logs_offset = t->logs->len;
+    cstr_fmt_result fmt_res =
+        bytebuf_fmt(t->logs, "S S S // S", left, cmp, right, log_message);
     if (!fmt_res.ok) {
         panic();
     }
-    buffer[fmt_res.len] = '\0';
-    return test_report_append(t, passed, buffer, fmt_res.len + 1, file, line);
+    test_report_append_no_log(t, passed, logs_offset, fmt_res.len, file, line);
+    return passed;
 }
 
 bool test_report_append_formatted_float(
@@ -78,15 +88,15 @@ bool test_report_append_formatted_float(
     const double left,
     const double right
 ) {
-    char buffer[1024] = {0};
-    cstr_fmt_result fmt_res = cstr_fmt(
-        buffer, sizeof(buffer), "%f %s %f // %s", left, cmp, right, log_message
-    );
+    assert(t->logs && "logs must not be null");
+    size_t logs_offset = t->logs->len;
+    cstr_fmt_result fmt_res =
+        bytebuf_fmt(t->logs, "f S f // S", left, cmp, right, log_message);
     if (!fmt_res.ok) {
         panic();
     }
-    buffer[fmt_res.len] = '\0';
-    return test_report_append(t, passed, buffer, fmt_res.len + 1, file, line);
+    test_report_append_no_log(t, passed, logs_offset, fmt_res.len, file, line);
+    return passed;
 }
 
 bool test_report_append_formatted_int(
@@ -99,21 +109,15 @@ bool test_report_append_formatted_int(
     const llong left,
     const llong right
 ) {
-    char buffer[4 * 1024] = {0};
-    cstr_fmt_result fmt_res = cstr_fmt(
-        buffer,
-        sizeof(buffer),
-        "%lld %s %lld // %s",
-        left,
-        cmp,
-        right,
-        log_message
-    );
+    assert(t->logs && "logs must not be null");
+    size_t logs_offset = t->logs->len;
+    cstr_fmt_result fmt_res =
+        bytebuf_fmt(t->logs, "I S I // S", left, cmp, right, log_message);
     if (!fmt_res.ok) {
         panic();
     }
-    buffer[fmt_res.len] = '\0';
-    return test_report_append(t, passed, buffer, fmt_res.len + 1, file, line);
+    test_report_append_no_log(t, passed, logs_offset, fmt_res.len, file, line);
+    return passed;
 }
 
 bool test_report_append_formatted_uint(
@@ -126,21 +130,15 @@ bool test_report_append_formatted_uint(
     const ullong left,
     const ullong right
 ) {
-    char buffer[4 * 1024] = {0};
-    cstr_fmt_result fmt_res = cstr_fmt(
-        buffer,
-        sizeof(buffer),
-        "%llu %s %llu // %s",
-        left,
-        cmp,
-        right,
-        log_message
-    );
+    assert(t->logs && "logs must not be null");
+    size_t logs_offset = t->logs->len;
+    cstr_fmt_result fmt_res =
+        bytebuf_fmt(t->logs, "U S U // S", left, cmp, right, log_message);
     if (!fmt_res.ok) {
         panic();
     }
-    buffer[fmt_res.len] = '\0';
-    return test_report_append(t, passed, buffer, fmt_res.len + 1, file, line);
+    test_report_append_no_log(t, passed, logs_offset, fmt_res.len, file, line);
+    return passed;
 }
 
 static int test_suite_report_tap(test_suite_report *report, bufstream *out) {
@@ -181,10 +179,10 @@ static int test_suite_report_tap(test_suite_report *report, bufstream *out) {
             }
             out_res = bufstream_fmt(
                 out,
-                "    s u - S\n",
+                "    s u - s\n",
                 status,
                 j + 1,
-                &(logs->buffer[ar.logs_offset])
+                slice_new((logs->buffer + ar.logs_offset), ar.logs_len)
             );
             if (out_res.err_code) {
                 return out_res.err_code;
@@ -275,10 +273,10 @@ test_suite_report_pretty(test_suite_report *report, bufstream *out) {
             if (!ar.passed || print_all_asserts) {
                 io_res = bufstream_fmt(
                     out,
-                    "    S:i: S\n",
+                    "    S:i: s\n",
                     ar.file,
                     ar.line,
-                    &(logs->buffer[ar.logs_offset])
+                    slice_new((logs->buffer + ar.logs_offset), ar.logs_len)
                 );
                 if (io_res.err_code) {
                     return 0;
@@ -297,29 +295,6 @@ int test_main(
     uint test_count,
     test_case *test_cases
 ) {
-    uchar buf_stdout[4 * 1024];
-    io_file_bytesink_context stdout_ctx = {
-        .fd = STDOUT_FILENO,
-        .chunk_size = 0,
-    };
-    bufstream bstream_stdout = {
-        .buffer = buf_stdout,
-        .len = 0,
-        .cap = sizeof(buf_stdout),
-        .sink = io_file_bytesink(&stdout_ctx),
-    };
-    uchar buf_stderr[4 * 1024];
-    io_file_bytesink_context stderr_ctx = {
-        .fd = STDERR_FILENO,
-        .chunk_size = 0,
-    };
-    bufstream bstream_stderr = {
-        .buffer = buf_stderr,
-        .len = 0,
-        .cap = sizeof(buf_stderr),
-        .sink = io_file_bytesink(&stderr_ctx),
-    };
-
     int ret_val = 0;
 
     // settings
@@ -413,12 +388,12 @@ int test_main(
             report.tests_passed += 1;
         }
 
-        bytesink_result io_res = bufstream_flush(&bstream_stderr);
+        bytesink_result io_res = io_stderr_flush();
         if (io_res.err_code) {
             ret_val = 2;
             break;
         }
-        io_res = bufstream_flush(&bstream_stdout);
+        io_res = io_stdout_flush();
         if (io_res.err_code) {
             ret_val = 2;
             break;
@@ -434,10 +409,10 @@ int test_main(
         ret_val = 1; // Tests failed
     }
 
-    if (!test_suite_report_pretty(&report, &bstream_stderr)) {
+    if (!test_suite_report_pretty(&report, io_stderr_get())) {
         ret_val = 2; // IO error
     }
-    int err_code = test_suite_report_tap(&report, &bstream_stdout);
+    int err_code = test_suite_report_tap(&report, io_stdout_get());
     if (err_code) {
         ret_val = 2; // IO error
     }
@@ -447,11 +422,11 @@ int test_main(
     dynarr_free(asserts_handle.asserts);
     bytebuf_free(&logs);
 
-    bytesink_result io_res = bufstream_flush(&bstream_stderr);
+    bytesink_result io_res = io_stderr_flush();
     if (io_res.err_code) {
         ret_val = 2;
     }
-    io_res = bufstream_flush(&bstream_stdout);
+    io_res = io_stdout_flush();
     if (io_res.err_code) {
         ret_val = 2;
     }
