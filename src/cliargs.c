@@ -46,10 +46,11 @@ void cliargs_write_error(cliargs_state state, const char *format, ...) {
 
     size_t remaining_len = state.args->errors.max_len - state.args->errors.len;
 
-    cstr_fmt_result fmt_res = cstr_fmt(
+    cstr_fmt_result fmt_res = cstr_fmt2(
         state.args->errors.buffer + state.args->errors.len,
         remaining_len,
-        "Failed to process argument #%u '%s': ",
+        "s #u 'S': ",
+        slice_sstr("Failed to process argument"),
         state.index + 1,
         state.argv[state.index]
     );
@@ -60,7 +61,7 @@ void cliargs_write_error(cliargs_state state, const char *format, ...) {
 
     va_list va_args;
     va_start(va_args, format);
-    fmt_res = cstr_fmt_va(
+    fmt_res = cstr_fmt2_va(
         state.args->errors.buffer + state.args->errors.len,
         remaining_len,
         format,
@@ -213,7 +214,7 @@ cliargs_find_by_name(cliargs_state state, const char *name, size_t name_len) {
         }
     }
 
-    cliargs_write_error(state, "Unknown flag.");
+    cliargs_write_error(state, "s", slice_sstr("Unknown flag."));
     return NULL;
 }
 
@@ -224,8 +225,10 @@ cliargs_error cliargs_add_pos_arg(cliargs_state state) {
     if (state.args->positional.len >= state.args->positional.max_len) {
         cliargs_write_error(
             state,
-            "Too many positional arguments. Expected max %d arguments.",
-            state.args->positional.max_len
+            "s i s.",
+            slice_sstr("Too many positional arguments. Expected max"),
+            state.args->positional.max_len,
+            slice_sstr("arguments")
         );
         return cliargs_error_too_many_pos_args;
     }
@@ -243,9 +246,12 @@ cliargs_error cliargs_parse_value_to_opt(
     if (opt->len >= opt->max_len) {
         cliargs_write_error(
             state,
-            "Too many arguments for '%s'. Expected max %d arguments.",
+            "s 'S'. s i s.",
+            slice_sstr("Too many arguments for"),
             opt->long_name,
-            opt->max_len
+            slice_sstr("Expected max"),
+            opt->max_len,
+            slice_sstr("arguments")
         );
         return cliargs_error_too_many_flag_args;
     }
@@ -259,12 +265,13 @@ cliargs_error cliargs_parse_value_to_opt(
     case cliargs_error_parse_fail:
         cliargs_write_error(
             state,
-            "Could not parse value of type %s.",
+            "s S.",
+            slice_sstr("Could not parse value of type"),
             cliargs_type_to_name(opt->type)
         );
         return err;
     case cliargs_error_unknown_type:
-        cliargs_write_error(state, "Unexpected type.");
+        cliargs_write_error(state, "s", slice_sstr("Unexpected type."));
         return err;
     case cliargs_error_unknown_flag:
     case cliargs_error_too_many_flag_args:
@@ -286,9 +293,12 @@ cliargs_opt_add_value(cliargs_state state, cliargs_opt *opt, cliargs_val v) {
     if (opt->len >= opt->max_len) {
         cliargs_write_error(
             state,
-            "Too many arguments for '%s'. Expected max %d arguments.",
+            "s 'S'. s i s.",
+            slice_sstr("Too many arguments for"),
             opt->long_name,
-            opt->max_len
+            slice_sstr("Expected max"),
+            opt->max_len,
+            slice_sstr("arguments")
         );
         return cliargs_error_too_many_flag_args;
     }
@@ -336,7 +346,10 @@ cliargs_error cliargs_parse(cliargs *args, int argc, char **argv) {
             // awaiting val for an opt
             if (!a.val_len) {
                 cliargs_write_error(
-                    state, "Expected a value for option '%s'.", opt->long_name
+                    state,
+                    "s 'S'.",
+                    slice_sstr("Expected a value for option"),
+                    opt->long_name
                 );
                 return cliargs_error_value_expected;
             }
