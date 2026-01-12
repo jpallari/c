@@ -3,20 +3,8 @@
 #include <stdio.h>
 
 int main(int argc, char **argv) {
-    uchar buf_stderr[4 * 1024];
-    io_file_bytesink_context stderr_ctx = {
-        .fd = STDERR_FILENO,
-        .chunk_size = 0,
-    };
-    bufstream bstream_stderr = {
-        .buffer = buf_stderr,
-        .len = 0,
-        .cap = sizeof(buf_stderr),
-        .sink = io_file_bytesink(&stderr_ctx),
-    };
-
     if (argc < 2) {
-        bufstream_write_sstr(&bstream_stderr, "No file supplied\n");
+        io_stderr_write_sstr("No file supplied\n");
         return 1;
     }
 
@@ -27,12 +15,11 @@ int main(int argc, char **argv) {
 
     file_read_result res = file_read_sync(argv[1], &std_allocator);
     if (res.err_code) {
-        bufstream_fmt(
-            &bstream_stderr,
+        io_stderr_fmt(
             "S 'S' S i",
             "Reading file",
             argv[1],
-            "failed with code",
+            "failed with code\n",
             res.err_code
         );
     }
@@ -84,5 +71,7 @@ int main(int argc, char **argv) {
     } while (s.buffer);
 
     alloc_free(&std_allocator, res.data);
+    io_stderr_flush();
+
     return 0;
 }
