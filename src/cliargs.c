@@ -46,7 +46,7 @@ void cliargs_write_error(cliargs_state state, const char *format, ...) {
 
     size_t remaining_len = state.args->errors.max_len - state.args->errors.len;
 
-    cstr_fmt_result fmt_res = cstr_fmt2(
+    cstr_fmt_result fmt_res = cstr_fmt(
         state.args->errors.buffer + state.args->errors.len,
         remaining_len,
         "s #u 'S': ",
@@ -61,7 +61,7 @@ void cliargs_write_error(cliargs_state state, const char *format, ...) {
 
     va_list va_args;
     va_start(va_args, format);
-    fmt_res = cstr_fmt2_va(
+    fmt_res = cstr_fmt_va(
         state.args->errors.buffer + state.args->errors.len,
         remaining_len,
         format,

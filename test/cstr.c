@@ -372,11 +372,11 @@ void test_cstr_fmt(test *t) {
     const char *format;
 
     format = "s: s; s: i";
-    len = cstr_fmt2_len(
+    len = cstr_fmt_len(
         format, slice_sstr("string"), slice_sstr("hello"), slice_sstr("int"), -4
     );
     assert_eq_uint(t, len, 22, "1: fmt len");
-    res = cstr_fmt2(
+    res = cstr_fmt(
         buf,
         sizeof(buf),
         format,
@@ -390,29 +390,29 @@ void test_cstr_fmt(test *t) {
     assert_true(t, res.ok, "1: ok");
 
     format = "s: U";
-    len = cstr_fmt2_len(format, slice_sstr("ullong"), 123UL);
+    len = cstr_fmt_len(format, slice_sstr("ullong"), 123UL);
     assert_eq_uint(t, len, 11, "2: fmt len");
-    res = cstr_fmt2(buf, sizeof(buf), format, slice_sstr("ullong"), 123UL);
+    res = cstr_fmt(buf, sizeof(buf), format, slice_sstr("ullong"), 123UL);
     assert_eq_cstr(t, "ullong: 123", buf, "2: fmt contents");
     assert_eq_uint(t, res.len, 11, "2: fmt content len");
     assert_true(t, res.ok, "2: ok");
 
     format = "u; I";
-    len = cstr_fmt2_len(format, 98, -12345L);
+    len = cstr_fmt_len(format, 98, -12345L);
     assert_eq_uint(t, len, 10, "3: fmt len");
-    res = cstr_fmt2(buf, sizeof(buf), format, 98, -12345L);
+    res = cstr_fmt(buf, sizeof(buf), format, 98, -12345L);
     assert_eq_cstr(t, "98; -12345", buf, "3: fmt contents");
     assert_eq_uint(t, res.len, 10, "3: fmt content len");
     assert_true(t, res.ok, "3: ok");
 
     format = "F; F";
-    len = cstr_fmt2_len(
+    len = cstr_fmt_len(
         format,
         (cstr_fmt_float) {.v = (double)2.456f, .precision = 2},
         (cstr_fmt_float) {.v = 123.456789, .precision = 4}
     );
     assert_eq_uint(t, len, 14, "4: fmt len");
-    res = cstr_fmt2(
+    res = cstr_fmt(
         buf,
         sizeof(buf),
         format,
@@ -424,7 +424,7 @@ void test_cstr_fmt(test *t) {
     assert_true(t, res.ok, "4: ok");
 
     format = "s: s; s: c!";
-    len = cstr_fmt2_len(
+    len = cstr_fmt_len(
         format,
         slice_sstr("string"),
         slice_const_new("hello world", 5),
@@ -432,7 +432,7 @@ void test_cstr_fmt(test *t) {
         'x'
     );
     assert_eq_uint(t, len, 23, "5: fmt len");
-    res = cstr_fmt2(
+    res = cstr_fmt(
         buf,
         sizeof(buf),
         format,
