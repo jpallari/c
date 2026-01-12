@@ -1,68 +1,12 @@
-#ifndef JP_TESTR_H
-#define JP_TESTR_H
-
+#include "testr.h"
 #include "io.h"
-#include "std.h"
 #include <stdarg.h>
 #include <stddef.h>
-#include <stdlib.h>
 #include <unistd.h>
-
-////////////////////////
-// Panic
-////////////////////////
-
-/**
- * Quit the program immediately
- */
-#define panic() exit(10)
-
-////////////////////////
-// Config
-////////////////////////
 
 static int color_enabled = 1;
 static int trap_on_assert_fail = 0;
 static int print_all_asserts = 0;
-
-////////////////////////
-// Reporting
-////////////////////////
-
-typedef struct {
-    ullong logs_offset;
-    const char *file;
-    int line;
-    bool passed;
-} test_assert;
-
-typedef struct {
-    test_assert *asserts; // dynamic array
-} asserts_handle;
-
-typedef struct {
-    bytebuf *logs;
-    asserts_handle *asserts_handle;
-    uint assert_count;
-    uint asserts_passed;
-} test;
-
-typedef struct {
-    const char *name;
-    test_assert *asserts;
-    uint assert_count;
-    uint asserts_passed;
-} test_report;
-
-typedef struct {
-    bytebuf *logs;
-    asserts_handle *asserts_handle;
-    test_report *test_reports;
-    uint test_count;
-    uint tests_passed;
-    uint assert_count;
-    uint asserts_passed;
-} test_suite_report;
 
 bool test_report_append(
     test *t,
@@ -294,24 +238,6 @@ void test_suite_report_pretty(test_suite_report *report, int fd) {
     }
 }
 
-////////////////////////
-// Test runner
-////////////////////////
-
-typedef void (*test_case_fun)(test *t);
-
-typedef struct {
-    void (*before_all)(void);
-    void (*before)(void);
-    void (*after)(void);
-    void (*after_all)(void);
-} test_setup;
-
-typedef struct {
-    const char *name;
-    test_case_fun test_code;
-} test_case;
-
 int test_main(
     int argc,
     char **argv,
@@ -425,92 +351,3 @@ int test_main(
     int fail_count = (int)(report.test_count - report.tests_passed);
     return fail_count;
 }
-
-#define setup_tests(setup, tests) \
-    int main(int argc, char **argv) { \
-        return test_main( \
-            argc, argv, (setup), sizeof(tests) / sizeof(*tests), (tests) \
-        ); \
-    }
-
-////////////////////////
-// Assertions
-////////////////////////
-
-#define assert_true(t, c, msg) \
-    test_report_append((t), !!(c), (msg), sizeof(msg), __FILE__, __LINE__)
-
-#define assert_false(t, c, msg) assert_true(t, !(c), msg)
-
-#define __assert_cmp_uint(t, c, l, r, cmp, msg) \
-    test_report_append_formatted_uint( \
-        (t), !!(c), (msg), __FILE__, __LINE__, #cmp, (l), (r) \
-    )
-
-#define __assert_cmp_sint(t, c, l, r, cmp, msg) \
-    test_report_append_formatted_int( \
-        (t), !!(c), (msg), __FILE__, __LINE__, #cmp, (l), (r) \
-    )
-
-#define assert_eq_uint(t, a, b, msg) \
-    __assert_cmp_uint(t, (a) == (b), a, b, ==, msg)
-#define assert_ne_uint(t, a, b, msg) \
-    __assert_cmp_uint(t, (a) != (b), a, b, !=, msg)
-#define assert_lt_uint(t, a, b, msg) \
-    __assert_cmp_uint(t, (a) < (b), a, b, <, msg)
-#define assert_le_uint(t, a, b, msg) \
-    __assert_cmp_uint(t, (a) <= (b), a, b, <=, msg)
-#define assert_gt_uint(t, a, b, msg) \
-    __assert_cmp_uint(t, (a) > (b), a, b, >, msg)
-#define assert_ge_uint(t, a, b, msg) \
-    __assert_cmp_uint(t, (a) >= (b), a, b, >=, msg)
-
-#define assert_eq_sint(t, a, b, msg) \
-    __assert_cmp_sint(t, (a) == (b), a, b, ==, msg)
-#define assert_ne_sint(t, a, b, msg) \
-    __assert_cmp_sint(t, (a) != (b), a, b, !=, msg)
-#define assert_lt_sint(t, a, b, msg) \
-    __assert_cmp_sint(t, (a) < (b), a, b, <, msg)
-#define assert_le_sint(t, a, b, msg) \
-    __assert_cmp_sint(t, (a) <= (b), a, b, <=, msg)
-#define assert_gt_sint(t, a, b, msg) \
-    __assert_cmp_sint(t, (a) > (b), a, b, >, msg)
-#define assert_ge_sint(t, a, b, msg) \
-    __assert_cmp_sint(t, (a) >= (b), a, b, >=, msg)
-
-#define assert_eq_float(t, l, r, eps, msg) \
-    test_report_append_formatted_float( \
-        (t), abs((l) - (r)) < (eps), (msg), __FILE__, __LINE__, "==", (l), (r) \
-    )
-
-#define assert_eq_bytes(t, l, r, capacity, msg) \
-    assert_true(t, bytes_eq((l), (r), (capacity)), msg)
-
-#define assert_ne_bytes(t, l, r, capacity, msg) \
-    assert_false(t, bytes_eq((l), (r), (capacity)), msg)
-
-#define assert_eq_cstr(t, l, r, msg) \
-    test_report_append_formatted_cstr( \
-        (t), \
-        cstr_eq_unsafe((l), (r)), \
-        (msg), \
-        __FILE__, \
-        __LINE__, \
-        "==", \
-        (l), \
-        (r) \
-    )
-
-#define assert_ne_cstr(t, l, r, msg) \
-    test_report_append_formatted_cstr( \
-        (t), \
-        !cstr_eq_unsafe((l), (r)), \
-        (msg), \
-        __FILE__, \
-        __LINE__, \
-        "!=", \
-        (l), \
-        (r) \
-    )
-
-#endif // JP_TESTR_H

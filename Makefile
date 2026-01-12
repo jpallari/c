@@ -1,3 +1,5 @@
+.POSIX:
+.SUFFIXES:
 CC = gcc
 LANG_STD = c11
 SAN_FLAGS = -fsanitize=address,leak,undefined
@@ -10,12 +12,37 @@ SRC_DIR = src
 CMD_DIR = cmd
 TEST_DIR = test
 DEBUG_DIR = $(BUILD_DIR)/debug
-DEBUG_OBJ_DIR = $(BUILD_DIR)/debug/obj
-DEBUG_CMD_OBJ_DIR = $(BUILD_DIR)/debug/obj/cmd
+DEBUG_OBJ_DIR = $(DEBUG_DIR)/obj
+DEBUG_CMD_OBJ_DIR = $(DEBUG_OBJ_DIR)/cmd
+DEBUG_TEST_DIR = $(DEBUG_DIR)/test
 RELEASE_DIR = $(BUILD_DIR)/release
-RELEASE_OBJ_DIR = $(BUILD_DIR)/release/obj
-RELEASE_CMD_OBJ_DIR = $(BUILD_DIR)/release/obj/cmd
-TEST_BIN_DIR = $(BUILD_DIR)/test
+RELEASE_OBJ_DIR = $(RELEASE_DIR)/obj
+RELEASE_CMD_OBJ_DIR = $(RELEASE_OBJ_DIR)/cmd
+RELEASE_TEST_DIR = $(RELEASE_DIR)/test
+
+# Files
+HEADER_FILES = \
+	$(INCLUDE_DIR)/cliargs.h \
+	$(INCLUDE_DIR)/demo.h \
+	$(INCLUDE_DIR)/io.h \
+	$(INCLUDE_DIR)/std.h \
+	$(INCLUDE_DIR)/testr.h
+SRC_FILES = \
+	$(SRC_DIR)/cliargs.c \
+	$(SRC_DIR)/io.c \
+	$(SRC_DIR)/std.c \
+	$(SRC_DIR)/testr.c
+CMD_FILES = \
+	$(CMD_DIR)/demo.c \
+	$(CMD_DIR)/reals.c
+TEST_FILES = \
+	$(TEST_DIR)/arena.c \
+	$(TEST_DIR)/bytes.c \
+	$(TEST_DIR)/cliargs.c \
+	$(TEST_DIR)/cstr.c \
+	$(TEST_DIR)/dynarr.c \
+	$(TEST_DIR)/ringbuf.c \
+	$(TEST_DIR)/slice.c
 
 # C flags
 CFLAGS = \
@@ -35,7 +62,6 @@ CFLAGS = \
 	-Wwrite-strings \
 	-std=$(LANG_STD) \
 	-I$(INCLUDE_DIR) \
-	-MMD -MP \
 	-fno-omit-frame-pointer \
 	-fno-math-errno \
 	-ffinite-math-only
@@ -47,91 +73,84 @@ DEBUG_CFLAGS = \
 	-fprofile-arcs \
 	-ftest-coverage
 RELEASE_CFLAGS = -O2 -flto
-ifneq (,$(findstring gcc,$(CC)))
-	CFLAGS += -ftree-vectorize
-	ifdef VEC_INFO
-		CFLAGS += \
-			-fopt-info-vec-optimized \
-			-fopt-info-vec-missed \
-			-fopt-info-vec-all
-	endif
-endif
-ifneq (,$(findstring clang,$(CC)))
-	CFLAGS += -fvectorize
-	ifdef VEC_INFO
-		CFLAGS += \
-			-Rpass=loop-vectorize \
-			-Rpass-missed=loop-vectorize \
-			-Rpass-analysis=loop-vectorize
-	endif
-endif
+
+# To debug vectorization, add these CFLAGS.
+# GCC:
+# 	CFLAGS += -fopt-info-vec-optimized -fopt-info-vec-missed -fopt-info-vec-all
+# Clang:
+# 	CFLAGS += -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize
 
 # Linker flags
 LDFLAGS =
 DEBUG_LDFLAGS = $(SAN_FLAGS) -lgcov --coverage
 RELEASE_LDFLAGS = -flto
 
-# Local configuration
--include config.mk
-
-# Files
-HEADER_FILES = $(wildcard $(INCLUDE_DIR)/*.h)
-SRC_FILES = $(wildcard $(SRC_DIR)/*.c)
-CMD_FILES = $(wildcard $(CMD_DIR)/*.c)
-TEST_FILES = $(wildcard $(TEST_DIR)/*.c)
-DEBUG_OBJ_FILES = $(SRC_FILES:$(SRC_DIR)/%.c=$(DEBUG_OBJ_DIR)/%.o)
-DEBUG_CMD_OBJ_FILES = $(CMD_FILES:$(CMD_DIR)/%.c=$(DEBUG_CMD_OBJ_DIR)/%.o)
-CMD_DEBUG_BIN_FILES = $(CMD_FILES:$(CMD_DIR)/%.c=$(DEBUG_DIR)/%)
-RELEASE_OBJ_FILES = $(SRC_FILES:$(SRC_DIR)/%.c=$(RELEASE_OBJ_DIR)/%.o)
-RELEASE_CMD_OBJ_FILES = $(CMD_FILES:$(CMD_DIR)/%.c=$(RELEASE_CMD_OBJ_DIR)/%.o)
-CMD_RELEASE_BIN_FILES = $(CMD_FILES:$(CMD_DIR)/%.c=$(RELEASE_DIR)/%)
-TEST_OBJ_FILES = $(TEST_FILES:$(TEST_DIR)/%.c=$(TEST_BIN_DIR)/%.o)
-TEST_BIN_FILES = $(TEST_FILES:$(TEST_DIR)/%.c=$(TEST_BIN_DIR)/%)
-
-# Testing
-TEST_TARGET_PREFIX = test-
-TEST_TARGETS = $(TEST_FILES:$(TEST_DIR)/%.c=$(TEST_TARGET_PREFIX)%)
-
 # Main targets
-.PHONY: debug release all
+.PHONY: all
 all: debug release test
-debug: $(CMD_DEBUG_BIN_FILES)
-release: $(CMD_RELEASE_BIN_FILES)
-
-# Dependencies generated using -MMD -MP
--include $(DEBUG_OBJ_FILES:.o=.d)
--include $(RELEASE_OBJ_FILES:.o=.d)
 
 #
 # Build C files to objects
 #
 
-$(DEBUG_OBJ_FILES): $(DEBUG_OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-	@mkdir -p $(dir $@)
+$(DEBUG_OBJ_DIR)/cliargs.o: $(SRC_DIR)/cliargs.c $(INCLUDE_DIR)/std.h
+	@mkdir -p $(DEBUG_OBJ_DIR)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
+$(DEBUG_OBJ_DIR)/io.o: $(SRC_DIR)/io.c $(INCLUDE_DIR)/io.h $(INCLUDE_DIR)/std.h
+	@mkdir -p $(DEBUG_OBJ_DIR)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
+$(DEBUG_OBJ_DIR)/std.o: $(SRC_DIR)/std.c $(INCLUDE_DIR)/std.h
+	@mkdir -p $(DEBUG_OBJ_DIR)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
+$(DEBUG_OBJ_DIR)/testr.o: $(SRC_DIR)/testr.c $(INCLUDE_DIR)/io.h $(INCLUDE_DIR)/std.h $(INCLUDE_DIR)/testr.h
+	@mkdir -p $(DEBUG_OBJ_DIR)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
+$(DEBUG_CMD_OBJ_DIR)/demo.o: $(CMD_DIR)/demo.c $(INCLUDE_DIR)/io.h $(INCLUDE_DIR)/std.h
+	@mkdir -p $(DEBUG_CMD_OBJ_DIR)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
+$(DEBUG_CMD_OBJ_DIR)/reals.o: $(CMD_DIR)/reals.c $(INCLUDE_DIR)/io.h $(INCLUDE_DIR)/std.h
+	@mkdir -p $(DEBUG_CMD_OBJ_DIR)
 	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
 
-$(RELEASE_OBJ_FILES): $(RELEASE_OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-	@mkdir -p $(dir $@)
+$(RELEASE_OBJ_DIR)/cliargs.o: $(SRC_DIR)/cliargs.c $(INCLUDE_DIR)/std.h
+	@mkdir -p $(RELEASE_OBJ_DIR)
 	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) -c $< -o $@
-
-$(DEBUG_CMD_OBJ_FILES): $(DEBUG_CMD_OBJ_DIR)/%.o: $(CMD_DIR)/%.c
-	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $^ -o $@
-
-$(RELEASE_CMD_OBJ_FILES): $(RELEASE_CMD_OBJ_DIR)/%.o: $(CMD_DIR)/%.c
-	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) -c $^ -o $@
+$(RELEASE_OBJ_DIR)/io.o: $(SRC_DIR)/io.c $(INCLUDE_DIR)/io.h $(INCLUDE_DIR)/std.h
+	@mkdir -p $(RELEASE_OBJ_DIR)
+	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) -c $< -o $@
+$(RELEASE_OBJ_DIR)/std.o: $(SRC_DIR)/std.c $(INCLUDE_DIR)/std.h
+	@mkdir -p $(RELEASE_OBJ_DIR)
+	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) -c $< -o $@
+$(RELEASE_OBJ_DIR)/testr.o: $(SRC_DIR)/std.c $(INCLUDE_DIR)/io.h $(INCLUDE_DIR)/std.h $(INCLUDE_DIR)/testr.h
+	@mkdir -p $(RELEASE_OBJ_DIR)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
+$(RELEASE_CMD_OBJ_DIR)/demo.o: $(CMD_DIR)/demo.c $(INCLUDE_DIR)/io.h $(INCLUDE_DIR)/std.h
+	@mkdir -p $(RELEASE_CMD_OBJ_DIR)
+	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) -c $< -o $@
+$(RELEASE_CMD_OBJ_DIR)/reals.o: $(CMD_DIR)/reals.c $(INCLUDE_DIR)/io.h $(INCLUDE_DIR)/std.h
+	@mkdir -p $(RELEASE_CMD_OBJ_DIR)
+	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) -c $< -o $@
 
 #
 # Link C objects to binaries
 #
 
-$(CMD_DEBUG_BIN_FILES): $(DEBUG_DIR)/%: $(DEBUG_CMD_OBJ_DIR)/%.o $(DEBUG_OBJ_FILES)
-	@mkdir -p $(dir $@)
+.PHONY: debug release
+
+debug: $(DEBUG_DIR)/demo $(DEBUG_DIR)/reals
+$(DEBUG_DIR)/demo: $(DEBUG_CMD_OBJ_DIR)/demo.o $(DEBUG_OBJ_DIR)/io.o $(DEBUG_OBJ_DIR)/std.o
+	@mkdir -p $(DEBUG_DIR)
+	$(CC) $(LDFLAGS) $(DEBUG_LDFLAGS) $^ -o $@
+$(DEBUG_DIR)/reals: $(DEBUG_CMD_OBJ_DIR)/reals.o $(DEBUG_OBJ_DIR)/io.o $(DEBUG_OBJ_DIR)/std.o
+	@mkdir -p $(DEBUG_DIR)
 	$(CC) $(LDFLAGS) $(DEBUG_LDFLAGS) $^ -o $@
 
-$(CMD_RELEASE_BIN_FILES): $(RELEASE_DIR)/%: $(RELEASE_CMD_OBJ_DIR)/%.o $(RELEASE_OBJ_FILES)
-	@mkdir -p $(dir $@)
+release: $(RELEASE_DIR)/demo $(RELEASE_DIR)/reals
+$(RELEASE_DIR)/demo: $(RELEASE_CMD_OBJ_DIR)/demo.o $(RELEASE_OBJ_DIR)/io.o $(RELEASE_OBJ_DIR)/std.o
+	@mkdir -p $(RELEASE_DIR)
+	$(CC) $(LDFLAGS) $(RELEASE_LDFLAGS) $^ -o $@
+$(RELEASE_DIR)/reals: $(RELEASE_CMD_OBJ_DIR)/reals.o $(RELEASE_OBJ_DIR)/io.o $(RELEASE_OBJ_DIR)/std.o
+	@mkdir -p $(RELEASE_DIR)
 	$(CC) $(LDFLAGS) $(RELEASE_LDFLAGS) $^ -o $@
 
 #
@@ -140,18 +159,61 @@ $(CMD_RELEASE_BIN_FILES): $(RELEASE_DIR)/%: $(RELEASE_CMD_OBJ_DIR)/%.o $(RELEASE
 
 .PHONY: lint test test-build format
 
-test: $(TEST_TARGETS)
-test-build: $(TEST_BIN_FILES)
+test: \
+	test-arena \
+	test-bytes \
+	test-cliargs \
+	test-cstr \
+	test-dynarr \
+	test-slice
 
-$(TEST_OBJ_FILES): $(TEST_BIN_DIR)/%.o: $(TEST_DIR)/%.c
-	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $^ -o $@
-
-$(TEST_BIN_FILES): $(TEST_BIN_DIR)/%: $(TEST_BIN_DIR)/%.o $(DEBUG_OBJ_FILES)
-	@mkdir -p $(dir $@)
+$(DEBUG_TEST_DIR)/arena.o: $(TEST_DIR)/arena.c $(INCLUDE_DIR)/testr.h $(INCLUDE_DIR)/std.h
+	@mkdir -p $(DEBUG_TEST_DIR)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
+$(DEBUG_TEST_DIR)/arena: $(DEBUG_TEST_DIR)/arena.o $(DEBUG_OBJ_DIR)/testr.o $(DEBUG_OBJ_DIR)/std.o $(DEBUG_OBJ_DIR)/io.o
+	@mkdir -p $(DEBUG_TEST_DIR)
 	$(CC) $(LDFLAGS) $(DEBUG_LDFLAGS) $^ -o $@
+test-arena: $(DEBUG_TEST_DIR)/arena
+	./$< $(TEST_FILTERS)
 
-$(TEST_TARGET_PREFIX)%: $(TEST_BIN_DIR)/%
+$(DEBUG_TEST_DIR)/bytes.o: $(TEST_DIR)/bytes.c $(INCLUDE_DIR)/testr.h $(INCLUDE_DIR)/std.h
+	@mkdir -p $(DEBUG_TEST_DIR)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
+$(DEBUG_TEST_DIR)/bytes: $(DEBUG_TEST_DIR)/bytes.o $(DEBUG_OBJ_DIR)/testr.o $(DEBUG_OBJ_DIR)/std.o $(DEBUG_OBJ_DIR)/io.o
+	$(CC) $(LDFLAGS) $(DEBUG_LDFLAGS) $^ -o $@
+test-bytes: $(DEBUG_TEST_DIR)/bytes
+	./$< $(TEST_FILTERS)
+
+$(DEBUG_TEST_DIR)/cliargs.o: $(TEST_DIR)/cliargs.c $(INCLUDE_DIR)/testr.h $(INCLUDE_DIR)/std.h $(INCLUDE_DIR)/cliargs.h
+	@mkdir -p $(DEBUG_TEST_DIR)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
+$(DEBUG_TEST_DIR)/cliargs: $(DEBUG_TEST_DIR)/cliargs.o $(DEBUG_OBJ_DIR)/testr.o $(DEBUG_OBJ_DIR)/std.o $(DEBUG_OBJ_DIR)/io.o $(DEBUG_OBJ_DIR)/cliargs.o 
+	$(CC) $(LDFLAGS) $(DEBUG_LDFLAGS) $^ -o $@
+test-cliargs: $(DEBUG_TEST_DIR)/cliargs
+	./$< $(TEST_FILTERS)
+
+$(DEBUG_TEST_DIR)/cstr.o: $(TEST_DIR)/cstr.c $(INCLUDE_DIR)/testr.h $(INCLUDE_DIR)/std.h
+	@mkdir -p $(DEBUG_TEST_DIR)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
+$(DEBUG_TEST_DIR)/cstr: $(DEBUG_TEST_DIR)/cstr.o $(DEBUG_OBJ_DIR)/testr.o $(DEBUG_OBJ_DIR)/std.o $(DEBUG_OBJ_DIR)/io.o
+	$(CC) $(LDFLAGS) $(DEBUG_LDFLAGS) $^ -o $@
+test-cstr: $(DEBUG_TEST_DIR)/cstr
+	./$< $(TEST_FILTERS)
+
+$(DEBUG_TEST_DIR)/dynarr.o: $(TEST_DIR)/dynarr.c $(INCLUDE_DIR)/testr.h $(INCLUDE_DIR)/std.h
+	@mkdir -p $(DEBUG_TEST_DIR)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
+$(DEBUG_TEST_DIR)/dynarr: $(DEBUG_TEST_DIR)/dynarr.o $(DEBUG_OBJ_DIR)/testr.o $(DEBUG_OBJ_DIR)/std.o $(DEBUG_OBJ_DIR)/io.o
+	$(CC) $(LDFLAGS) $(DEBUG_LDFLAGS) $^ -o $@
+test-dynarr: $(DEBUG_TEST_DIR)/dynarr
+	./$< $(TEST_FILTERS)
+
+$(DEBUG_TEST_DIR)/slice.o: $(TEST_DIR)/slice.c $(INCLUDE_DIR)/testr.h $(INCLUDE_DIR)/std.h
+	@mkdir -p $(DEBUG_TEST_DIR)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -c $< -o $@
+$(DEBUG_TEST_DIR)/slice: $(DEBUG_TEST_DIR)/slice.o $(DEBUG_OBJ_DIR)/testr.o $(DEBUG_OBJ_DIR)/std.o $(DEBUG_OBJ_DIR)/io.o
+	$(CC) $(LDFLAGS) $(DEBUG_LDFLAGS) $^ -o $@
+test-slice: $(DEBUG_TEST_DIR)/slice
 	./$< $(TEST_FILTERS)
 
 lint: $(SRC_FILES) $(HEADER_FILES) $(CMD_FILES) $(TEST_FILES)
@@ -171,9 +233,6 @@ clean-debug:
 
 clean-release:
 	rm -rf $(RELEASE_DIR)
-
-clean-test:
-	rm -rf $(TEST_BIN_DIR)
 
 clean:
 	rm -rf $(BUILD_DIR)
