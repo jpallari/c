@@ -1219,15 +1219,15 @@ bufstream_write_float(bufstream *bstream, float src, uint decimals);
 bufstream_write_result
 bufstream_write_double(bufstream *bstream, double src, uint decimals);
 
-cstr_fmt_result bufstream_fmt_va(
+bufstream_write_result bufstream_fmt_va(
     bufstream *bstream, const char *restrict format, va_list va_args
 );
 
-__attribute__((unused)) static inline cstr_fmt_result
+__attribute__((unused)) static inline bufstream_write_result
 bufstream_fmt(bufstream *bstream, const char *restrict format, ...) {
     va_list va_args;
     va_start(va_args, format);
-    cstr_fmt_result res = bufstream_fmt_va(bstream, format, va_args);
+    bufstream_write_result res = bufstream_fmt_va(bstream, format, va_args);
     va_end(va_args);
     return res;
 }
