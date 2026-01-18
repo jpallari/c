@@ -53,7 +53,9 @@ bool test_report_append(
     if (!bytebuf_write_str(t->logs, log_message, log_message_size)) {
         panic();
     }
-    test_report_append_no_log(t, passed, logs_offset, log_message_size, file, line);
+    test_report_append_no_log(
+        t, passed, logs_offset, log_message_size, file, line
+    );
     return passed;
 }
 

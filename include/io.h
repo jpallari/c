@@ -71,10 +71,8 @@ bufstream_write_result io_stderr_fmt(const char *restrict format, ...);
 bytesink_result io_stdout_flush(void);
 bytesink_result io_stderr_flush(void);
 
-#define io_stdout_write_sstr(str) \
-    io_stdout_write_str((str), lengthof(str))
+#define io_stdout_write_sstr(str) io_stdout_write_str((str), lengthof(str))
 
-#define io_stderr_write_sstr(str) \
-    io_stderr_write_str((str), lengthof(str))
+#define io_stderr_write_sstr(str) io_stderr_write_str((str), lengthof(str))
 
 #endif // JP_IO_H
