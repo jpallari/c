@@ -1,0 +1,6 @@
+.SUFFIXES:
+CC ?= cc
+LANG_STD ?= c11 
+BUILD_DIR = build/release-$(CC)-$(LANG_STD)
+include cflags.release.mk
+include ctargets.mk
