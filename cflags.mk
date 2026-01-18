@@ -14,7 +14,7 @@ CFLAGS = \
 	-Wunreachable-code \
 	-Wwrite-strings \
 	-std=$(LANG_STD) \
-	-I$(INCLUDE_DIR) \
+	-Iinclude \
 	-fno-omit-frame-pointer \
 	-fno-math-errno \
 	-ffinite-math-only
