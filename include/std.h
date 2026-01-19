@@ -104,6 +104,23 @@ static inline void breakpoint(void) {
 // Bytes
 ////////////////////////
 
+#if __STDC_VERSION__ >= 202311L
+#include <stdalign.h>
+#else
+
+/**
+ * Get the alignment of given type.
+ */
+#if __STDC_VERSION__ >= 201112L
+#define alignof _Alignof
+#elif defined(__GNUC__)
+#define alignof __alignof__
+#else
+#define alignof(x) max_align_t
+#endif
+
+#endif
+
 #ifdef JP_USE_STRING_H
 
 /**
@@ -321,7 +338,7 @@ __attribute__((unused)) static allocator std_allocator = {
  * @returns pointer to area of memory that was allocated
  */
 #define alloc_new(allocator, t, n) \
-    (t *)alloc_malloc(allocator, sizeof(t) * (n), _Alignof(t))
+    (t *)alloc_malloc(allocator, sizeof(t) * (n), alignof(t))
 
 /**
  * Call malloc on a custom memory allocation interface.
@@ -537,7 +554,7 @@ void *arena_alloc_bytes(arena *arena, size_t size, size_t alignment);
  * Allocate a number of items of type t from the given arena.
  */
 #define arena_alloc(arena, t, count) \
-    ((t *)arena_alloc_bytes((arena), sizeof(t) * (count), _Alignof(t)))
+    ((t *)arena_alloc_bytes((arena), sizeof(t) * (count), alignof(t)))
 
 /**
  * Clear the arena usage.
@@ -602,7 +619,7 @@ void *dynarr_new_sized(
  * Create a new dynamic array
  */
 #define dynarr_new(capacity, t, allocator) \
-    ((t *)dynarr_new_sized((capacity), sizeof(t), _Alignof(t), (allocator)))
+    ((t *)dynarr_new_sized((capacity), sizeof(t), alignof(t), (allocator)))
 
 /**
  * Get the header for given array
@@ -673,7 +690,7 @@ void *dynarr_grow_ut(
  * @returns an array with increased capacity
  */
 #define dynarr_grow(array, capacity_increase, t) \
-    dynarr_grow_ut((array), (capacity_increase), sizeof(t), _Alignof(t))
+    dynarr_grow_ut((array), (capacity_increase), sizeof(t), alignof(t))
 
 /**
  * Clone a given array with new capacity.
@@ -690,7 +707,7 @@ void *dynarr_clone_ut(
  */
 #define dynarr_clone(array, capacity_increase, type) \
     (type *)dynarr_clone_ut( \
-        (array), (capacity_increase), sizeof(*(array)), _Alignof(type) \
+        (array), (capacity_increase), sizeof(*(array)), alignof(type) \
     )
 
 /**
@@ -741,7 +758,7 @@ void *dynarr_push_grow_ut(
  */
 #define dynarr_push_grow(array, items, count, type) \
     (type *)dynarr_push_grow_ut( \
-        (array), (items), (count), sizeof(type), _Alignof(type) \
+        (array), (items), (count), sizeof(type), alignof(type) \
     )
 
 /**

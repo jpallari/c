@@ -161,7 +161,7 @@ allocator arena_allocator_new(arena *arena) {
 void *dynarr_new_sized(
     ullong capacity, size_t item_size, size_t alignment, allocator *allocator
 ) {
-    alignment = max(alignment, _Alignof(dynarr_header));
+    alignment = max(alignment, alignof(dynarr_header));
     void *data = alloc_malloc(
         allocator, dynarr_count_to_bytes(capacity, item_size), alignment
     );
@@ -195,7 +195,7 @@ void *dynarr_grow_ut(
     assert(header && "Header must not be null");
 
     ullong capacity = capacity_increase + header->capacity;
-    alignment = max(alignment, _Alignof(dynarr_header));
+    alignment = max(alignment, alignof(dynarr_header));
     void *new_array_data = alloc_malloc(
         header->allocator, dynarr_count_to_bytes(capacity, item_size), alignment
     );
@@ -1553,7 +1553,7 @@ void bytebuf_init(bytebuf *bbuf, size_t capacity, allocator *allocator) {
     assert(capacity > 0 && "capacity must be larger than 0");
     bytes_set(bbuf, 0, sizeof(*bbuf));
     bbuf->allocator = allocator;
-    bbuf->buffer = alloc_malloc(allocator, capacity, _Alignof(uchar));
+    bbuf->buffer = alloc_malloc(allocator, capacity, alignof(uchar));
     if (bbuf->buffer) {
         bbuf->cap = capacity;
     }
@@ -1596,7 +1596,7 @@ bool bytebuf_grow(bytebuf *bbuf, size_t capacity_increase) {
     }
 
     uchar *newbuf = alloc_malloc(
-        bbuf->allocator, bbuf->cap + capacity_increase, _Alignof(uchar)
+        bbuf->allocator, bbuf->cap + capacity_increase, alignof(uchar)
     );
     if (!newbuf) {
         return 0;
