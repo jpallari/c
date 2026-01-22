@@ -3,7 +3,7 @@
 #include <stddef.h>
 
 void test_arena(test *t) {
-    _Alignas(max_align_t) int buffer[10] = {0};
+    alignas(max_align_t) int buffer[10] = {0};
     size_t buf1_count = 5, buf2_count = 4;
     arena arena = arena_new((uchar *)buffer, sizeof(buffer));
     allocator alloc = arena_allocator_new(&arena);

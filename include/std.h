@@ -101,25 +101,45 @@ static inline void breakpoint(void) {
 #define lengthof(x) (countof(x) - 1)
 
 ////////////////////////
-// Bytes
+// Alignment
 ////////////////////////
 
+#if __STDC_VERSION__ < 201112L && defined(__BIGGEST_ALIGNMENT__)
+#define max_align_t __BIGGEST_ALIGNMENT__
+#endif
+
 #if __STDC_VERSION__ >= 202311L
+// >=C23
+
 #include <stdalign.h>
 #else
+// <C23
 
 /**
  * Get the alignment of given type.
  */
 #if __STDC_VERSION__ >= 201112L
 #define alignof _Alignof
-#elif defined(__GNUC__)
+#elif defined(__GNUC__) || defined(__clang__)
 #define alignof __alignof__
 #else
 #define alignof(x) max_align_t
 #endif
 
+/**
+ * Get the alignment of given type.
+ */
+#if __STDC_VERSION__ >= 201112L
+#define alignas _Alignas
+#elif defined(__GNUC__) || defined(__clang__)
+#define alignas(N) __attribute__((__aligned__(N)))
 #endif
+
+#endif
+
+////////////////////////
+// Bytes
+////////////////////////
 
 #ifdef JP_USE_STRING_H
 
