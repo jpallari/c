@@ -16,7 +16,7 @@ TEST_REPORT_FILES = $(TEST_FILES:test/%.c=$(TEST_REPORT_DIR)/%.txt)
 # Default target
 #
 
-.PHONY: build
+.PHONY: all
 all: build test
 
 #
@@ -140,6 +140,7 @@ $(TEST_REPORT_DIR)/slice.txt: $(TEST_OBJ_DIR)/slice
 # Clean-up
 #
 
+.PHONY: clean
 clean:
 	rm -rf $(BUILD_DIR)
 

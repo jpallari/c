@@ -1,0 +1,71 @@
+# Generated using "Makefile.all.gen.sh" - do not edit manually
+#
+# Build the project for all platforms
+#
+.SUFFIXES:
+
+TEST_FILTERS =
+JOBS = 1
+
+.PHONY: all
+all: build-debug-c11-gcc build-release-c11-gcc build-debug-c99-gcc build-release-c99-gcc build-debug-c11-clang build-release-c11-clang build-debug-c99-clang build-release-c99-clang
+
+.PHONY: build-debug-c11-gcc
+build-debug-c11-gcc:
+	make -f Makefile.debug -j $(JOBS) \
+		TEST_FILTERS=$(TEST_FILTERS) \
+		BUILD_DIR=build/debug-c11-gcc \
+		LANG_STD=c11 CC=gcc
+
+.PHONY: build-release-c11-gcc
+build-release-c11-gcc:
+	make -f Makefile.release -j $(JOBS) \
+		TEST_FILTERS=$(TEST_FILTERS) \
+		BUILD_DIR=build/release-c11-gcc \
+		LANG_STD=c11 CC=gcc
+
+.PHONY: build-debug-c99-gcc
+build-debug-c99-gcc:
+	make -f Makefile.debug -j $(JOBS) \
+		TEST_FILTERS=$(TEST_FILTERS) \
+		BUILD_DIR=build/debug-c99-gcc \
+		LANG_STD=c99 CC=gcc
+
+.PHONY: build-release-c99-gcc
+build-release-c99-gcc:
+	make -f Makefile.release -j $(JOBS) \
+		TEST_FILTERS=$(TEST_FILTERS) \
+		BUILD_DIR=build/release-c99-gcc \
+		LANG_STD=c99 CC=gcc
+
+.PHONY: build-debug-c11-clang
+build-debug-c11-clang:
+	make -f Makefile.debug -j $(JOBS) \
+		TEST_FILTERS=$(TEST_FILTERS) \
+		BUILD_DIR=build/debug-c11-clang \
+		LANG_STD=c11 CC=clang
+
+.PHONY: build-release-c11-clang
+build-release-c11-clang:
+	make -f Makefile.release -j $(JOBS) \
+		TEST_FILTERS=$(TEST_FILTERS) \
+		BUILD_DIR=build/release-c11-clang \
+		LANG_STD=c11 CC=clang
+
+.PHONY: build-debug-c99-clang
+build-debug-c99-clang:
+	make -f Makefile.debug -j $(JOBS) \
+		TEST_FILTERS=$(TEST_FILTERS) \
+		BUILD_DIR=build/debug-c99-clang \
+		LANG_STD=c99 CC=clang
+
+.PHONY: build-release-c99-clang
+build-release-c99-clang:
+	make -f Makefile.release -j $(JOBS) \
+		TEST_FILTERS=$(TEST_FILTERS) \
+		BUILD_DIR=build/release-c99-clang \
+		LANG_STD=c99 CC=clang
+
+.PHONY: clean
+clean:
+	rm -rf build

@@ -1,6 +1,3 @@
-.SUFFIXES:
-CC ?= cc
-LANG_STD ?= c11 
-BUILD_DIR = build/debug-$(CC)-$(LANG_STD)
 include cflags.debug.mk
 include ctargets.mk
+include check.mk
