@@ -28,7 +28,7 @@ typedef struct {
     int err_code;
 } file_read_result;
 
-__attribute__((unused)) static inline void
+ignore_unused static inline void
 file_read_result_free(file_read_result res, allocator *allocator) {
     slice s = {
         .buffer = res.data,
@@ -51,7 +51,7 @@ typedef struct {
 bytesink_result
 io_file_bytesink_fn(void *context, const uchar *bytes, size_t len);
 
-__attribute__((unused)) static inline bytesink
+ignore_unused static inline bytesink
 io_file_bytesink(io_file_bytesink_context *ctx) {
     bytesink sink = {
         .context = ctx,

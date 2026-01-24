@@ -79,6 +79,12 @@ static inline void breakpoint(void) {
 #define assert(c)
 #endif // JP_USE_ASSERT_H
 
+#if defined(__GNUC__) || defined(__clang__)
+#define ignore_unused __attribute__((unused))
+#else
+#define ignore_unused
+#endif
+
 ////////////////////////
 // Math
 ////////////////////////
@@ -89,7 +95,8 @@ static inline void breakpoint(void) {
 
 #define is_power_of_two(a) (((a) != 0) && (((a) & ((a) - 1)) == 0))
 
-static inline ullong round_up_multiple_ullong(ullong n, ullong multiple) {
+ignore_unused static inline ullong
+round_up_multiple_ullong(ullong n, ullong multiple) {
     assert(multiple > 0 && "multiple must be >0");
     if (multiple == 0) {
         return n;
@@ -160,7 +167,7 @@ static inline ullong round_up_multiple_ullong(ullong n, ullong multiple) {
  * @param size memory size to align
  * @param alignement size to align to (must be power-of-two)
  */
-__attribute__((unused)) static inline size_t
+ignore_unused static inline size_t
 align_to_nearest(size_t size, size_t alignment) {
     assert(is_power_of_two(alignment) && "alignment must be power of two");
     size_t mask = alignment - 1;
@@ -219,7 +226,7 @@ bytes_copy(void *restrict dest, const void *restrict src, size_t n) {
  * @param[in] n number of bytes to copy
  * @returns pointer to area of memory where bytes were copied to
  */
-__attribute__((unused)) static inline void *
+ignore_unused static inline void *
 bytes_move(void *dest, const void *src, size_t n) {
     assert(dest && "dest must not be null");
     assert(src && "src must not be null");
@@ -252,8 +259,7 @@ bytes_move(void *dest, const void *src, size_t n) {
  * @param[in] n number of bytes to fill
  * @returns pointer to the memory area that was filled
  */
-__attribute__((unused)) static inline void *
-bytes_set(void *dest, int c, size_t n) {
+ignore_unused static inline void *bytes_set(void *dest, int c, size_t n) {
     if (!n) {
         return dest;
     }
@@ -384,8 +390,7 @@ typedef struct {
  * @param len length of the data
  * @returns a new slice
  */
-__attribute__((unused)) static inline slice
-slice_new(void *buffer, size_t len) {
+ignore_unused static inline slice slice_new(void *buffer, size_t len) {
     slice s = {
         .buffer = (uchar *)buffer,
         .len = len,
@@ -400,7 +405,7 @@ slice_new(void *buffer, size_t len) {
  * @param len length of the data
  * @returns a new slice
  */
-__attribute__((unused)) static inline slice_const
+ignore_unused static inline slice_const
 slice_const_new(const void *buffer, size_t len) {
     slice_const s = {
         .buffer = (const uchar *)buffer,
@@ -475,7 +480,7 @@ slice slice_from_cstr_unsafe(char *str);
  * @param s slice to check
  * @returns true if the slice is set
  */
-__attribute__((unused)) static inline bool slice_is_set(slice s) {
+ignore_unused static inline bool slice_is_set(slice s) {
     return s.buffer != NULL && s.len != 0;
 }
 
@@ -488,7 +493,7 @@ __attribute__((unused)) static inline bool slice_is_set(slice s) {
  * @param s slice to check
  * @returns true if the slice is set
  */
-__attribute__((unused)) static inline bool slice_const_is_set(slice_const s) {
+ignore_unused static inline bool slice_const_is_set(slice_const s) {
     return s.buffer != NULL && s.len != 0;
 }
 
@@ -543,7 +548,7 @@ typedef struct {
  * @param alignment memory alignment to use for the allocation
  * @returns pointer to area of memory that was allocated
  */
-__attribute__((unused)) static inline slice
+ignore_unused static inline slice
 alloc_malloc(allocator *a, size_t size, size_t alignment) {
     return a->malloc(size, alignment, a->ctx);
 }
@@ -554,7 +559,7 @@ alloc_malloc(allocator *a, size_t size, size_t alignment) {
  * @param allocator allocator to use for freeing memory
  * @param ptr pointer to area of memory to free
  */
-__attribute__((unused)) static inline void alloc_free(allocator *a, slice ptr) {
+ignore_unused static inline void alloc_free(allocator *a, slice ptr) {
     a->free(ptr, a->ctx);
 }
 
@@ -597,9 +602,7 @@ static void std_free(slice ptr, void *ctx) {
  * Standard memory allocation compatible with the custom memory
  * allocation interface.
  */
-__attribute__((unused)) static allocator std_allocator = {
-    std_malloc, std_free, NULL
-};
+ignore_unused static allocator std_allocator = {std_malloc, std_free, NULL};
 
 /**
  * Memory allocation using memory mapping compatible with the custom memory
@@ -625,9 +628,7 @@ void mmap_free(slice ptr, void *ctx);
  * Memory allocation using memory mapping compatible with the custom memory
  * allocation interface.
  */
-__attribute__((unused)) static allocator mmap_allocator = {
-    mmap_malloc, mmap_free, NULL
-};
+ignore_unused static allocator mmap_allocator = {mmap_malloc, mmap_free, NULL};
 
 ////////////////////////
 // Arena allocator
@@ -723,7 +724,7 @@ typedef struct {
 /**
  * Convert item count and size to byte size (incl. header)
  */
-__attribute__((unused)) static inline size_t
+ignore_unused static inline size_t
 dynarr_count_to_bytes(ullong n, size_t item_size) {
     return (size_t)n * item_size + sizeof(dynarr_header);
 }
@@ -754,7 +755,7 @@ static inline dynarr_header *dynarr_get_header(void *array) {
 /**
  * Get the count for given array
  */
-__attribute__((unused)) static inline ullong dynarr_len(void *array) {
+ignore_unused static inline ullong dynarr_len(void *array) {
     dynarr_header *header = dynarr_get_header(array);
     if (!header) {
         return 0;
@@ -765,7 +766,7 @@ __attribute__((unused)) static inline ullong dynarr_len(void *array) {
 /**
  * Get the capacity for given array
  */
-__attribute__((unused)) static inline ullong dynarr_capacity(void *array) {
+ignore_unused static inline ullong dynarr_capacity(void *array) {
     dynarr_header *header = dynarr_get_header(array);
     if (!header) {
         return 0;
@@ -1078,7 +1079,7 @@ size_t cstr_from_ullong(char *dest, size_t len, ullong src);
 size_t cstr_from_float(char *dest, size_t len, float src, uint decimals);
 size_t cstr_from_double(char *dest, size_t len, double src, uint decimals);
 
-__attribute__((unused)) static inline size_t
+ignore_unused static inline size_t
 cstr_from_int_nt(char *dest, size_t len, int src) {
     size_t bytes_written = cstr_from_int(dest, len, src);
     if (bytes_written && bytes_written + 1 < len) {
@@ -1088,7 +1089,7 @@ cstr_from_int_nt(char *dest, size_t len, int src) {
     return bytes_written;
 }
 
-__attribute__((unused)) static inline size_t
+ignore_unused static inline size_t
 cstr_from_uint_nt(char *dest, size_t len, uint src) {
     size_t bytes_written = cstr_from_uint(dest, len, src);
     if (bytes_written && bytes_written + 1 < len) {
@@ -1098,7 +1099,7 @@ cstr_from_uint_nt(char *dest, size_t len, uint src) {
     return bytes_written;
 }
 
-__attribute__((unused)) static inline size_t
+ignore_unused static inline size_t
 cstr_from_llong_nt(char *dest, size_t len, llong src) {
     size_t bytes_written = cstr_from_llong(dest, len, src);
     if (bytes_written && bytes_written + 1 < len) {
@@ -1108,7 +1109,7 @@ cstr_from_llong_nt(char *dest, size_t len, llong src) {
     return bytes_written;
 }
 
-__attribute__((unused)) static inline size_t
+ignore_unused static inline size_t
 cstr_from_ullong_nt(char *dest, size_t len, ullong src) {
     size_t bytes_written = cstr_from_ullong(dest, len, src);
     if (bytes_written && bytes_written + 1 < len) {
@@ -1118,7 +1119,7 @@ cstr_from_ullong_nt(char *dest, size_t len, ullong src) {
     return bytes_written;
 }
 
-__attribute__((unused)) static inline size_t
+ignore_unused static inline size_t
 cstr_from_float_nt(char *dest, size_t len, float src, uint decimals) {
     size_t bytes_written = cstr_from_float(dest, len, src, decimals);
     if (bytes_written && bytes_written + 1 < len) {
@@ -1128,7 +1129,7 @@ cstr_from_float_nt(char *dest, size_t len, float src, uint decimals) {
     return bytes_written;
 }
 
-__attribute__((unused)) static inline size_t
+ignore_unused static inline size_t
 cstr_from_double_nt(char *dest, size_t len, double src, uint decimals) {
     size_t bytes_written = cstr_from_double(dest, len, src, decimals);
     if (bytes_written && bytes_written + 1 < len) {
@@ -1163,7 +1164,7 @@ cstr_fmt_result cstr_fmt_va(
     va_list va_args
 );
 
-__attribute__((unused)) static inline cstr_fmt_result
+ignore_unused static inline cstr_fmt_result
 cstr_fmt(char *restrict dest, size_t len, const char *restrict format, ...) {
     va_list va_args;
     va_start(va_args, format);
@@ -1174,7 +1175,7 @@ cstr_fmt(char *restrict dest, size_t len, const char *restrict format, ...) {
 
 size_t cstr_fmt_len_va(const char *restrict format, va_list va_args);
 
-__attribute__((unused)) static inline size_t
+ignore_unused static inline size_t
 cstr_fmt_len(const char *restrict format, ...) {
     va_list va_args;
     va_start(va_args, format);
@@ -1200,44 +1201,42 @@ void bytebuf_init_fixed(
     bytebuf *bbuf, uchar *buffer, size_t len, size_t capacity
 );
 
-__attribute__((unused)) static inline bytebuf
+ignore_unused static inline bytebuf
 bytebuf_new(size_t capacity, allocator *allocator) {
     bytebuf bbuf;
     bytebuf_init(&bbuf, capacity, allocator);
     return bbuf;
 }
 
-__attribute__((unused)) static inline bytebuf
+ignore_unused static inline bytebuf
 bytebuf_new_fixed(uchar *buffer, size_t len, size_t capacity) {
     bytebuf bbuf;
     bytebuf_init_fixed(&bbuf, buffer, len, capacity);
     return bbuf;
 }
 
-__attribute__((unused)) static inline bool bytebuf_is_init(bytebuf *bbuf) {
+ignore_unused static inline bool bytebuf_is_init(bytebuf *bbuf) {
     assert(bbuf && "bytebuf must not be null");
     return bbuf && bbuf->buffer && bbuf->cap;
 }
 
-__attribute__((unused)) static inline bool bytebuf_is_growable(bytebuf *bbuf) {
+ignore_unused static inline bool bytebuf_is_growable(bytebuf *bbuf) {
     assert(bbuf && "bytebuf must not be null");
     return bbuf && (bbuf->allocator != NULL);
 }
 
-__attribute__((unused)) static inline void bytebuf_clear(bytebuf *bbuf) {
+ignore_unused static inline void bytebuf_clear(bytebuf *bbuf) {
     bbuf->len = 0;
 }
 
-__attribute__((unused)) static inline void
-bytebuf_clear_last(bytebuf *bbuf, size_t len) {
+ignore_unused static inline void bytebuf_clear_last(bytebuf *bbuf, size_t len) {
     if (bbuf->len > len) {
         bbuf->len -= len;
     }
     bbuf->len = 0;
 }
 
-__attribute__((unused)) static inline size_t
-bytebuf_bytes_available(bytebuf *bbuf) {
+ignore_unused static inline size_t bytebuf_bytes_available(bytebuf *bbuf) {
     return bbuf->cap - bbuf->len;
 }
 
@@ -1256,7 +1255,7 @@ size_t bytebuf_write_ullong(bytebuf *bbuf, ullong src);
 size_t bytebuf_write_float(bytebuf *bbuf, float src, uint decimals);
 size_t bytebuf_write_double(bytebuf *bbuf, double src, uint decimals);
 
-__attribute__((unused)) static inline size_t
+ignore_unused static inline size_t
 bytebuf_write_str(bytebuf *bbuf, const char *str, size_t len) {
     if (bytebuf_write(bbuf, (const uchar *)str, len)) {
         return len;
@@ -1270,7 +1269,7 @@ bytebuf_write_str(bytebuf *bbuf, const char *str, size_t len) {
 cstr_fmt_result
 bytebuf_fmt_va(bytebuf *bbuf, const char *restrict format, va_list va_args);
 
-__attribute__((unused)) static inline cstr_fmt_result
+ignore_unused static inline cstr_fmt_result
 bytebuf_fmt(bytebuf *bbuf, const char *restrict format, ...) {
     va_list va_args;
     va_start(va_args, format);
@@ -1310,7 +1309,7 @@ bytesink_result bufstream_flush(bufstream *bstream);
 bufstream_write_result
 bufstream_write(bufstream *bstream, const uchar *src, size_t len);
 
-__attribute__((unused)) static inline bufstream_write_result
+ignore_unused static inline bufstream_write_result
 bufstream_write_str(bufstream *bstream, const char *src, size_t len) {
     return bufstream_write(bstream, (const uchar *)src, len);
 }
@@ -1331,7 +1330,7 @@ bufstream_write_result bufstream_fmt_va(
     bufstream *bstream, const char *restrict format, va_list va_args
 );
 
-__attribute__((unused)) static inline bufstream_write_result
+ignore_unused static inline bufstream_write_result
 bufstream_fmt(bufstream *bstream, const char *restrict format, ...) {
     va_list va_args;
     va_start(va_args, format);
