@@ -6,7 +6,6 @@
 #include <unistd.h>
 
 static int color_enabled = 1;
-static int trap_on_assert_fail = 0;
 static int print_all_asserts = 0;
 
 static void test_report_append_no_log(
@@ -305,10 +304,6 @@ int test_main(
         color_enabled = 0;
     } else if (!isatty(2)) {
         color_enabled = 0;
-    }
-    const char *assert_trap = getenv("ASSERT_TRAP");
-    if (assert_trap) {
-        trap_on_assert_fail = 1;
     }
     const char *assert_print_all = getenv("ASSERT_PRINT_ALL");
     if (assert_print_all) {
