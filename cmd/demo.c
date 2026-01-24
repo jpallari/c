@@ -6,8 +6,8 @@
 int array_demo(void) {
     int exit_code = 0;
 
-    uchar *buffer = alloc_new(&std_allocator, uchar, 1024 * 1024);
-    arena arena = arena_new(buffer, 1024 * 1024);
+    slice buffer = alloc_new(&std_allocator, uchar, 1024 * 1024);
+    arena arena = arena_new(buffer.buffer, 1024 * 1024);
     allocator allocator = arena_allocator_new(&arena);
 
     float *arr = dynarr_new(10, float, &allocator);
@@ -92,7 +92,7 @@ int file_demo(int argc, char **argv) {
     }
 
     if (read_res.data) {
-        alloc_free(&std_allocator, read_res.data);
+        file_read_result_free(read_res, &std_allocator);
     }
     return 0;
 }

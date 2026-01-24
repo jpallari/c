@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
         }
     } while (s.buffer);
 
-    alloc_free(&std_allocator, res.data);
+    file_read_result_free(res, &std_allocator);
     io_stderr_flush();
 
     return 0;

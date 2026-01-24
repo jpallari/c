@@ -24,8 +24,18 @@ io_write_all_sync(int fd, const void *buffer, size_t len, size_t chunk_size);
 typedef struct {
     uchar *data;
     size_t len;
+    size_t cap;
     int err_code;
 } file_read_result;
+
+__attribute__((unused)) static inline void
+file_read_result_free(file_read_result res, allocator *allocator) {
+    slice s = {
+        .buffer = res.data,
+        .len = res.cap,
+    };
+    alloc_free(allocator, s);
+}
 
 #define file_err_failed_alloc (int)(-2)
 #define file_err_invalid_stat (int)(-3)

@@ -11,12 +11,14 @@ void test_arena(test *t) {
     assert_eq_uint(t, arena.size, buffer_size, "arena size");
 
     // allocate 1st arena buffer
-    int *buf1 = alloc_new(&alloc, int, buf1_count);
+    slice s_buf1 = alloc_new(&alloc, int, buf1_count);
+    int *buf1 = slice_cast(s_buf1, int);
     size_t buf1_size = sizeof(int) * buf1_count;
     assert_eq_uint(t, arena.used, buf1_size, "arena used after first alloc");
 
     // allocate 2nd arena buffer
-    int *buf2 = alloc_new(&alloc, int, buf2_count);
+    slice s_buf2 = alloc_new(&alloc, int, buf2_count);
+    int *buf2 = slice_cast(s_buf2, int);
     size_t buf2_size = sizeof(int) * (buf1_count + buf2_count);
     assert_eq_uint(t, arena.used, buf2_size, "arena used after second alloc");
 
@@ -35,8 +37,8 @@ void test_arena(test *t) {
     );
 
     // try to overallocate
-    int *buf3 = alloc_new(&alloc, int, 3);
-    assert_false(t, buf3, "overallocation must fail");
+    slice s_buf3 = alloc_new(&alloc, int, 3);
+    assert_false(t, slice_is_set(s_buf3), "overallocation must fail");
 }
 
 static test_case tests[] = {{"Arena", test_arena}};

@@ -126,6 +126,16 @@ $(TEST_REPORT_DIR)/dynarr.txt: $(TEST_OBJ_DIR)/dynarr
 	@mkdir -p $(TEST_REPORT_DIR)
 	./$< $(TEST_FILTERS) > $@
 
+# mmap allocator
+$(TEST_OBJ_DIR)/mmap_alloc.o: test/mmap_alloc.c include/testr.h include/std.h
+	@mkdir -p $(TEST_OBJ_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+$(TEST_OBJ_DIR)/mmap_alloc: $(TEST_OBJ_DIR)/mmap_alloc.o $(OBJ_DIR)/testr.o $(OBJ_DIR)/std.o $(OBJ_DIR)/io.o
+	$(CC) $(LDFLAGS) $^ -o $@
+$(TEST_REPORT_DIR)/mmap_alloc.txt: $(TEST_OBJ_DIR)/mmap_alloc
+	@mkdir -p $(TEST_REPORT_DIR)
+	./$< $(TEST_FILTERS) > $@
+
 # Slice
 $(TEST_OBJ_DIR)/slice.o: test/slice.c include/testr.h include/std.h
 	@mkdir -p $(TEST_OBJ_DIR)

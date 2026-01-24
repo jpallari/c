@@ -143,7 +143,7 @@ int test_main(
 ////////////////////////
 
 #define assert_true(t, c, msg) \
-    test_report_append((t), !!(c), (msg), sizeof(msg), __FILE__, __LINE__)
+    test_report_append((t), !!(c), (msg), lengthof(msg), __FILE__, __LINE__)
 
 #define assert_false(t, c, msg) assert_true(t, !(c), msg)
 

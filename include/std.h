@@ -7,8 +7,8 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <sys/mman.h>
+#include <unistd.h>
 
 #ifdef JP_USE_STRING_H
 #include <string.h>
@@ -87,8 +87,7 @@ static inline void breakpoint(void) {
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define abs(a) (((a) >= 0) ? (a) : -(a))
 
-#define is_power_of_two(a) \
-    (((a) != 0) && (((a) & ((a) - 1)) == 0))
+#define is_power_of_two(a) (((a) != 0) && (((a) & ((a) - 1)) == 0))
 
 static inline ullong round_up_multiple_ullong(ullong n, ullong multiple) {
     assert(multiple > 0 && "multiple must be >0");
@@ -314,137 +313,6 @@ bool bytes_eq(const void *a, const void *b, size_t len);
 size_t bytes_to_hex(uchar *dest, const uchar *src, size_t n);
 
 ////////////////////////
-// Allocator
-////////////////////////
-
-/**
- * Interface for memory allocation
- */
-typedef struct {
-    /**
-     * Function for allocating memory.
-     *
-     * @param size amount of memory in bytes to allocate
-     * @param alignment memory alignment to use for the allocation
-     * @param ctx additional data to provide context for the allocation
-     * @returns pointer to area of memory that was allocated
-     */
-    void *(*malloc)(size_t size, size_t alignment, void *ctx);
-
-    /**
-     * Function for freeing memory.
-     *
-     * @param ptr pointer to area of memory to free
-     * @param ctx additional data to provide context for freeing memory
-     */
-    void (*free)(void *ptr, void *ctx);
-
-    /**
-     * Custom data to provide context for the allocator.
-     */
-    void *ctx;
-} allocator;
-
-/**
- * Create given amount of new items of given type using an allocator.
- *
- * @param allocator allocator to use for acquiring memory
- * @param t type of the objects to allocate
- * @param n number of objects to allocate
- * @returns pointer to area of memory that was allocated
- */
-#define alloc_new(allocator, t, n) \
-    (t *)alloc_malloc(allocator, sizeof(t) * (n), alignof(t))
-
-/**
- * Call malloc on a custom memory allocation interface.
- *
- * @param allocator allocator to use for acquiring memory
- * @param size amount of memory in bytes to allocate
- * @param alignment memory alignment to use for the allocation
- * @returns pointer to area of memory that was allocated
- */
-__attribute__((unused)) static inline void *
-alloc_malloc(allocator *a, size_t size, size_t alignment) {
-    return a->malloc(size, alignment, a->ctx);
-}
-
-/**
- * Call free on a custom memory allocation interface.
- *
- * @param allocator allocator to use for freeing memory
- * @param ptr pointer to area of memory to free
- */
-__attribute__((unused)) static inline void alloc_free(allocator *a, void *ptr) {
-    a->free(ptr, a->ctx);
-}
-
-/**
- * Standard memory allocation (stdlib malloc) compatible with the custom memory
- * allocation interface.
- *
- * @param size amount of memory in bytes to allocate
- * @param alignment memory alignment to use for the allocation (unused)
- * @param ctx additional data to provide context for the allocation (unused)
- * @returns pointer to area of memory that was allocated
- */
-static void *std_malloc(size_t size, size_t alignment, void *ctx) {
-    assert(size > 0 && "size must be greater than 0");
-    (void)ctx;
-    (void)alignment;
-    return malloc(size);
-}
-
-/**
- * Standard memory freeing (stdlib free) compatible with the custom memory
- * allocation interface.
- *
- * @param ptr pointer to area of memory to free
- * @param ctx additional data to provide context for freeing memory (unused)
- */
-static void std_free(void *ptr, void *ctx) {
-    assert(ptr && "ptr must not be null");
-    (void)ctx;
-    free(ptr);
-}
-
-/**
- * Standard memory allocation compatible with the custom memory
- * allocation interface.
- */
-__attribute__((unused)) static allocator std_allocator = {
-    std_malloc, std_free, NULL
-};
-
-/**
- * Memory allocation using memory mapping compatible with the custom memory
- * allocation interface.
- *
- * @param size amount of memory in bytes to allocate
- * @param alignment memory alignment to use for the allocation (unused)
- * @param ctx additional data to provide context for the allocation (unused)
- * @returns pointer to area of memory that was allocated
- */
-void *mmap_malloc(size_t size, size_t alignment, void *ctx);
-
-/**
- * Memory freeing using memory mapping compatible with the custom memory
- * allocation interface.
- *
- * @param ptr pointer to area of memory to free
- * @param ctx additional data to provide context for freeing memory (unused)
- */
-void mmap_free(void *ptr, void *ctx);
-
-/**
- * Memory allocation using memory mapping compatible with the custom memory
- * allocation interface.
- */
-__attribute__((unused)) static allocator mmap_allocator = {
-    mmap_malloc, mmap_free, NULL
-};
-
-////////////////////////
 // Slices
 ////////////////////////
 
@@ -481,6 +349,11 @@ typedef struct {
      */
     size_t len;
 } slice;
+
+/**
+ * Cast a slice buffer to a specific type.
+ */
+#define slice_cast(s, t) (t *)((s).buffer)
 
 /**
  * Create a slice from an array
@@ -593,6 +466,169 @@ slice_const slice_const_from_cstr_unsafe(const char *str);
  */
 slice slice_from_cstr_unsafe(char *str);
 
+/**
+ * Check if a slice is set.
+ *
+ * A slice is considered set if the buffer is not null and
+ * the length is greater than zero.
+ *
+ * @param s slice to check
+ * @returns true if the slice is set
+ */
+__attribute__((unused)) static inline bool slice_is_set(slice s) {
+    return s.buffer != NULL && s.len != 0;
+}
+
+/**
+ * Check if a slice is set.
+ *
+ * A slice is considered set if the buffer is not null and
+ * the length is greater than zero.
+ *
+ * @param s slice to check
+ * @returns true if the slice is set
+ */
+__attribute__((unused)) static inline bool slice_const_is_set(slice_const s) {
+    return s.buffer != NULL && s.len != 0;
+}
+
+////////////////////////
+// Allocator
+////////////////////////
+
+/**
+ * Interface for memory allocation
+ */
+typedef struct {
+    /**
+     * Function for allocating memory.
+     *
+     * @param size amount of memory in bytes to allocate
+     * @param alignment memory alignment to use for the allocation
+     * @param ctx additional data to provide context for the allocation
+     * @returns pointer to area of memory that was allocated
+     */
+    slice (*malloc)(size_t size, size_t alignment, void *ctx);
+
+    /**
+     * Function for freeing memory.
+     *
+     * @param ptr pointer to area of memory to free
+     * @param ctx additional data to provide context for freeing memory
+     */
+    void (*free)(slice ptr, void *ctx);
+
+    /**
+     * Custom data to provide context for the allocator.
+     */
+    void *ctx;
+} allocator;
+
+/**
+ * Create given amount of new items of given type using an allocator.
+ *
+ * @param allocator allocator to use for acquiring memory
+ * @param t type of the objects to allocate
+ * @param n number of objects to allocate
+ * @returns pointer to area of memory that was allocated
+ */
+#define alloc_new(allocator, t, n) \
+    alloc_malloc(allocator, sizeof(t) * (n), alignof(t))
+
+/**
+ * Call malloc on a custom memory allocation interface.
+ *
+ * @param allocator allocator to use for acquiring memory
+ * @param size amount of memory in bytes to allocate
+ * @param alignment memory alignment to use for the allocation
+ * @returns pointer to area of memory that was allocated
+ */
+__attribute__((unused)) static inline slice
+alloc_malloc(allocator *a, size_t size, size_t alignment) {
+    return a->malloc(size, alignment, a->ctx);
+}
+
+/**
+ * Call free on a custom memory allocation interface.
+ *
+ * @param allocator allocator to use for freeing memory
+ * @param ptr pointer to area of memory to free
+ */
+__attribute__((unused)) static inline void alloc_free(allocator *a, slice ptr) {
+    a->free(ptr, a->ctx);
+}
+
+/**
+ * Standard memory allocation (stdlib malloc) compatible with the custom memory
+ * allocation interface.
+ *
+ * @param size amount of memory in bytes to allocate
+ * @param alignment memory alignment to use for the allocation (unused)
+ * @param ctx additional data to provide context for the allocation (unused)
+ * @returns pointer to area of memory that was allocated
+ */
+static slice std_malloc(size_t size, size_t alignment, void *ctx) {
+    assert(size > 0 && "size must be greater than 0");
+    (void)ctx;
+    (void)alignment;
+    slice s = {0};
+    s.buffer = malloc(size);
+    if (s.buffer == NULL) {
+        return s;
+    }
+    s.len = size;
+    return s;
+}
+
+/**
+ * Standard memory freeing (stdlib free) compatible with the custom memory
+ * allocation interface.
+ *
+ * @param ptr pointer to area of memory to free
+ * @param ctx additional data to provide context for freeing memory (unused)
+ */
+static void std_free(slice ptr, void *ctx) {
+    assert(ptr.buffer && "ptr must not be null");
+    (void)ctx;
+    free(ptr.buffer);
+}
+
+/**
+ * Standard memory allocation compatible with the custom memory
+ * allocation interface.
+ */
+__attribute__((unused)) static allocator std_allocator = {
+    std_malloc, std_free, NULL
+};
+
+/**
+ * Memory allocation using memory mapping compatible with the custom memory
+ * allocation interface.
+ *
+ * @param size amount of memory in bytes to allocate
+ * @param alignment memory alignment to use for the allocation (unused)
+ * @param ctx additional data to provide context for the allocation (unused)
+ * @returns pointer to area of memory that was allocated
+ */
+slice mmap_malloc(size_t size, size_t alignment, void *ctx);
+
+/**
+ * Memory freeing using memory mapping compatible with the custom memory
+ * allocation interface.
+ *
+ * @param ptr pointer to area of memory to free
+ * @param ctx additional data to provide context for freeing memory (unused)
+ */
+void mmap_free(slice ptr, void *ctx);
+
+/**
+ * Memory allocation using memory mapping compatible with the custom memory
+ * allocation interface.
+ */
+__attribute__((unused)) static allocator mmap_allocator = {
+    mmap_malloc, mmap_free, NULL
+};
+
 ////////////////////////
 // Arena allocator
 ////////////////////////
@@ -641,12 +677,12 @@ void arena_clear(arena *arena);
 /**
  * Custom allocator malloc function for the arena
  */
-void *arena_malloc(size_t size, size_t alignment, void *ctx);
+slice arena_malloc(size_t size, size_t alignment, void *ctx);
 
 /**
  * Custom allocator free function for the arena
  */
-void arena_free(void *ptr, void *ctx);
+void arena_free(slice ptr, void *ctx);
 
 /**
  * Custom allocator for a memory arena
@@ -670,6 +706,13 @@ typedef struct {
      * Number of items the array can hold
      */
     ullong capacity;
+
+    /**
+     * Allocation size in bytes
+     *
+     * This is used for deallocation
+     */
+    size_t alloc_size;
 
     /**
      * Memory allocator used for growing

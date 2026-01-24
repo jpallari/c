@@ -327,10 +327,12 @@ int test_main(
     }
 
     // init report
+    slice test_reports_allocation =
+        alloc_new(&std_allocator, test_report, test_count);
     test_suite_report report = {
         .asserts_handle = &asserts_handle,
         .logs = &logs,
-        .test_reports = alloc_new(&std_allocator, test_report, test_count),
+        .test_reports = (test_report *)test_reports_allocation.buffer,
         .test_count = test_count,
         .tests_passed = 0,
         .assert_count = 0,
@@ -420,7 +422,7 @@ int test_main(
     }
 
     // free all
-    alloc_free(&std_allocator, report.test_reports);
+    alloc_free(&std_allocator, test_reports_allocation);
     dynarr_free(asserts_handle.asserts);
     bytebuf_free(&logs);
 
