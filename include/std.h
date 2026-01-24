@@ -81,7 +81,10 @@ static inline void breakpoint(void) {
  * Assert: fail when condition does not hold
  */
 #define assert(c) \
-    while (!(c)) __builtin_unreachable()
+    while (!(c)) { \
+        breakpoint(); \
+        __builtin_unreachable(); \
+    }
 
 #else
 #define assert(c)
