@@ -29,8 +29,10 @@ typedef int bool;
 // Debugging
 ////////////////////////
 
+// Breakpoint
 #ifdef JP_DEBUG
-// Breakpoint: Use a builtin if possible
+
+// Use a builtin breakpoint if possible
 #if defined(__has_builtin)
 #if __has_builtin(__builtin_debugtrap)
 #define breakpoint() __builtin_debugtrap()
@@ -39,8 +41,9 @@ typedef int bool;
 #endif
 #endif
 
-// Breakpoint: ASM based
+// ASM based breakpoint
 #if !defined(breakpoint)
+
 #if defined(__i386__) || defined(__x86_64__)
 static inline void breakpoint(void) {
     __asm__ __volatile__("int3");
@@ -53,18 +56,23 @@ static inline void breakpoint(void) {
 static inline void breakpoint(void) {
     __asm__ __volatile__(".inst 0xe7f001f0");
 }
+
 #else
-// Breakpoint: Use signals
+
+// Fall back to signals for breakpoint
 #include <signal.h>
 #if defined(SIGTRAP)
 #define breakpoint() raise(SIGTRAP)
 #else
 #define breakpoint() raise(SIGABRT)
 #endif
+
 #endif
 #endif
+
 #endif // JP_DEBUG
 
+// Assertions
 #if defined(JP_USE_ASSERT_H)
 #include <assert.h>
 #elif defined(JP_DEBUG)
@@ -79,6 +87,7 @@ static inline void breakpoint(void) {
 #define assert(c)
 #endif // JP_USE_ASSERT_H
 
+// Attribute for ignoring unused code
 #if defined(__GNUC__) || defined(__clang__)
 #define ignore_unused __attribute__((unused))
 #else
@@ -89,12 +98,47 @@ static inline void breakpoint(void) {
 // Math
 ////////////////////////
 
+/**
+ * Choose the minimum of two numbers
+ *
+ * @param a,b numbers to compare
+ * @returns a or b depending on which is smaller
+ */
 #define min(a, b) ((a) < (b) ? (a) : (b))
+
+/**
+ * Choose the maximum of two numbers
+ *
+ * @param a,b numbers to compare
+ * @returns a or b depending on which is greater
+ */
 #define max(a, b) ((a) > (b) ? (a) : (b))
+
+/**
+ * Convert given number to an absolute value i.e. -N --> N
+ *
+ * @param a number to convert
+ * @returns the number converted to its absolute value
+ */
 #define abs(a) (((a) >= 0) ? (a) : -(a))
 
+/**
+ * Check whether the given number is a power-of-two value
+ */
 #define is_power_of_two(a) (((a) != 0) && (((a) & ((a) - 1)) == 0))
 
+/**
+ * Round up the given number to a multiple of another number.
+ *
+ * Examples:
+ * - 1, 3 --> 3
+ * - 5, 3 --> 6
+ * - 8, 3 --> 9
+ *
+ * @param n number to round up
+ * @param multiple the multiple of the value to round up to
+ * @returns n rounded up to a multiple
+ */
 ignore_unused static inline ullong
 round_up_multiple_ullong(ullong n, ullong multiple) {
     assert(multiple > 0 && "multiple must be >0");
@@ -165,7 +209,7 @@ round_up_multiple_ullong(ullong n, ullong multiple) {
  * Align a memory size to the nearest alignment (power-of-two) value.
  *
  * @param size memory size to align
- * @param alignement size to align to (must be power-of-two)
+ * @param alignment size to align to (must be power-of-two)
  */
 ignore_unused static inline size_t
 align_to_nearest(size_t size, size_t alignment) {
@@ -221,9 +265,9 @@ bytes_copy(void *restrict dest, const void *restrict src, size_t n) {
  * Basically memmove. Assumes that overlapping can be avoided by comparing
  * pointer ordering, which is OK for targets where this code is used.
  *
- * @param[out] dest area of memory to copy bytes to
- * @param[in] src area of memory to copy bytes from
- * @param[in] n number of bytes to copy
+ * @param[out] dest area of memory to move bytes to
+ * @param[in] src area of memory to move bytes from
+ * @param[in] n number of bytes to move
  * @returns pointer to area of memory where bytes were copied to
  */
 ignore_unused static inline void *
@@ -271,18 +315,69 @@ ignore_unused static inline void *bytes_set(void *dest, int c, size_t n) {
 
 #endif // JP_USE_STRING_H
 
+/**
+ * Copy a given number of items from one buffer to another
+ *
+ * @param[out] dest area of memory to copy bytes to
+ * @param[in] src area of memory to copy bytes from
+ * @param[in] n number of items to copy
+ * @returns pointer to area of memory where bytes were copied to
+ */
 #define copy_n(dest, src, n) bytes_copy((dest), (src), (n) * sizeof(*(src)))
 
+/**
+ * Move a given number of items from one buffer to another
+ *
+ * @param[out] dest area of memory to move bytes to
+ * @param[in] src area of memory to move bytes from
+ * @param[in] n number of items to move
+ * @returns pointer to area of memory where bytes were copied to
+ */
 #define move_n(dest, src, n) bytes_move((dest), (src), (n) * sizeof(*(src)))
 
+/**
+ * Set a given number of bytes to a byte pattern
+ *
+ * @param[out] dest buffer to fill with a pattern
+ * @param[in] c byte pattern to fill the buffer with
+ * @param[in] n number of bytes to fill
+ * @returns pointer to the memory area that was filled
+ */
 #define set_n(dest, c, n) bytes_set((dest), (c), (n) * sizeof(*(dest)))
 
+/**
+ * Copy a given number of items from one buffer to another
+ *
+ * @param[out] dest area of memory to copy bytes to
+ * @param[in] src area of memory to copy bytes from
+ * @param[in] n number of items to copy
+ * @param[in] type the type of the buffer items
+ * @returns pointer to area of memory where bytes were copied to
+ */
 #define copy_nt(dest, src, n, type) \
     bytes_copy((dest), (src), (n) * sizeof(type))
 
+/**
+ * Move a given number of items from one buffer to another
+ *
+ * @param[out] dest area of memory to move bytes to
+ * @param[in] src area of memory to move bytes from
+ * @param[in] n number of items to move
+ * @param[in] type the type of the buffer items
+ * @returns pointer to area of memory where bytes were copied to
+ */
 #define move_nt(dest, src, n, type) \
     bytes_move((dest), (src), (n) * sizeof(type))
 
+/**
+ * Set a given number of bytes to a byte pattern
+ *
+ * @param[out] dest buffer to fill with a pattern
+ * @param[in] c byte pattern to fill the buffer with
+ * @param[in] n number of bytes to fill
+ * @param[in] type the type of the buffer items
+ * @returns pointer to the memory area that was filled
+ */
 #define set_nt(dest, c, n, type) bytes_set((dest), (c), (n) * sizeof(type))
 
 /**
@@ -723,6 +818,10 @@ typedef struct {
 
 /**
  * Convert item count and size to byte size (incl. header)
+ *
+ * @param n item count
+ * @param item_size size of a single item
+ * @returns dynarr size in bytes
  */
 ignore_unused static inline size_t
 dynarr_count_to_bytes(ullong n, size_t item_size) {
