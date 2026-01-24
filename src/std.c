@@ -49,13 +49,17 @@ void byte_to_hex_chars(uchar b, uchar *high, uchar *low) {
     *low = byte_to_hex_char(b % 16);
 }
 
-size_t bytes_to_hex(uchar *dest, const uchar *src, size_t n) {
+size_t
+bytes_to_hex(uchar *dest, size_t dest_len, const uchar *src, size_t src_len) {
     size_t j = 0;
-    for (size_t i = 0; i < n; i += 1, j += 2) {
+    for (size_t i = 0; i < src_len && j < dest_len; i += 1, j += 2) {
         byte_to_hex_chars(src[i], &dest[j], &dest[j + 1]);
     }
-    dest[j] = 0;
-    j += 1;
+
+    if (j < dest_len) {
+        // null terminate if possible
+        dest[j] = 0;
+    }
     return j;
 }
 
@@ -496,7 +500,9 @@ slice cstr_split_next(cstr_split_iter *split) {
     while (split->index < split->str.len && !len_set) {
         uchar ch = split->str.buffer[split->index];
         if (ch) {
-            index_result res = bytes_index_of(split->split_chars.buffer, split->split_chars.len, ch);
+            index_result res = bytes_index_of(
+                split->split_chars.buffer, split->split_chars.len, ch
+            );
             if (res.ok) {
                 if (bitset_is_set(
                         split->flags, cstr_split_flag_null_terminate
@@ -1463,6 +1469,26 @@ cstr_fmt_result cstr_fmt_va(
             bytes_copy(dest + bytes_written, s.buffer, field_bytes);
             res.ok = s.len <= len - bytes_written;
             break;
+        case 'h':
+            s = va_arg(va_args, slice_const);
+            field_bytes = bytes_to_hex(
+                (uchar *)dest + bytes_written,
+                len - bytes_written,
+                s.buffer,
+                s.len
+            );
+            res.ok = s.len <= len - bytes_written;
+            break;
+        case 'H':
+            s = slice_const_from_cstr_unsafe(va_arg(va_args, char *));
+            field_bytes = bytes_to_hex(
+                (uchar *)dest + bytes_written,
+                len - bytes_written,
+                s.buffer,
+                s.len
+            );
+            res.ok = s.len <= len - bytes_written;
+            break;
         case 'f':
             fmt_float.v = va_arg(va_args, double);
             fmt_float.precision = 6;
@@ -1570,6 +1596,10 @@ size_t cstr_fmt_len_va(const char *restrict format, va_list va_args) {
         case 'S':
             s = slice_const_from_cstr_unsafe(va_arg(va_args, char *));
             len += s.len;
+            break;
+        case 'h':
+            s = va_arg(va_args, slice_const);
+            len += s.len * 2;
             break;
         case 'f':
             fmt_float.v = va_arg(va_args, double);
@@ -1834,6 +1864,32 @@ size_t bytebuf_write_double(bytebuf *bbuf, double src, uint decimals) {
     return bytes_to_write;
 }
 
+static size_t bytebuf_write_hex(bytebuf *bbuf, slice_const hex) {
+    assert(bbuf && "bbuf must not be null");
+    assert(bbuf->buffer && "bbuf's buffer must not be null");
+
+    if (bytebuf_bytes_available(bbuf) < hex.len * 2) {
+        if (bytebuf_is_growable(bbuf)) {
+            size_t capacity_increase = bbuf->cap + hex.len * 4;
+            bool ok = bytebuf_grow(bbuf, capacity_increase);
+            if (!ok) {
+                return 0; // grow failed
+            }
+        } else {
+            return 0; // no capacity left
+        }
+    }
+
+    size_t len = bytes_to_hex(
+        bbuf->buffer + bbuf->len,
+        bytebuf_bytes_available(bbuf),
+        hex.buffer,
+        hex.len
+    );
+    bbuf->len += len;
+    return len;
+}
+
 cstr_fmt_result
 bytebuf_fmt_va(bytebuf *bbuf, const char *restrict format, va_list va_args) {
     assert(bbuf && "bbuf must not be null");
@@ -1870,6 +1926,20 @@ bytebuf_fmt_va(bytebuf *bbuf, const char *restrict format, va_list va_args) {
             s = slice_const_from_cstr_unsafe(va_arg(va_args, char *));
             res.ok = bytebuf_write(bbuf, s.buffer, s.len);
             field_bytes = s.len;
+            break;
+        case 'h':
+            s = va_arg(va_args, slice_const);
+            field_bytes = bytebuf_write_hex(bbuf, s);
+            if (field_bytes == 0) {
+                res.ok = 0;
+            }
+            break;
+        case 'H':
+            s = slice_const_from_cstr_unsafe(va_arg(va_args, char *));
+            field_bytes = bytebuf_write_hex(bbuf, s);
+            if (field_bytes == 0) {
+                res.ok = 0;
+            }
             break;
         case 'f':
             fmt_float.v = va_arg(va_args, double);
@@ -2144,6 +2214,38 @@ bufstream_write_double(bufstream *bstream, double src, uint decimals) {
     return cstr_from_real_parts_to_bufstream(&parts, bstream);
 }
 
+static bufstream_write_result
+bufstream_write_hex(bufstream *bstream, slice_const hex) {
+    // Kind of ugly way to do this for now since it ends up double buffering the
+    // data. This could be later replaced with a function that directly writes
+    // to the underlying buffer.
+    assert(bstream && "bstream must not be null");
+    assert(bstream->buffer && "bstream's buffer must not be null");
+
+    bufstream_write_result res = {0};
+    uchar buffer[1024];
+    size_t bytes_processed = 0;
+
+    while (bytes_processed < hex.len) {
+        size_t len = bytes_to_hex(
+            buffer,
+            sizeof(buffer),
+            hex.buffer + bytes_processed,
+            hex.len - bytes_processed
+        );
+        bytes_processed += len / 2;
+        bufstream_write_result partial_res =
+            bufstream_write(bstream, buffer, len);
+        res.len += partial_res.len;
+        if (partial_res.err_code) {
+            res.err_code = partial_res.err_code;
+            return res;
+        }
+    }
+
+    return res;
+}
+
 bufstream_write_result bufstream_fmt_va(
     bufstream *bstream, const char *restrict format, va_list va_args
 ) {
@@ -2176,6 +2278,14 @@ bufstream_write_result bufstream_fmt_va(
         case 'S':
             s = slice_const_from_cstr_unsafe(va_arg(va_args, char *));
             temp_res = bufstream_write(bstream, s.buffer, s.len);
+            break;
+        case 'h':
+            s = va_arg(va_args, slice_const);
+            temp_res = bufstream_write_hex(bstream, s);
+            break;
+        case 'H':
+            s = slice_const_from_cstr_unsafe(va_arg(va_args, char *));
+            temp_res = bufstream_write_hex(bstream, s);
             break;
         case 'f':
             fmt_float.v = va_arg(va_args, double);

@@ -66,14 +66,14 @@ void test_buffered_stream_short_writes(test *t) {
     assert_eq_sint(t, res.err_code, 0, "no error");
     assert_eq_uint(t, res.len, lengthof("world!"), "len = lengthof('world!')");
     assert_eq_bytes(
-        t, context.bbuf.buffer, "hello worl", 10, "sink content partial"
+        t, context.bbuf.buffer, (const uchar *)"hello worl", 10, "sink content partial"
     );
 
     bytesink_result sink_res = bufstream_flush(&bstream);
     assert_eq_sint(t, sink_res.err_code, 0, "no error");
     assert_eq_uint(t, sink_res.len, 2, "len = lengthof('d!')");
     assert_eq_bytes(
-        t, context.bbuf.buffer, "hello world!", 12, "sink content full"
+        t, context.bbuf.buffer, (const uchar *)"hello world!", 12, "sink content full"
     );
 }
 
@@ -101,7 +101,7 @@ void test_buffered_stream_long_writes(test *t) {
     assert_eq_bytes(
         t,
         context.bbuf.buffer,
-        "Tolstoy book Anna Karenina",
+        (const uchar *)"Tolstoy book Anna Karenina",
         26,
         "sink content full"
     );
@@ -134,7 +134,7 @@ void test_buffered_stream_failing_writes(test *t) {
     assert_eq_bytes(
         t,
         context.bbuf.buffer,
-        "this is a somewhat long ",
+        (const uchar *)"this is a somewhat long ",
         24,
         "sink content full"
     );

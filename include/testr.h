@@ -72,6 +72,17 @@ bool test_report_append_formatted_cstr(
     const char *right
 );
 
+bool test_report_append_formatted_hex(
+    test *t,
+    bool passed,
+    const char *log_message,
+    const char *file,
+    const int line,
+    const char *cmp,
+    const slice_const left,
+    const slice_const right
+);
+
 bool test_report_append_formatted_float(
     test *t,
     bool passed,
@@ -188,12 +199,6 @@ int test_main(
         (t), abs((l) - (r)) < (eps), (msg), __FILE__, __LINE__, "==", (l), (r) \
     )
 
-#define assert_eq_bytes(t, l, r, len, msg) \
-    assert_true(t, bytes_eq((l), (r), (len)), msg)
-
-#define assert_ne_bytes(t, l, r, len, msg) \
-    assert_false(t, bytes_eq((l), (r), (len)), msg)
-
 #define assert_eq_cstr(t, l, r, msg) \
     test_report_append_formatted_cstr( \
         (t), \
@@ -210,6 +215,30 @@ int test_main(
     test_report_append_formatted_cstr( \
         (t), \
         !cstr_eq_unsafe((l), (r)), \
+        (msg), \
+        __FILE__, \
+        __LINE__, \
+        "!=", \
+        (l), \
+        (r) \
+    )
+
+#define assert_eq_bytes(t, l, r, len, msg) \
+    test_report_append_formatted_hex( \
+        (t), \
+        bytes_eq((l), (r), (len)), \
+        (msg), \
+        __FILE__, \
+        __LINE__, \
+        "==", \
+        slice_const_new((l), (len)), \
+        slice_const_new((r), (len)) \
+    )
+
+#define assert_ne_bytes(t, l, r, len, msg) \
+    test_report_append_formatted_hex( \
+        (t), \
+        !bytes_eq((l), (r), (len)), \
         (msg), \
         __FILE__, \
         __LINE__, \

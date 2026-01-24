@@ -47,9 +47,7 @@ void test_cstr_len_unsafe(test *t) {
 void test_cstr_split(test *t) {
     char str[] = "this is a string";
     cstr_split_iter split;
-    cstr_split_init(
-        &split, slice_str(str), slice_sstr(" "), 0
-    );
+    cstr_split_init(&split, slice_str(str), slice_sstr(" "), 0);
 
     // first word
     {
@@ -91,9 +89,7 @@ void test_cstr_split_collect(test *t) {
     char str[] = "collecting all words to an array";
 
     cstr_split_iter split;
-    cstr_split_init(
-        &split, slice_str(str), slice_sstr(" "), 0
-    );
+    cstr_split_init(&split, slice_str(str), slice_sstr(" "), 0);
 
     slice arr[10] = {0};
 
@@ -183,9 +179,7 @@ void test_cstr_split_collect_strings(test *t) {
     char str[] = "collecting all words to an array";
 
     cstr_split_iter split;
-    cstr_split_init(
-        &split, slice_str(str), slice_sstr(" "), 0
-    );
+    cstr_split_init(&split, slice_str(str), slice_sstr(" "), 0);
 
     char *arr[10] = {0};
 
@@ -373,7 +367,7 @@ void test_cstr_fmt(test *t) {
         slice_sstr("int"),
         -4
     );
-    assert_eq_cstr(t, "string: hello; int: -4", buf, "1: fmt contents");
+    assert_eq_cstr(t, buf, "string: hello; int: -4", "1: fmt contents");
     assert_eq_uint(t, res.len, 22, "1: fmt content len");
     assert_true(t, res.ok, "1: ok");
 
@@ -381,7 +375,7 @@ void test_cstr_fmt(test *t) {
     len = cstr_fmt_len(format, slice_sstr("ullong"), 123UL);
     assert_eq_uint(t, len, 11, "2: fmt len");
     res = cstr_fmt(buf, sizeof(buf), format, slice_sstr("ullong"), 123UL);
-    assert_eq_cstr(t, "ullong: 123", buf, "2: fmt contents");
+    assert_eq_cstr(t, buf, "ullong: 123", "2: fmt contents");
     assert_eq_uint(t, res.len, 11, "2: fmt content len");
     assert_true(t, res.ok, "2: ok");
 
@@ -389,7 +383,7 @@ void test_cstr_fmt(test *t) {
     len = cstr_fmt_len(format, 98, -12345L);
     assert_eq_uint(t, len, 10, "3: fmt len");
     res = cstr_fmt(buf, sizeof(buf), format, 98, -12345L);
-    assert_eq_cstr(t, "98; -12345", buf, "3: fmt contents");
+    assert_eq_cstr(t, buf, "98; -12345", "3: fmt contents");
     assert_eq_uint(t, res.len, 10, "3: fmt content len");
     assert_true(t, res.ok, "3: ok");
 
@@ -407,7 +401,7 @@ void test_cstr_fmt(test *t) {
         (cstr_fmt_float) {.v = (double)2.456f, .precision = 2},
         (cstr_fmt_float) {.v = 123.456789, .precision = 4}
     );
-    assert_eq_cstr(t, "2.46; 123.4568", buf, "4: fmt contents");
+    assert_eq_cstr(t, buf, "2.46; 123.4568", "4: fmt contents");
     assert_eq_uint(t, res.len, 14, "4: fmt content len");
     assert_true(t, res.ok, "4: ok");
 
@@ -429,9 +423,19 @@ void test_cstr_fmt(test *t) {
         slice_sstr("char"),
         'x'
     );
-    assert_eq_cstr(t, "string: hello; char: x!", buf, "5: fmt contents");
+    assert_eq_cstr(t, buf, "string: hello; char: x!", "5: fmt contents");
     assert_eq_uint(t, res.len, 23, "5: fmt content len");
     assert_true(t, res.ok, "5: ok");
+
+    format = "s: h;";
+    len = cstr_fmt_len(format, slice_sstr("hex"), slice_sstr("abcd"));
+    assert_eq_uint(t, len, 14, "6: fmt len");
+    res = cstr_fmt(
+        buf, sizeof(buf), format, slice_sstr("hex"), slice_sstr("abcd")
+    );
+    assert_eq_cstr(t, buf, "hex: 61626364;", "6: fmt contents");
+    assert_eq_uint(t, res.len, 14, "6: fmt content len");
+    assert_true(t, res.ok, "6: ok");
 }
 
 static test_case tests[] = {

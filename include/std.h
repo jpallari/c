@@ -420,11 +420,12 @@ bool bytes_eq(const void *a, const void *b, size_t len);
  * the number of bytes that are to be converted.
  *
  * @param[out] dest buffer to write the hex string to
+ * @param[in] dest_len length of the dest buffer
  * @param[in] src data to convert to a hex string
- * @param[in] n number of bytes to convert to a hex string
+ * @param[in] src_len number of bytes to convert to a hex string
  * @returns number of bytes written
  */
-size_t bytes_to_hex(uchar *dest, const uchar *src, size_t n);
+size_t bytes_to_hex(uchar *dest, size_t dest_len, const uchar *src, size_t src_len);
 
 /**
  * Result type for any index search.
