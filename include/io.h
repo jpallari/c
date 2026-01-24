@@ -22,8 +22,7 @@ io_write_all_sync(int fd, const void *buffer, size_t len, size_t chunk_size);
     io_write_all_sync((fd), (str), sizeof(str), 0)
 
 typedef struct {
-    uchar *data;
-    size_t len;
+    slice data;
     size_t cap;
     int err_code;
 } file_read_result;
@@ -31,7 +30,7 @@ typedef struct {
 ignore_unused static inline void
 file_read_result_free(file_read_result res, allocator *allocator) {
     slice s = {
-        .buffer = res.data,
+        .buffer = res.data.buffer,
         .len = res.cap,
     };
     alloc_free(allocator, s);

@@ -91,17 +91,17 @@ file_read_result file_read_sync(const char *filename, allocator *allocator) {
     }
     size_t block_size = (size_t)file_stat.st_blksize;
 
-    size_t len = (size_t)file_stat.st_size;
-    slice s = alloc_new(allocator, uchar, len);
+    size_t file_size = (size_t)file_stat.st_size;
+    slice s = alloc_new(allocator, uchar, file_size);
     if (!slice_is_set(s)) {
         res.err_code = -2;
         goto end;
     }
-    res.data = s.buffer;
+    res.data = s;
     res.cap = s.len;
 
-    io_result io_read_res = os_read_all(fd, res.data, len, block_size);
-    res.len = io_read_res.len;
+    io_result io_read_res = os_read_all(fd, res.data.buffer, file_size, block_size);
+    res.data.len = io_read_res.len;
     res.err_code = io_read_res.err_code;
 
 end:

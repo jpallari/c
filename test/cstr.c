@@ -46,14 +46,10 @@ void test_cstr_len_unsafe(test *t) {
 
 void test_cstr_split(test *t) {
     char str[] = "this is a string";
-    cstr_split_iter split = {
-        .str = str,
-        .str_len = sizeof(str),
-        .split_chars = " ",
-        .split_chars_len = 1,
-        .index = 0,
-        .null_terminate = 0,
-    };
+    cstr_split_iter split;
+    cstr_split_init(
+        &split, slice_str(str), slice_sstr(" "), 0
+    );
 
     // first word
     {
@@ -94,14 +90,10 @@ void test_cstr_split(test *t) {
 void test_cstr_split_collect(test *t) {
     char str[] = "collecting all words to an array";
 
-    cstr_split_iter split = {
-        .str = str,
-        .str_len = sizeof(str),
-        .split_chars = " ",
-        .split_chars_len = 1,
-        .index = 0,
-        .null_terminate = 0,
-    };
+    cstr_split_iter split;
+    cstr_split_init(
+        &split, slice_str(str), slice_sstr(" "), 0
+    );
 
     slice arr[10] = {0};
 
@@ -150,14 +142,10 @@ void test_cstr_split_collect(test *t) {
 
 void test_cstr_split_null_terminate(test *t) {
     char str[] = "null terminate these words";
-    cstr_split_iter split = {
-        .str = str,
-        .str_len = sizeof(str),
-        .split_chars = " ",
-        .split_chars_len = 1,
-        .index = 0,
-        .null_terminate = 1,
-    };
+    cstr_split_iter split;
+    cstr_split_init(
+        &split, slice_str(str), slice_sstr(" "), cstr_split_flag_null_terminate
+    );
 
     // first word
     {
@@ -194,14 +182,10 @@ void test_cstr_split_null_terminate(test *t) {
 void test_cstr_split_collect_strings(test *t) {
     char str[] = "collecting all words to an array";
 
-    cstr_split_iter split = {
-        .str = str,
-        .str_len = sizeof(str),
-        .split_chars = " ",
-        .split_chars_len = 1,
-        .index = 0,
-        .null_terminate = 0,
-    };
+    cstr_split_iter split;
+    cstr_split_init(
+        &split, slice_str(str), slice_sstr(" "), 0
+    );
 
     char *arr[10] = {0};
 
@@ -218,7 +202,9 @@ void test_cstr_split_collect_strings(test *t) {
     }
 
     assert_false(
-        t, split.null_terminate, "null termination flag is toggled back"
+        t,
+        bitset_is_set(split.flags, cstr_split_flag_null_terminate),
+        "null termination flag is toggled back"
     );
     bytes_set(arr, 0, sizeof(arr));
     split.index = 0;
@@ -233,7 +219,9 @@ void test_cstr_split_collect_strings(test *t) {
     }
 
     assert_false(
-        t, split.null_terminate, "null termination flag is toggled back"
+        t,
+        bitset_is_set(split.flags, cstr_split_flag_null_terminate),
+        "null termination flag is toggled back"
     );
 }
 

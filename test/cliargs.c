@@ -4,14 +4,13 @@
 
 size_t
 split_args(char *argv_str, size_t argv_str_len, char **argv, size_t argv_len) {
-    cstr_split_iter split = {
-        .str = argv_str,
-        .str_len = argv_str_len,
-        .split_chars = " ",
-        .split_chars_len = 1,
-        .index = 0,
-        .null_terminate = 1,
-    };
+    cstr_split_iter split;
+    cstr_split_init(
+        &split,
+        (slice) {.buffer = (uchar *)argv_str, .len = argv_str_len},
+        slice_sstr(" "),
+        cstr_split_flag_null_terminate
+    );
     return cstr_split_collect_strings(argv, argv_len, &split);
 }
 

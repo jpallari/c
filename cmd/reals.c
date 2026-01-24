@@ -24,14 +24,11 @@ int main(int argc, char **argv) {
         );
     }
 
-    cstr_split_iter split = {
-        .str = (char *)res.data,
-        .str_len = res.len,
-        .split_chars = "\n",
-        .split_chars_len = 1,
-        .null_terminate = 1,
-        .index = 0,
-    };
+    slice_const split_chars = slice_sstr("\n");
+    cstr_split_iter split;
+    cstr_split_init(
+        &split, res.data, split_chars, cstr_split_flag_null_terminate
+    );
 
     slice s = {0};
     do {

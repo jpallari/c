@@ -8,9 +8,11 @@
 ////////////////////////
 
 int bytes_diff_index(const void *a, const void *b, size_t start, size_t len) {
+    assert(len > 0 && "len must be >0");
     assert(start < len && "start must be lower than length");
+
     const uchar *a_ = a, *b_ = b;
-    if ((uintptr_t)a_ == (uintptr_t)b_) {
+    if (len == 0 || (uintptr_t)a_ == (uintptr_t)b_) {
         return -1;
     }
     if (!a || !b) {
@@ -464,42 +466,56 @@ size_t cstr_len(const char *str, size_t capacity) {
     return len;
 }
 
+void cstr_split_init(
+    cstr_split_iter *split, slice str, slice_const split_chars, uint flags
+) {
+    assert(split && "split struct must not be null");
+
+    bytes_set(split, 0, sizeof(*split));
+    split->str = str;
+    split->split_chars = split_chars;
+    split->flags = flags;
+}
+
 slice cstr_split_next(cstr_split_iter *split) {
     assert(split && "split struct must not be null");
-    assert(split->split_chars && "split chars must not be null");
+    assert(split->str.buffer && "string must not be null");
+    assert(split->split_chars.buffer && "split chars must not be null");
 
     slice slice = {0};
 
-    if (!split->str || !split->str_len || !split->split_chars_len
-        || split->index >= split->str_len || !split->str[split->index]) {
+    if (!slice_is_set(split->str) || !slice_const_is_set(split->split_chars)
+        || split->index >= split->str.len || !split->str.buffer[split->index]) {
         return slice;
     }
 
-    slice.buffer = (uchar *)split->str + split->index;
+    size_t start_index = split->index;
+    slice.buffer = split->str.buffer + start_index;
     bool len_set = 0;
 
-    while (split->index < split->str_len && !len_set) {
-        char ch = split->str[split->index];
+    while (split->index < split->str.len && !len_set) {
+        uchar ch = split->str.buffer[split->index];
         if (ch) {
-            for (size_t si = 0; si < split->split_chars_len; si += 1) {
-                if (split->split_chars[si] == ch) {
-                    if (split->null_terminate) {
-                        split->str[split->index] = '\0';
-                    }
-                    uintptr_t str = (uintptr_t)split->str;
-                    uintptr_t buf = (uintptr_t)slice.buffer;
-                    slice.len = (size_t)(str + split->index - buf);
-                    len_set = 1;
-                    break;
+            index_result res = bytes_index_of(split->split_chars.buffer, split->split_chars.len, ch);
+            if (res.ok) {
+                if (bitset_is_set(
+                        split->flags, cstr_split_flag_null_terminate
+                    )) {
+                    split->str.buffer[split->index] = '\0';
                 }
+                slice.len = split->index - start_index;
+                len_set = 1;
             }
         } else {
-            uintptr_t str = (uintptr_t)split->str;
-            uintptr_t buf = (uintptr_t)slice.buffer;
-            slice.len = (size_t)(str + split->index - buf);
+            // null character
+            slice.len = split->index - start_index;
             len_set = 1;
         }
         split->index += 1;
+    }
+
+    if (!len_set) {
+        slice.len = split->str.len - start_index;
     }
 
     return slice;
@@ -525,12 +541,8 @@ cstr_split_collect_strings(char **strings, size_t len, cstr_split_iter *split) {
     assert(strings && "strings must not be null");
     assert(split && "split must not be null");
 
-    struct {
-        uint null_terminate : 1;
-    } flags = {
-        .null_terminate = split->null_terminate,
-    };
-    split->null_terminate = 1;
+    uint flags = split->flags;
+    bitset_set_mut(split->flags, cstr_split_flag_null_terminate);
 
     size_t i = 0;
     for (; i < len; i += 1) {
@@ -541,7 +553,7 @@ cstr_split_collect_strings(char **strings, size_t len, cstr_split_iter *split) {
         strings[i] = (char *)slice.buffer;
     }
 
-    split->null_terminate = flags.null_terminate;
+    split->flags = flags;
     return i;
 }
 

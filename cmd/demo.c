@@ -76,7 +76,7 @@ int file_demo(int argc, char **argv) {
     if (argc > 2) {
         const char *filename_write = argv[2];
         io_result write_res =
-            file_write_sync(filename_write, read_res.data, read_res.len);
+            file_write_sync(filename_write, read_res.data.buffer, read_res.data.len);
         if (write_res.err_code) {
             print_file_error(filename_write, write_res.err_code);
             return 1;
@@ -85,13 +85,13 @@ int file_demo(int argc, char **argv) {
         io_stdout_fmt(
             "s: U\ns:\ns\n",
             slice_sstr("File size"),
-            read_res.len,
+            read_res.data.len,
             slice_sstr("File contents"),
-            slice_new(read_res.data, read_res.len)
+            read_res.data
         );
     }
 
-    if (read_res.data) {
+    if (slice_is_set(read_res.data)) {
         file_read_result_free(read_res, &std_allocator);
     }
     return 0;

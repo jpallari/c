@@ -219,6 +219,16 @@ align_to_nearest(size_t size, size_t alignment) {
 }
 
 ////////////////////////
+// Bitset
+////////////////////////
+
+#define bitset_is_set(bitset, bit) ((bitset) & (bit))
+#define bitset_set(bitset, bit) ((bitset) | (bit))
+#define bitset_set_mut(bitset, bit) ((bitset) |= (bit))
+#define bitset_unset(bitset, bit) ((bitset) & ~(bit))
+#define bitset_unset_mut(bitset, bit) ((bitset) &= ~(bit))
+
+////////////////////////
 // Bytes
 ////////////////////////
 
@@ -413,6 +423,41 @@ bool bytes_eq(const void *a, const void *b, size_t len);
  */
 size_t bytes_to_hex(uchar *dest, const uchar *src, size_t n);
 
+/**
+ * Result type for any index search.
+ */
+typedef struct {
+    /**
+     * Found index
+     */
+    size_t index;
+
+    /**
+     * Whether or not an index was found
+     */
+    bool ok;
+} index_result;
+
+/**
+ * Find the index of a byte.
+ *
+ * @param buffer bytes to search for a byte
+ * @param len length of the bytes buffer
+ * @param byte byte to search for in the buffer
+ * @returns index of the byte and whether or not the byte was found
+ */
+ignore_unused static inline index_result
+bytes_index_of(const uchar *buffer, size_t len, uchar byte) {
+    index_result res = {0};
+    for (size_t i = 0; i < len; i += 1) {
+        if (buffer[i] == byte) {
+            res.index = i;
+            res.ok = 1;
+        }
+    }
+    return res;
+}
+
 ////////////////////////
 // Slices
 ////////////////////////
@@ -465,6 +510,17 @@ typedef struct {
 #define slice_arr(arr) \
     (slice) { \
         .buffer = (uchar *)(arr), .len = sizeof(arr), \
+    }
+
+/**
+ * Create a slice from a mutable string (string array)
+ *
+ * @param str a string array
+ * @returns a new slice
+ */
+#define slice_str(str) \
+    (slice) { \
+        .buffer = (uchar *)(str), .len = lengthof(str), \
     }
 
 /**
@@ -1076,6 +1132,8 @@ size_t cstr_len_unsafe(const char *str);
  */
 size_t cstr_len(const char *str, size_t capacity);
 
+#define cstr_split_flag_null_terminate (uint)(1)
+
 /**
  * String split iterator
  */
@@ -1083,22 +1141,12 @@ typedef struct {
     /**
      * String to split
      */
-    char *str;
-
-    /**
-     * Length of the string to split
-     */
-    size_t str_len;
+    slice str;
 
     /**
      * Characters based on which string should be split.
      */
-    const char *split_chars;
-
-    /**
-     * Length of the split characters list.
-     */
-    size_t split_chars_len;
+    slice_const split_chars;
 
     /**
      * The next character index to check for string split.
@@ -1106,10 +1154,22 @@ typedef struct {
     size_t index;
 
     /**
-     * Flag: whether or not to null-terminate on split characters
+     * Flag options for splitting
      */
-    uint null_terminate : 1;
+    uint flags;
 } cstr_split_iter;
+
+/**
+ * Initialise a split iterator
+ *
+ * @param[out] split iterator to initialise
+ * @param[in] str string to split
+ * @param[in] split_chars characters based on which string should be split
+ * @param[in] flags flag options for splitting
+ */
+void cstr_split_init(
+    cstr_split_iter *split, slice str, slice_const split_chars, uint flags
+);
 
 /**
  * Get a slice to the next sub-string from a split iterator.
