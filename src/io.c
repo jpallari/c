@@ -150,7 +150,7 @@ end:
 
 bytesink_result
 io_file_bytesink_fn(void *context, const uchar *bytes, size_t len) {
-    io_file_bytesink_context *ctx = (io_file_bytesink_context *)context;
+    io_file_bytesink_context *ctx = context;
     bytesink_result res;
     io_result io_res = io_write_all_sync(ctx->fd, bytes, len, ctx->chunk_size);
     res.len = io_res.len;

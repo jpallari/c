@@ -58,6 +58,51 @@ size_t bytes_to_hex(uchar *dest, const uchar *src, size_t n) {
 }
 
 ////////////////////////
+// Allocator
+////////////////////////
+
+struct mmap_alloc_header {
+    size_t size;
+};
+
+void *mmap_malloc(size_t size, size_t alignment, void *ctx) {
+    assert(size > 0 && "size must be greater than 0");
+    (void)alignment;
+    (void)ctx;
+
+    long page_size_signed = sysconf(_SC_PAGE_SIZE);
+    assert(page_size_signed > 0 && "expected a page size >0");
+
+    size_t header_alloc_size = sizeof(struct mmap_alloc_header);
+    size += header_alloc_size;
+    size = (size_t)round_up_multiple_ullong(
+        (ullong)size, (ullong)page_size_signed
+    );
+
+    void *p = mmap(
+        0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0
+    );
+    if (p == MAP_FAILED) {
+        return NULL;
+    }
+
+    struct mmap_alloc_header *header = p;
+    header->size = size;
+
+    return (uchar *)p + header_alloc_size;
+}
+
+void mmap_free(void *ptr, void *ctx) {
+    assert(ptr && "ptr must not be null");
+    (void)ctx;
+
+    struct mmap_alloc_header *header =
+        (struct mmap_alloc_header *)((uchar *)ptr
+                                     - sizeof(struct mmap_alloc_header));
+    munmap(header, header->size);
+}
+
+////////////////////////
 // Slices
 ////////////////////////
 
@@ -126,7 +171,7 @@ arena arena_new(uchar *buffer, size_t size) {
 }
 
 void *arena_alloc_bytes(arena *arena, size_t size, size_t alignment) {
-    size_t aligned_used = arena_aligned_used(arena->used, alignment);
+    size_t aligned_used = align_to_nearest(arena->used, alignment);
     if (arena->size < size + aligned_used) {
         return NULL;
     }
