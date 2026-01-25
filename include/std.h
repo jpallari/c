@@ -37,6 +37,8 @@ typedef int bool;
 #if defined(__has_builtin)
 #if __has_builtin(__builtin_debugtrap)
 #define breakpoint() __builtin_debugtrap()
+#elif __has_builtin(__builtin_trap)
+#define breakpoint() __builtin_trap()
 #elif __has_builtin(__debugbreak)
 #define breakpoint() __debugbreak()
 #endif
@@ -81,11 +83,13 @@ static inline void breakpoint(void) {
 /**
  * Assert: fail when condition does not hold
  */
+#ifdef JP_DEBUG_BREAK_ON_ASSERT_FAIL
 #define assert(c) \
-    while (!(c)) { \
-        breakpoint(); \
-        __builtin_unreachable(); \
-    }
+    while (!(c)) { breakpoint(); }
+#else
+#define assert(c) \
+    while (!(c)) { __builtin_unreachable(); }
+#endif
 
 #else
 #define assert(c)

@@ -15,4 +15,7 @@ CFLAGS += \
 # Clang:
 # 	CFLAGS += -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize
 
+# Uncomment to break on assert failure
+# CFLAGS += -DJP_DEBUG_BREAK_ON_ASSERT_FAIL
+
 LDFLAGS += $(SAN_FLAGS) -lgcov --coverage
