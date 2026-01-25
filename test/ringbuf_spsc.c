@@ -6,6 +6,7 @@
 #define nums_per_item 128UL
 #define item_count (nums_per_item * 10000UL)
 #define expected_sum (item_count * (item_count + 1) / 2)
+#define ringbuf_buffer_size (512UL * 1028UL)
 
 struct producer_ctx {
     ringbuf_spsc *rbuf;
@@ -29,7 +30,9 @@ void *produce_nums(void *ctx_) {
         while (!ringbuf_spsc_push(rbuf, s)) {}
     }
 
-    s.len = 0;
+    // send termination signal
+    buffer[0] = 0;
+    s.len = sizeof(ullong);
     while (!ringbuf_spsc_push(rbuf, s)) {}
 
     return NULL;
@@ -42,18 +45,17 @@ void *consume_nums(void *ctx_) {
     ullong count = 0;
 
     ullong buffer[nums_per_item];
-    size_t len = 0;
 
     while (1) {
-        bool ok = ringbuf_spsc_pop(rbuf, (uchar *)&buffer, &len);
+        bool ok = ringbuf_spsc_pop(rbuf, (uchar *)&buffer, sizeof(buffer));
         if (ok) {
-            if (len == 0) {
+            if (buffer[0] == 0) {
+                // termination signal received
                 break;
             }
 
-            size_t n = len / sizeof(size_t);
-            count += n;
-            for (uint j = 0; j < n; j += 1) { sum += buffer[j]; }
+            count += nums_per_item;
+            for (uint j = 0; j < nums_per_item; j += 1) { sum += buffer[j]; }
         }
     }
 
@@ -64,9 +66,9 @@ void *consume_nums(void *ctx_) {
 }
 
 void test_ringbuf_spsc_concurrent(test *t) {
-    allocation a = alloc_new(&mmap_allocator, uchar, 512 * 1028);
+    allocation a = alloc_new(&mmap_allocator, uchar, ringbuf_buffer_size);
     ringbuf_spsc rbuf;
-    ringbuf_spsc_init(&rbuf, slice_new(a.ptr, a.len), sizeof(ullong) * nums_per_item, alignof(ullong));
+    ringbuf_spsc_init(&rbuf, slice_new(a.ptr, a.len), sizeof(ullong) * nums_per_item);
 
     ullong sum = 0;
     ullong count = 0;
@@ -100,9 +102,9 @@ void test_ringbuf_spsc_concurrent(test *t) {
 }
 
 void test_ringbuf_spsc_sequential(test *t) {
-    allocation a = alloc_new(&mmap_allocator, uchar, 512 * 1028);
+    allocation a = alloc_new(&mmap_allocator, uchar, ringbuf_buffer_size);
     ringbuf_spsc rbuf;
-    ringbuf_spsc_init(&rbuf, slice_new(a.ptr, a.len), sizeof(ullong) * nums_per_item, alignof(ullong));
+    ringbuf_spsc_init(&rbuf, slice_new(a.ptr, a.len), sizeof(ullong) * nums_per_item);
 
     ullong nums[nums_per_item];
     slice s = slice_arr(nums);
@@ -125,12 +127,11 @@ void test_ringbuf_spsc_sequential(test *t) {
     // read until empty
     ok = 1;
     bytes_set(nums, 0, sizeof(nums));
-    size_t len = 0;
     ullong sum2 = 0;
     while (ok) {
-        ok = ringbuf_spsc_pop(&rbuf, (uchar *)nums, &len);
-        if (ok && len) {
-            for (ullong i = 0; i < len/sizeof(size_t); i += 1) {
+        ok = ringbuf_spsc_pop(&rbuf, (uchar *)nums, sizeof(nums));
+        if (ok) {
+            for (ullong i = 0; i < nums_per_item; i += 1) {
                 sum2 += nums[i];
             }
         }
