@@ -26,6 +26,9 @@ all: build test
 $(OBJ_DIR)/cliargs.o: src/cliargs.c include/std.h
 	@mkdir -p $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
+$(OBJ_DIR)/mt.o: src/mt.c include/mt.h include/std.h
+	@mkdir -p $(OBJ_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
 $(OBJ_DIR)/io.o: src/io.c include/io.h include/std.h
 	@mkdir -p $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -133,6 +136,16 @@ $(TEST_OBJ_DIR)/mmap_alloc.o: test/mmap_alloc.c include/testr.h include/std.h
 $(TEST_OBJ_DIR)/mmap_alloc: $(TEST_OBJ_DIR)/mmap_alloc.o $(OBJ_DIR)/testr.o $(OBJ_DIR)/std.o $(OBJ_DIR)/io.o
 	$(CC) $(LDFLAGS) $^ -o $@
 $(TEST_REPORT_DIR)/mmap_alloc.txt: $(TEST_OBJ_DIR)/mmap_alloc
+	@mkdir -p $(TEST_REPORT_DIR)
+	./$< $(TEST_FILTERS) > $@
+
+# Ring buffer (SPSC)
+$(TEST_OBJ_DIR)/ringbuf_spsc.o: test/ringbuf_spsc.c include/testr.h include/mt.h include/std.h
+	@mkdir -p $(TEST_OBJ_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+$(TEST_OBJ_DIR)/ringbuf_spsc: $(TEST_OBJ_DIR)/ringbuf_spsc.o $(OBJ_DIR)/testr.o $(OBJ_DIR)/mt.o $(OBJ_DIR)/std.o $(OBJ_DIR)/io.o
+	$(CC) $(LDFLAGS) $^ -o $@
+$(TEST_REPORT_DIR)/ringbuf_spsc.txt: $(TEST_OBJ_DIR)/ringbuf_spsc
 	@mkdir -p $(TEST_REPORT_DIR)
 	./$< $(TEST_FILTERS) > $@
 

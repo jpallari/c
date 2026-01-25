@@ -6,7 +6,7 @@ import sys
 configs = [
     { 'target': target, 'lang_std': lang_std, 'compiler': compiler }
     for compiler in ['gcc', 'clang']
-    for lang_std in ['c11', 'c99']
+    for lang_std in ['c11']
     for target in ['debug', 'release']
 ]
 
