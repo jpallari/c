@@ -17,4 +17,7 @@ CFLAGS = \
 	-Iinclude \
 	-fno-omit-frame-pointer \
 	-fno-math-errno \
-	-ffinite-math-only
+	-ffinite-math-only \
+	-pthread
+LDFLAGS = \
+	-pthread
