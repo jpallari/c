@@ -29,11 +29,11 @@ typedef struct {
 
 ignore_unused static inline void
 file_read_result_free(file_read_result res, allocator *allocator) {
-    slice s = {
-        .buffer = res.data.buffer,
+    allocation a = {
+        .ptr = res.data.buffer,
         .len = res.cap,
     };
-    alloc_free(allocator, s);
+    alloc_free(allocator, a);
 }
 
 #define file_err_failed_alloc (int)(-2)

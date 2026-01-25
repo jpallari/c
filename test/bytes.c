@@ -5,14 +5,14 @@ void test_bytes_copy(test *t) {
     size_t len = 1000;
     int mismatches = 0;
 
-    slice s_arr1 = alloc_new(&std_allocator, int, len);
-    int *arr1 = slice_cast(s_arr1, int);
+    allocation s_arr1 = alloc_new(&std_allocator, int, len);
+    int *arr1 = s_arr1.ptr;
     if (!assert_true(t, arr1, "malloc must succeed")) {
         return;
     }
 
-    slice s_arr2 = alloc_new(&std_allocator, int, len);
-    int *arr2 = slice_cast(s_arr2, int);
+    allocation s_arr2 = alloc_new(&std_allocator, int, len);
+    int *arr2 = s_arr2.ptr;
     if (!assert_true(t, arr2, "malloc must succeed")) {
         return;
     }
@@ -45,14 +45,14 @@ void test_bytes_move_no_overlap(test *t) {
     size_t len = 1000;
     int mismatches = 0;
 
-    slice s_arr1 = alloc_new(&std_allocator, int, len);
-    int *arr1 = slice_cast(s_arr1, int);
+    allocation s_arr1 = alloc_new(&std_allocator, int, len);
+    int *arr1 = s_arr1.ptr;
     if (!assert_true(t, arr1, "malloc must succeed")) {
         return;
     };
 
-    slice s_arr2 = alloc_new(&std_allocator, int, len);
-    int *arr2 = slice_cast(s_arr2, int);
+    allocation s_arr2 = alloc_new(&std_allocator, int, len);
+    int *arr2 = s_arr2.ptr;
     if (!assert_true(t, arr2, "malloc must succeed")) {
         return;
     };

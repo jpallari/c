@@ -6,8 +6,8 @@
 int array_demo(void) {
     int exit_code = 0;
 
-    slice buffer = alloc_new(&std_allocator, uchar, 1024 * 1024);
-    arena arena = arena_new(buffer.buffer, 1024 * 1024);
+    allocation buffer = alloc_new(&std_allocator, uchar, 1024 * 1024);
+    arena arena = arena_new(buffer.ptr, 1024 * 1024);
     allocator allocator = arena_allocator_new(&arena);
 
     float *arr = dynarr_new(10, float, &allocator);

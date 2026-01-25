@@ -343,12 +343,12 @@ int test_main(
     }
 
     // init report
-    slice test_reports_allocation =
+    allocation test_reports_allocation =
         alloc_new(&std_allocator, test_report, test_count);
     test_suite_report report = {
         .asserts_handle = &asserts_handle,
         .logs = &logs,
-        .test_reports = (test_report *)test_reports_allocation.buffer,
+        .test_reports = test_reports_allocation.ptr,
         .test_count = test_count,
         .tests_passed = 0,
         .assert_count = 0,

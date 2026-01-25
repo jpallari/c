@@ -67,7 +67,7 @@ bytes_to_hex(uchar *dest, size_t dest_len, const uchar *src, size_t src_len) {
 // Allocator
 ////////////////////////
 
-slice mmap_malloc(size_t size, size_t alignment, void *ctx) {
+allocation mmap_malloc(size_t size, size_t alignment, void *ctx) {
     assert(size > 0 && "size must be greater than 0");
     (void)alignment;
     (void)ctx;
@@ -75,27 +75,26 @@ slice mmap_malloc(size_t size, size_t alignment, void *ctx) {
     long page_size_signed = sysconf(_SC_PAGE_SIZE);
     assert(page_size_signed > 0 && "expected a page size >0");
 
-    slice s = {0};
-
     size = (size_t)round_up_multiple_ullong(
         (ullong)size, (ullong)page_size_signed
     );
 
-    s.buffer = mmap(
+    void *ptr = mmap(
         0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0
     );
-    if (s.buffer == MAP_FAILED) {
-        s.buffer = NULL;
-        return s;
+    if (ptr == MAP_FAILED) {
+        return (allocation) {0};
     }
-    s.len = size;
-    return s;
+    return (allocation) {
+        .ptr = ptr,
+        .len = size,
+    };
 }
 
-void mmap_free(slice ptr, void *ctx) {
-    assert(ptr.buffer && "ptr must not be null");
+void mmap_free(allocation a, void *ctx) {
+    assert(a.ptr && "ptr must not be null");
     (void)ctx;
-    munmap(ptr.buffer, ptr.len);
+    munmap(a.ptr, a.len);
 }
 
 ////////////////////////
@@ -180,20 +179,21 @@ void arena_clear(arena *arena) {
     arena->used = 0;
 }
 
-slice arena_malloc(size_t size, size_t alignment, void *ctx) {
+allocation arena_malloc(size_t size, size_t alignment, void *ctx) {
     arena *arena = ctx;
-    slice s = {0};
-    s.buffer = arena_alloc_bytes(arena, size, alignment);
-    if (s.buffer == NULL) {
-        return s;
+    void *ptr = arena_alloc_bytes(arena, size, alignment);
+    if (ptr == NULL) {
+        return (allocation) {0};
     }
-    s.len = size;
-    return s;
+    return (allocation) {
+        .ptr = ptr,
+        .len = size,
+    };
 }
 
-void arena_free(slice ptr, void *ctx) {
+void arena_free(allocation a, void *ctx) {
     (void)ctx;
-    (void)ptr;
+    (void)a;
 }
 
 allocator arena_allocator_new(arena *arena) {
@@ -209,20 +209,20 @@ void *dynarr_new_sized(
     ullong capacity, size_t item_size, size_t alignment, allocator *allocator
 ) {
     alignment = max(alignment, alignof(dynarr_header));
-    slice s = alloc_malloc(
+    allocation a = alloc_malloc(
         allocator, dynarr_count_to_bytes(capacity, item_size), alignment
     );
-    if (!slice_is_set(s)) {
+    if (!allocation_exists(a)) {
         return NULL;
     }
 
-    dynarr_header *header = (dynarr_header *)s.buffer;
+    dynarr_header *header = (dynarr_header *)a.ptr;
     header->len = 0;
     header->capacity = capacity;
-    header->alloc_size = s.len;
+    header->alloc_size = a.len;
     header->allocator = allocator;
 
-    return (uchar *)(s.buffer) + sizeof(dynarr_header);
+    return (uchar *)(a.ptr) + sizeof(dynarr_header);
 }
 
 void dynarr_free(void *array) {
@@ -230,11 +230,11 @@ void dynarr_free(void *array) {
     if (!header) {
         return;
     }
-    slice s = {
-        .buffer = (uchar *)header,
+    allocation a = {
+        .ptr = header,
         .len = header->alloc_size,
     };
-    alloc_free(header->allocator, s);
+    alloc_free(header->allocator, a);
 }
 
 void *dynarr_grow_ut(
@@ -248,15 +248,15 @@ void *dynarr_grow_ut(
 
     ullong capacity = capacity_increase + header->capacity;
     alignment = max(alignment, alignof(dynarr_header));
-    slice new_array_data = alloc_malloc(
+    allocation new_array_data = alloc_malloc(
         header->allocator, dynarr_count_to_bytes(capacity, item_size), alignment
     );
-    if (!slice_is_set(new_array_data)) {
+    if (!allocation_exists(new_array_data)) {
         return NULL;
     }
 
-    uchar *new_array = (uchar *)(new_array_data.buffer) + sizeof(dynarr_header);
-    dynarr_header *new_header = (dynarr_header *)new_array_data.buffer;
+    uchar *new_array = (uchar *)(new_array_data.ptr) + sizeof(dynarr_header);
+    dynarr_header *new_header = (dynarr_header *)new_array_data.ptr;
     new_header->len = header->len;
     new_header->capacity = capacity;
     new_header->alloc_size = new_array_data.len;
@@ -1642,10 +1642,10 @@ void bytebuf_init(bytebuf *bbuf, size_t capacity, allocator *allocator) {
     assert(capacity > 0 && "capacity must be larger than 0");
     bytes_set(bbuf, 0, sizeof(*bbuf));
     bbuf->allocator = allocator;
-    slice s = alloc_malloc(allocator, capacity, alignof(uchar));
-    if (slice_is_set(s)) {
-        bbuf->buffer = s.buffer;
-        bbuf->cap = s.len;
+    allocation a = alloc_malloc(allocator, capacity, alignof(uchar));
+    if (allocation_exists(a)) {
+        bbuf->buffer = a.ptr;
+        bbuf->cap = a.len;
     }
 }
 
@@ -1667,11 +1667,11 @@ void bytebuf_free(bytebuf *bbuf) {
         return;
     }
     if (bbuf->allocator) {
-        slice s = {
-            .buffer = bbuf->buffer,
+        allocation a = {
+            .ptr = bbuf->buffer,
             .len = bbuf->cap,
         };
-        alloc_free(bbuf->allocator, s);
+        alloc_free(bbuf->allocator, a);
     }
     bbuf->cap = 0;
     bbuf->len = 0;
@@ -1689,25 +1689,25 @@ bool bytebuf_grow(bytebuf *bbuf, size_t capacity_increase) {
         return 0;
     }
 
-    slice newbuf = alloc_malloc(
+    allocation newbuf = alloc_malloc(
         bbuf->allocator, bbuf->cap + capacity_increase, alignof(uchar)
     );
-    if (!slice_is_set(newbuf)) {
+    if (!allocation_exists(newbuf)) {
         return 0;
     }
 
-    slice oldbuf = {
-        .buffer = bbuf->buffer,
+    allocation oldbuf = {
+        .ptr = bbuf->buffer,
         .len = bbuf->cap,
     };
 
-    if (oldbuf.buffer) {
-        bytes_copy(newbuf.buffer, bbuf->buffer, bbuf->len);
+    if (oldbuf.ptr) {
+        bytes_copy(newbuf.ptr, bbuf->buffer, bbuf->len);
     }
-    bbuf->buffer = newbuf.buffer;
+    bbuf->buffer = newbuf.ptr;
     bbuf->cap = newbuf.len;
 
-    if (oldbuf.buffer) {
+    if (oldbuf.ptr) {
         alloc_free(bbuf->allocator, oldbuf);
     }
 

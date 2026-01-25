@@ -3,10 +3,10 @@
 
 void test_mmap_allocation(test *t) {
     size_t count = 100;
-    slice s_nums = alloc_new(&mmap_allocator, int, count);
-    int *nums = slice_cast(s_nums, int);
+    allocation s_nums = alloc_new(&mmap_allocator, int, count);
+    int *nums = s_nums.ptr;
 
-    assert_true(t, slice_is_set(s_nums), "allocation must succeed");
+    assert_true(t, allocation_exists(s_nums), "allocation must succeed");
     assert_ge_uint(
         t,
         s_nums.len,
