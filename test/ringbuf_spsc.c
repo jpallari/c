@@ -3,7 +3,9 @@
 #include "testr.h"
 #include <pthread.h>
 
-#define item_count 100000
+#define nums_per_item 128UL
+#define item_count (nums_per_item * 10000UL)
+#define expected_sum (item_count * (item_count + 1) / 2)
 
 struct producer_ctx {
     ringbuf_spsc *rbuf;
@@ -19,11 +21,11 @@ void *produce_nums(void *ctx_) {
     struct producer_ctx *ctx = ctx_;
     ringbuf_spsc *rbuf = ctx->rbuf;
 
-    ullong buffer[10];
+    ullong buffer[nums_per_item];
     slice s = slice_arr(buffer);
 
-    for (ullong i = 0; i < item_count; i += 10) {
-        for (ullong j = 0; j < 10; j += 1) { buffer[j] = i + j; }
+    for (ullong i = 1; i <= item_count; i += nums_per_item) {
+        for (ullong j = 0; j < nums_per_item; j += 1) { buffer[j] = i + j; }
         while (!ringbuf_spsc_push(rbuf, s)) {}
     }
 
@@ -39,7 +41,7 @@ void *consume_nums(void *ctx_) {
     ullong sum = 0;
     ullong count = 0;
 
-    ullong buffer[10];
+    ullong buffer[nums_per_item];
     size_t len = 0;
 
     while (1) {
@@ -62,10 +64,9 @@ void *consume_nums(void *ctx_) {
 }
 
 void test_ringbuf_spsc_concurrent(test *t) {
-    uchar buffer[4096] = {0};
-    slice s = slice_arr(buffer);
+    allocation a = alloc_new(&mmap_allocator, uchar, 512 * 1028);
     ringbuf_spsc rbuf;
-    ringbuf_spsc_init(&rbuf, s, sizeof(ullong) * 10, alignof(ullong));
+    ringbuf_spsc_init(&rbuf, slice_new(a.ptr, a.len), sizeof(ullong) * nums_per_item, alignof(ullong));
 
     ullong sum = 0;
     ullong count = 0;
@@ -93,16 +94,17 @@ void test_ringbuf_spsc_concurrent(test *t) {
     assert_false(t, thread_err, "consumer thread join must succeed");
 
     assert_eq_uint(t, count, item_count, "item count");
-    assert_eq_uint(t, sum, 4999950000UL, "item sum");
+    assert_eq_uint(t, sum, expected_sum, "item sum");
+
+    alloc_free(&mmap_allocator, a);
 }
 
 void test_ringbuf_spsc_sequential(test *t) {
-    uchar buffer[4096] = {0};
-    slice s_buffer = slice_arr(buffer);
+    allocation a = alloc_new(&mmap_allocator, uchar, 512 * 1028);
     ringbuf_spsc rbuf;
-    ringbuf_spsc_init(&rbuf, s_buffer, sizeof(ullong) * 10, alignof(ullong));
+    ringbuf_spsc_init(&rbuf, slice_new(a.ptr, a.len), sizeof(ullong) * nums_per_item, alignof(ullong));
 
-    ullong nums[10];
+    ullong nums[nums_per_item];
     slice s = slice_arr(nums);
 
     // write until full
@@ -110,7 +112,7 @@ void test_ringbuf_spsc_sequential(test *t) {
     ullong sum1 = 0;
     for (ullong i = 0; ok; i += 1) {
         ullong partial_sum = 0;
-        for (ullong j = 0; j < 10; j += 1) {
+        for (ullong j = 0; j < nums_per_item; j += 1) {
             nums[j] = j + i;
             partial_sum += j + i;
         }
@@ -135,6 +137,8 @@ void test_ringbuf_spsc_sequential(test *t) {
     }
 
     assert_eq_uint(t, sum1, sum2, "sums");
+
+    alloc_free(&mmap_allocator, a);
 }
 
 static test_case tests[] = {
