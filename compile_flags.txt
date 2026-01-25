@@ -19,4 +19,5 @@ c
 -fno-math-errno
 -ffinite-math-only
 -DJP_DEBUG
+-DJP_DISABLE_STRING_H
 -Iinclude

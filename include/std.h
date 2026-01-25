@@ -10,9 +10,10 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-#ifdef JP_USE_STRING_H
+// Disabling string.h will enable custom "memcpy" and "memmove" functions.
+#ifndef JP_DISABLE_STRING_H
 #include <string.h>
-#endif // JP_USE_STRING_H
+#endif // JP_DISABLE_STRING_H
 
 ////////////////////////
 // Scalar types
@@ -235,7 +236,7 @@ align_to_nearest(size_t size, size_t alignment) {
 // Bytes
 ////////////////////////
 
-#ifdef JP_USE_STRING_H
+#ifndef JP_DISABLE_STRING_H
 
 /**
  * Basically memcpy
@@ -326,7 +327,7 @@ ignore_unused static inline void *bytes_set(void *dest, int c, size_t n) {
     return d;
 }
 
-#endif // JP_USE_STRING_H
+#endif // JP_DISABLE_STRING_H
 
 /**
  * Copy a given number of items from one buffer to another
@@ -425,7 +426,8 @@ bool bytes_eq(const void *a, const void *b, size_t len);
  * @param[in] src_len number of bytes to convert to a hex string
  * @returns number of bytes written
  */
-size_t bytes_to_hex(uchar *dest, size_t dest_len, const uchar *src, size_t src_len);
+size_t
+bytes_to_hex(uchar *dest, size_t dest_len, const uchar *src, size_t src_len);
 
 /**
  * Result type for any index search.
@@ -750,7 +752,7 @@ static allocation std_malloc(size_t size, size_t alignment, void *ctx) {
     (void)alignment;
     void *ptr = malloc(size);
     if (ptr == NULL) {
-        return (allocation){0};
+        return (allocation) {0};
     }
     return (allocation) {
         .ptr = ptr,
