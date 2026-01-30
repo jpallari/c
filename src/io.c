@@ -1,7 +1,9 @@
+#define _POSIX_C_SOURCE 200809L
 #include "io.h"
 #include "std.h"
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <sys/stat.h>
 
 ////////////////////////
@@ -20,10 +22,14 @@ io_result os_read_all(int fd, uchar *buffer, size_t len, size_t chunk_len) {
     if (chunk_len == 0) {
         chunk_len = len;
     }
+    chunk_len = min(chunk_len, SSIZE_MAX);
 
     while (res.len < len) {
         size_t next_chunk_len = min(len - res.len, chunk_len);
         ssize_t read_res = read(fd, buffer + res.len, next_chunk_len);
+        if (read_res == EINTR) {
+            continue;
+        }
         if (read_res < 0) {
             res.err_code = errno;
             break;
@@ -50,10 +56,14 @@ io_write_all_sync(int fd, const void *buffer, size_t len, size_t chunk_len) {
     if (chunk_len == 0) {
         chunk_len = len;
     }
+    chunk_len = min(chunk_len, SSIZE_MAX);
 
     while (res.len < len) {
         size_t next_chunk_size = min(len - res.len, chunk_len);
         ssize_t write_res = write(fd, buf_ + res.len, next_chunk_size);
+        if (write_res == EINTR) {
+            continue;
+        }
         if (write_res < 0) {
             res.err_code = errno;
             break;
