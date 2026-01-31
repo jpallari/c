@@ -48,13 +48,12 @@ bool test_report_append(
     const int line
 ) {
     assert(t->logs && "logs must not be null");
-    size_t logs_offset = t->logs->len;
-    if (!bytebuf_write_str(t->logs, log_message, log_message_size)) {
+    bytebuf_result res =
+        bytebuf_write_str(t->logs, log_message, log_message_size);
+    if (!res.ok) {
         panic();
     }
-    test_report_append_no_log(
-        t, passed, logs_offset, log_message_size, file, line
-    );
+    test_report_append_no_log(t, passed, res.offset, res.len, file, line);
     return passed;
 }
 
@@ -69,13 +68,12 @@ bool test_report_append_formatted_cstr(
     const char *right
 ) {
     assert(t->logs && "logs must not be null");
-    size_t logs_offset = t->logs->len;
-    cstr_fmt_result fmt_res =
+    bytebuf_result res =
         bytebuf_fmt(t->logs, "S S S // S", left, cmp, right, log_message);
-    if (!fmt_res.ok) {
+    if (!res.ok) {
         panic();
     }
-    test_report_append_no_log(t, passed, logs_offset, fmt_res.len, file, line);
+    test_report_append_no_log(t, passed, res.offset, res.len, file, line);
     return passed;
 }
 
@@ -90,13 +88,12 @@ bool test_report_append_formatted_hex(
     const slice_const right
 ) {
     assert(t->logs && "logs must not be null");
-    size_t logs_offset = t->logs->len;
-    cstr_fmt_result fmt_res =
+    bytebuf_result res =
         bytebuf_fmt(t->logs, "0xh S 0xh // S", left, cmp, right, log_message);
-    if (!fmt_res.ok) {
+    if (!res.ok) {
         panic();
     }
-    test_report_append_no_log(t, passed, logs_offset, fmt_res.len, file, line);
+    test_report_append_no_log(t, passed, res.offset, res.len, file, line);
     return passed;
 }
 
@@ -111,13 +108,12 @@ bool test_report_append_formatted_float(
     const double right
 ) {
     assert(t->logs && "logs must not be null");
-    size_t logs_offset = t->logs->len;
-    cstr_fmt_result fmt_res =
+    bytebuf_result res =
         bytebuf_fmt(t->logs, "f S f // S", left, cmp, right, log_message);
-    if (!fmt_res.ok) {
+    if (!res.ok) {
         panic();
     }
-    test_report_append_no_log(t, passed, logs_offset, fmt_res.len, file, line);
+    test_report_append_no_log(t, passed, res.offset, res.len, file, line);
     return passed;
 }
 
@@ -132,13 +128,12 @@ bool test_report_append_formatted_int(
     const llong right
 ) {
     assert(t->logs && "logs must not be null");
-    size_t logs_offset = t->logs->len;
-    cstr_fmt_result fmt_res =
+    bytebuf_result res =
         bytebuf_fmt(t->logs, "I S I // S", left, cmp, right, log_message);
-    if (!fmt_res.ok) {
+    if (!res.ok) {
         panic();
     }
-    test_report_append_no_log(t, passed, logs_offset, fmt_res.len, file, line);
+    test_report_append_no_log(t, passed, res.offset, res.len, file, line);
     return passed;
 }
 
@@ -153,13 +148,12 @@ bool test_report_append_formatted_uint(
     const ullong right
 ) {
     assert(t->logs && "logs must not be null");
-    size_t logs_offset = t->logs->len;
-    cstr_fmt_result fmt_res =
+    bytebuf_result res =
         bytebuf_fmt(t->logs, "U S U // S", left, cmp, right, log_message);
-    if (!fmt_res.ok) {
+    if (!res.ok) {
         panic();
     }
-    test_report_append_no_log(t, passed, logs_offset, fmt_res.len, file, line);
+    test_report_append_no_log(t, passed, res.offset, res.len, file, line);
     return passed;
 }
 

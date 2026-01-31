@@ -12,9 +12,9 @@ bytebuf_collect(void *context, const uchar *src, size_t len) {
     struct bytesink_ctx_bytebuf *ctx = (struct bytesink_ctx_bytebuf *)context;
 
     if (ctx->chunk_size == 0) {
-        bool ok = bytebuf_write(&ctx->bbuf, src, len);
-        if (ok) {
-            res.len = len;
+        bytebuf_result bbuf_res = bytebuf_write(&ctx->bbuf, src, len);
+        if (bbuf_res.ok) {
+            res.len = bbuf_res.len;
         } else {
             res.err_code = 1;
         }
@@ -24,8 +24,8 @@ bytebuf_collect(void *context, const uchar *src, size_t len) {
     // chunked write is used for simulating partially completing writes
     while (res.len < len) {
         size_t chunk_size = min(ctx->chunk_size, len - res.len);
-        bool ok = bytebuf_write(&ctx->bbuf, src + res.len, chunk_size);
-        if (!ok) {
+        bytebuf_result bbuf_res = bytebuf_write(&ctx->bbuf, src + res.len, chunk_size);
+        if (!bbuf_res.ok) {
             res.err_code = 1;
             return res;
         }

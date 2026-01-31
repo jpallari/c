@@ -170,7 +170,8 @@ round_up_multiple_ullong(ullong n, ullong multiple) {
  * This can be useful for rounding up or down a number to nearest
  * power-of-two number.
  *
- * Since zero does not have a significant bit, the result for it will be undefined.
+ * Since zero does not have a significant bit, the result for it will be
+ * undefined.
  *
  * @param n number to check for the most significant bit
  * @returns position of the most significant bit
@@ -1365,7 +1366,6 @@ typedef struct {
 typedef struct {
     size_t len;
     bool ok;
-    bool is_truncated;
 } cstr_fmt_result;
 
 cstr_fmt_result cstr_fmt_va(
@@ -1405,6 +1405,12 @@ typedef struct {
     size_t cap;
     allocator *allocator;
 } bytebuf;
+
+typedef struct {
+    size_t len;
+    size_t offset;
+    bool ok;
+} bytebuf_result;
 
 void bytebuf_init(bytebuf *bbuf, size_t capacity, allocator *allocator);
 
@@ -1457,34 +1463,31 @@ bool bytebuf_grow(bytebuf *bbuf, size_t capacity_increase);
 
 bytebuf bytebuf_clone(bytebuf *bbuf, size_t capacity_increase);
 
-bool bytebuf_write(bytebuf *bbuf, const uchar *src, size_t len);
+bytebuf_result bytebuf_write(bytebuf *bbuf, const uchar *src, size_t len);
 
-size_t bytebuf_write_int(bytebuf *bbuf, int src);
-size_t bytebuf_write_uint(bytebuf *bbuf, uint src);
-size_t bytebuf_write_llong(bytebuf *bbuf, llong src);
-size_t bytebuf_write_ullong(bytebuf *bbuf, ullong src);
-size_t bytebuf_write_float(bytebuf *bbuf, float src, uint decimals);
-size_t bytebuf_write_double(bytebuf *bbuf, double src, uint decimals);
+bytebuf_result bytebuf_write_int(bytebuf *bbuf, int src);
+bytebuf_result bytebuf_write_uint(bytebuf *bbuf, uint src);
+bytebuf_result bytebuf_write_llong(bytebuf *bbuf, llong src);
+bytebuf_result bytebuf_write_ullong(bytebuf *bbuf, ullong src);
+bytebuf_result bytebuf_write_float(bytebuf *bbuf, float src, uint decimals);
+bytebuf_result bytebuf_write_double(bytebuf *bbuf, double src, uint decimals);
 
-ignore_unused static inline size_t
+ignore_unused static inline bytebuf_result
 bytebuf_write_str(bytebuf *bbuf, const char *str, size_t len) {
-    if (bytebuf_write(bbuf, (const uchar *)str, len)) {
-        return len;
-    }
-    return 0;
+    return bytebuf_write(bbuf, (const uchar *)str, len);
 }
 
 #define bytebuf_write_sstr(bbuf, str) \
     bytebuf_write_str((bbuf), (str), lengthof(str))
 
-cstr_fmt_result
+bytebuf_result
 bytebuf_fmt_va(bytebuf *bbuf, const char *restrict format, va_list va_args);
 
-ignore_unused static inline cstr_fmt_result
+ignore_unused static inline bytebuf_result
 bytebuf_fmt(bytebuf *bbuf, const char *restrict format, ...) {
     va_list va_args;
     va_start(va_args, format);
-    cstr_fmt_result res = bytebuf_fmt_va(bbuf, format, va_args);
+    bytebuf_result res = bytebuf_fmt_va(bbuf, format, va_args);
     va_end(va_args);
     return res;
 }

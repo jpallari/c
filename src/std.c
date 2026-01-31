@@ -1729,86 +1729,83 @@ bytebuf bytebuf_clone(bytebuf *bbuf, size_t capacity_increase) {
     return newbbuf;
 }
 
-bool bytebuf_write(bytebuf *bbuf, const uchar *src, size_t len) {
+bytebuf_result bytebuf_write(bytebuf *bbuf, const uchar *src, size_t len) {
     assert(bbuf && "bytebuf must not be null");
     assert(bbuf->buffer && "bytebuf's buffer must not be null");
     assert(src && "source must not be null");
     assert(len > 0 && "length must be more than 0");
 
+    bytebuf_result res = {0};
+    res.offset = bbuf->len;
+
     if (!src || len == 0) {
-        return 1; // nothing to write
+        res.ok = 1; // nothing to write
+        return res;
     }
     if (len > bytebuf_bytes_available(bbuf)) {
         if (bytebuf_is_growable(bbuf)) {
             size_t capacity_increase = bbuf->cap + len;
             bool ok = bytebuf_grow(bbuf, capacity_increase);
             if (!ok) {
-                return 0; // grow failed
+                return res; // grow failed
             }
         } else {
-            return 0; // no capacity left
+            return res; // no capacity left
         }
     }
     bytes_copy(bbuf->buffer + bbuf->len, src, len);
     bbuf->len += len;
-    return 1;
+    res.len = len;
+    res.ok = 1;
+    return res;
 }
 
-size_t bytebuf_write_int(bytebuf *bbuf, int src) {
+bytebuf_result bytebuf_write_int(bytebuf *bbuf, int src) {
     assert(bbuf && "bbuf must not be null");
     assert(bbuf->buffer && "bytebuf's buffer must not be null");
 
     char tmp[16];
     char *end = tmp + sizeof(tmp);
     size_t bytes_to_copy = cstr_from_int_unsafe(end, src);
-    if (bytebuf_write(bbuf, (uchar *)end - bytes_to_copy, bytes_to_copy)) {
-        return bytes_to_copy;
-    }
-    return 0;
+    return bytebuf_write(bbuf, (uchar *)end - bytes_to_copy, bytes_to_copy);
 }
 
-size_t bytebuf_write_uint(bytebuf *bbuf, uint src) {
+bytebuf_result bytebuf_write_uint(bytebuf *bbuf, uint src) {
     assert(bbuf && "bbuf must not be null");
     assert(bbuf->buffer && "bytebuf's buffer must not be null");
 
     char tmp[16];
     char *end = tmp + sizeof(tmp);
     size_t bytes_to_copy = cstr_from_uint_unsafe(end, src);
-    if (bytebuf_write(bbuf, (uchar *)end - bytes_to_copy, bytes_to_copy)) {
-        return bytes_to_copy;
-    }
-    return 0;
+    return bytebuf_write(bbuf, (uchar *)end - bytes_to_copy, bytes_to_copy);
 }
 
-size_t bytebuf_write_llong(bytebuf *bbuf, llong src) {
+bytebuf_result bytebuf_write_llong(bytebuf *bbuf, llong src) {
     assert(bbuf && "bbuf must not be null");
     assert(bbuf->buffer && "bytebuf's buffer must not be null");
 
     char tmp[32];
     char *end = tmp + sizeof(tmp);
     size_t bytes_to_copy = cstr_from_llong_unsafe(end, src);
-    if (bytebuf_write(bbuf, (uchar *)end - bytes_to_copy, bytes_to_copy)) {
-        return bytes_to_copy;
-    }
-    return 0;
+    return bytebuf_write(bbuf, (uchar *)end - bytes_to_copy, bytes_to_copy);
 }
 
-size_t bytebuf_write_ullong(bytebuf *bbuf, ullong src) {
+bytebuf_result bytebuf_write_ullong(bytebuf *bbuf, ullong src) {
     assert(bbuf && "bbuf must not be null");
     assert(bbuf->buffer && "bytebuf's buffer must not be null");
 
     char tmp[32];
     char *end = tmp + sizeof(tmp);
     size_t bytes_to_copy = cstr_from_ullong_unsafe(end, src);
-    if (bytebuf_write(bbuf, (uchar *)end - bytes_to_copy, bytes_to_copy)) {
-        return bytes_to_copy;
-    }
-    return 0;
+    return bytebuf_write(bbuf, (uchar *)end - bytes_to_copy, bytes_to_copy);
 }
 
-size_t bytebuf_write_float(bytebuf *bbuf, float src, uint decimals) {
+bytebuf_result bytebuf_write_float(bytebuf *bbuf, float src, uint decimals) {
     assert(bbuf && "bbuf must not be null");
     assert(bbuf->buffer && "bytebuf's buffer must not be null");
+
+    bytebuf_result res = {0};
+    res.offset = bbuf->len;
 
     char integer_cstr[32];
     char fractional_cstr[32];
@@ -1823,21 +1820,26 @@ size_t bytebuf_write_float(bytebuf *bbuf, float src, uint decimals) {
             size_t capacity_increase = bbuf->cap + bytes_to_write * 2;
             bool ok = bytebuf_grow(bbuf, capacity_increase);
             if (!ok) {
-                return 0; // grow failed
+                return res; // grow failed
             }
         } else {
-            return 0; // no capacity left
+            return res; // no capacity left
         }
     }
 
     cstr_from_real_parts_to_buf(&parts, (char *)bbuf->buffer + bbuf->len);
     bbuf->len += bytes_to_write;
-    return bytes_to_write;
+    res.len = bytes_to_write;
+    res.ok = 1;
+    return res;
 }
 
-size_t bytebuf_write_double(bytebuf *bbuf, double src, uint decimals) {
+bytebuf_result bytebuf_write_double(bytebuf *bbuf, double src, uint decimals) {
     assert(bbuf && "bbuf must not be null");
     assert(bbuf->buffer && "bytebuf's buffer must not be null");
+
+    bytebuf_result res = {0};
+    res.offset = bbuf->len;
 
     char integer_cstr[32];
     char fractional_cstr[32];
@@ -1852,31 +1854,36 @@ size_t bytebuf_write_double(bytebuf *bbuf, double src, uint decimals) {
             size_t capacity_increase = bbuf->cap + bytes_to_write * 2;
             bool ok = bytebuf_grow(bbuf, capacity_increase);
             if (!ok) {
-                return 0; // grow failed
+                return res; // grow failed
             }
         } else {
-            return 0; // no capacity left
+            return res; // no capacity left
         }
     }
 
     cstr_from_real_parts_to_buf(&parts, (char *)bbuf->buffer + bbuf->len);
     bbuf->len += bytes_to_write;
-    return bytes_to_write;
+    res.len = bytes_to_write;
+    res.ok = 1;
+    return res;
 }
 
-static size_t bytebuf_write_hex(bytebuf *bbuf, slice_const hex) {
+static bytebuf_result bytebuf_write_hex(bytebuf *bbuf, slice_const hex) {
     assert(bbuf && "bbuf must not be null");
     assert(bbuf->buffer && "bbuf's buffer must not be null");
+
+    bytebuf_result res = {0};
+    res.offset = bbuf->len;
 
     if (bytebuf_bytes_available(bbuf) < hex.len * 2) {
         if (bytebuf_is_growable(bbuf)) {
             size_t capacity_increase = bbuf->cap + hex.len * 4;
             bool ok = bytebuf_grow(bbuf, capacity_increase);
             if (!ok) {
-                return 0; // grow failed
+                return res; // grow failed
             }
         } else {
-            return 0; // no capacity left
+            return res; // no capacity left
         }
     }
 
@@ -1887,115 +1894,86 @@ static size_t bytebuf_write_hex(bytebuf *bbuf, slice_const hex) {
         hex.len
     );
     bbuf->len += len;
-    return len;
+    res.len = len;
+    res.ok = 1;
+    return res;
 }
 
-cstr_fmt_result
+bytebuf_result
 bytebuf_fmt_va(bytebuf *bbuf, const char *restrict format, va_list va_args) {
     assert(bbuf && "bbuf must not be null");
     assert(bbuf->buffer && "bbuf's buffer must not be null");
     assert(format && "format must not be null");
 
-    cstr_fmt_result res = {
-        .ok = 1,
-        .len = 0,
-    };
+    bytebuf_result res = {0};
+    bytebuf_result partial_res = {.ok = 1};
+    slice_const s;
+    cstr_fmt_float fmt_float;
+    char c;
 
     if (!format) {
-        res.ok = 0;
         return res;
     }
 
-    slice_const s;
-    char c;
-    size_t field_bytes = 0;
-    cstr_fmt_float fmt_float;
-    while (res.ok && *format != '\0') {
+    res.offset = bbuf->len;
+
+    while (partial_res.ok && *format != '\0') {
         switch (*format) {
         case 'c':
             c = (char)va_arg(va_args, int);
-            res.ok = bytebuf_write(bbuf, (const uchar *)&c, 1);
-            field_bytes = 1;
+            partial_res = bytebuf_write(bbuf, (const uchar *)&c, 1);
             break;
         case 's':
             s = va_arg(va_args, slice_const);
-            res.ok = bytebuf_write(bbuf, s.buffer, s.len);
-            field_bytes = s.len;
+            partial_res = bytebuf_write(bbuf, s.buffer, s.len);
             break;
         case 'S':
             s = slice_const_from_cstr_unsafe(va_arg(va_args, char *));
-            res.ok = bytebuf_write(bbuf, s.buffer, s.len);
-            field_bytes = s.len;
+            partial_res = bytebuf_write(bbuf, s.buffer, s.len);
             break;
         case 'h':
             s = va_arg(va_args, slice_const);
-            field_bytes = bytebuf_write_hex(bbuf, s);
-            if (field_bytes == 0) {
-                res.ok = 0;
-            }
+            partial_res = bytebuf_write_hex(bbuf, s);
             break;
         case 'H':
             s = slice_const_from_cstr_unsafe(va_arg(va_args, char *));
-            field_bytes = bytebuf_write_hex(bbuf, s);
-            if (field_bytes == 0) {
-                res.ok = 0;
-            }
+            partial_res = bytebuf_write_hex(bbuf, s);
             break;
         case 'f':
             fmt_float.v = va_arg(va_args, double);
             fmt_float.precision = 6;
-            field_bytes =
+            partial_res =
                 bytebuf_write_double(bbuf, fmt_float.v, fmt_float.precision);
-            if (field_bytes == 0) {
-                res.ok = 0;
-            }
             break;
         case 'F':
             fmt_float = va_arg(va_args, cstr_fmt_float);
-            field_bytes =
+            partial_res =
                 bytebuf_write_double(bbuf, fmt_float.v, fmt_float.precision);
-            if (field_bytes == 0) {
-                res.ok = 0;
-            }
             break;
         case 'i':
-            field_bytes = bytebuf_write_int(bbuf, va_arg(va_args, int));
-            if (field_bytes == 0) {
-                res.ok = 0;
-            }
+            partial_res = bytebuf_write_int(bbuf, va_arg(va_args, int));
             break;
         case 'u':
-            field_bytes = bytebuf_write_uint(bbuf, va_arg(va_args, uint));
-            if (field_bytes == 0) {
-                res.ok = 0;
-            }
+            partial_res = bytebuf_write_uint(bbuf, va_arg(va_args, uint));
             break;
         case 'I':
-            field_bytes = bytebuf_write_llong(bbuf, va_arg(va_args, llong));
-            if (field_bytes == 0) {
-                res.ok = 0;
-            }
+            partial_res = bytebuf_write_llong(bbuf, va_arg(va_args, llong));
             break;
         case 'U':
-            field_bytes = bytebuf_write_ullong(bbuf, va_arg(va_args, ullong));
-            if (field_bytes == 0) {
-                res.ok = 0;
-            }
+            partial_res = bytebuf_write_ullong(bbuf, va_arg(va_args, ullong));
             break;
         default:
-            res.ok = bytebuf_write(bbuf, (const uchar *)format, 1);
-            field_bytes = 1;
+            partial_res = bytebuf_write(bbuf, (const uchar *)format, 1);
             break;
         }
-        if (res.ok) {
-            res.len += field_bytes;
-        }
+        res.len += partial_res.len;
         format += 1;
     }
+    res.ok = partial_res.ok;
 
     // null termination
-    res.ok = bytebuf_write(bbuf, (const uchar *)"\0", 1);
-    if (res.ok) {
+    partial_res = bytebuf_write(bbuf, (const uchar *)"\0", 1);
+    if (partial_res.ok) {
         // null termination is not included in length
         bbuf->len -= 1;
     } else {
@@ -2004,6 +1982,7 @@ bytebuf_fmt_va(bytebuf *bbuf, const char *restrict format, va_list va_args) {
         bbuf->len -= 1;
         res.len -= 1;
     }
+    res.ok &= partial_res.ok;
 
     return res;
 }
