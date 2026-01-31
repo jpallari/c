@@ -1,3 +1,0 @@
-include cflags.debug.mk
-include ctargets.mk
-include check.mk

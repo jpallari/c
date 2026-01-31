@@ -1,5 +1,3 @@
-include cflags.mk
-
 SAN_FLAGS = -fsanitize=address,leak,undefined
 
 CFLAGS += \

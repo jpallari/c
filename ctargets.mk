@@ -1,32 +1,8 @@
 #
-# Files and directories
-#
-
-BUILD_DIR ?= build
-OBJ_DIR = $(BUILD_DIR)/obj
-CMD_OBJ_DIR = $(OBJ_DIR)/cmd
-TEST_OBJ_DIR = $(BUILD_DIR)/test
-TEST_REPORT_DIR = $(TEST_OBJ_DIR)/report
-
-TEST_FILES = $(wildcard test/*.c)
-TEST_BUILD_FILES = $(TEST_FILES:test/%.c=$(TEST_OBJ_DIR)/%)
-TEST_REPORT_FILES = $(TEST_FILES:test/%.c=$(TEST_REPORT_DIR)/%.txt)
-
-#
-# Default target
-#
-
-.PHONY: all
-all: build test
-
-#
 # Build C files to objects
 #
 
 $(OBJ_DIR)/cliargs.o: src/cliargs.c include/std.h
-	@mkdir -p $(OBJ_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@
-$(OBJ_DIR)/mt.o: src/mt.c include/mt.h include/std.h
 	@mkdir -p $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 $(OBJ_DIR)/io.o: src/io.c include/io.h include/std.h
@@ -49,14 +25,13 @@ $(CMD_OBJ_DIR)/reals.o: cmd/reals.c include/io.h include/std.h
 # Link C objects to binaries
 #
 
-.PHONY: build
-build: $(BUILD_DIR)/demo $(BUILD_DIR)/reals
+CMD_NAMES += demo reals
 
-$(BUILD_DIR)/demo: $(CMD_OBJ_DIR)/demo.o $(OBJ_DIR)/io.o $(OBJ_DIR)/std.o
-	@mkdir -p $(BUILD_DIR)
+$(BIN_DIR)/demo: $(CMD_OBJ_DIR)/demo.o $(OBJ_DIR)/io.o $(OBJ_DIR)/std.o
+	@mkdir -p $(BIN_DIR)
 	$(CC) $(LDFLAGS) $^ -o $@
-$(BUILD_DIR)/reals: $(CMD_OBJ_DIR)/reals.o $(OBJ_DIR)/io.o $(OBJ_DIR)/std.o
-	@mkdir -p $(BUILD_DIR)
+$(BIN_DIR)/reals: $(CMD_OBJ_DIR)/reals.o $(OBJ_DIR)/io.o $(OBJ_DIR)/std.o
+	@mkdir -p $(BIN_DIR)
 	$(CC) $(LDFLAGS) $^ -o $@
 
 #
@@ -65,8 +40,16 @@ $(BUILD_DIR)/reals: $(CMD_OBJ_DIR)/reals.o $(OBJ_DIR)/io.o $(OBJ_DIR)/std.o
 
 .PHONY: test test-build
 
-test-build: $(TEST_BUILD_FILES)
-test: $(TEST_REPORT_FILES)
+TEST_NAMES += \
+	arena \
+	bufstream \
+	bytes \
+	cliargs \
+	cstr \
+	dynarr \
+	math \
+	mmap_alloc \
+	slice
 
 # Arena
 $(TEST_OBJ_DIR)/arena.o: test/arena.c include/testr.h include/std.h
@@ -149,16 +132,6 @@ $(TEST_REPORT_DIR)/mmap_alloc.txt: $(TEST_OBJ_DIR)/mmap_alloc
 	@mkdir -p $(TEST_REPORT_DIR)
 	./$< $(TEST_FILTERS) > $@
 
-# Ring buffer (SPSC)
-$(TEST_OBJ_DIR)/ringbuf_spsc.o: test/ringbuf_spsc.c include/testr.h include/mt.h include/std.h
-	@mkdir -p $(TEST_OBJ_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@
-$(TEST_OBJ_DIR)/ringbuf_spsc: $(TEST_OBJ_DIR)/ringbuf_spsc.o $(OBJ_DIR)/testr.o $(OBJ_DIR)/mt.o $(OBJ_DIR)/std.o $(OBJ_DIR)/io.o
-	$(CC) $(LDFLAGS) $^ -o $@
-$(TEST_REPORT_DIR)/ringbuf_spsc.txt: $(TEST_OBJ_DIR)/ringbuf_spsc
-	@mkdir -p $(TEST_REPORT_DIR)
-	./$< $(TEST_FILTERS) > $@
-
 # Slice
 $(TEST_OBJ_DIR)/slice.o: test/slice.c include/testr.h include/std.h
 	@mkdir -p $(TEST_OBJ_DIR)
@@ -176,4 +149,3 @@ $(TEST_REPORT_DIR)/slice.txt: $(TEST_OBJ_DIR)/slice
 .PHONY: clean
 clean:
 	rm -rf $(BUILD_DIR)
-

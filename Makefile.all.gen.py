@@ -4,9 +4,14 @@ import os
 import sys
 
 configs = [
-    { 'target': target, 'lang_std': lang_std, 'compiler': compiler }
+    {
+        'target': target,
+        'lang_std': lang_std,
+        'compiler': compiler,
+        'mt': lang_std == 'c11',
+    }
     for compiler in ['gcc', 'clang']
-    for lang_std in ['c11']
+    for lang_std in ['c11', 'c99']
     for target in ['debug', 'release']
 ]
 
@@ -38,21 +43,27 @@ def all_target(configs):
         '',
     ))
 
-def dyn_target_str(compile_target, lang_std, compiler):
+def dyn_target_str(config):
+    compile_target = config['target']
+    lang_std = config['lang_std']
+    compiler = config['compiler']
+    mt = config['mt']
+
     target_name = f'build-{compile_target}-{lang_std}-{compiler}'
-    return '\n'.join((
+    return '\n'.join(line for line in (
         f'.PHONY: {target_name}',
         f'{target_name}:',
-        f'	make -f Makefile.{compile_target} -j $(JOBS) \\',
+        f'	make -j $(JOBS) \\',
         f'		TEST_FILTERS=$(TEST_FILTERS) \\',
         f'		BUILD_DIR=build/{compile_target}-{lang_std}-{compiler} \\',
+        f'		ENABLE_RELEASE=1 \\' if compile_target == 'release' else '',
+        f'		ENABLE_MT=1 \\' if mt else '',
         f'		LANG_STD={lang_std} CC={compiler}',
-        '',
-    ))
+    ) if line) + '\n'
 
 if __name__ == '__main__':
     print(beginning)
     print(all_target(configs))
-    for c in configs:
-        print(dyn_target_str(c['target'], c['lang_std'], c['compiler']))
+    for config in configs:
+        print(dyn_target_str(config))
     print(ending)
