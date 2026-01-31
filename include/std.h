@@ -138,6 +138,8 @@ static inline void breakpoint(void) {
 /**
  * Round up the given number to a multiple of another number.
  *
+ * Undefined for multiple of zero.
+ *
  * Examples:
  * - 1, 3 --> 3
  * - 5, 3 --> 6
@@ -160,6 +162,28 @@ round_up_multiple_ullong(ullong n, ullong multiple) {
     }
 
     return n + multiple - remainder;
+}
+
+/**
+ * Get the position of the most significant bit from the given number.
+ *
+ * This can be useful for rounding up or down a number to nearest
+ * power-of-two number.
+ *
+ * Since zero does not have a significant bit, the result for it will be undefined.
+ *
+ * @param n number to check for the most significant bit
+ * @returns position of the most significant bit
+ */
+ignore_unused static inline uint most_significant_bit(ullong n) {
+    assert(n > 0 && "n must be >0");
+
+    uint i = 0;
+    while (n > 0) {
+        i += 1;
+        n >>= 1;
+    }
+    return i ? i - 1 : 0;
 }
 
 ////////////////////////
