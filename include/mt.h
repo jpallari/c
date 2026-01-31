@@ -16,8 +16,9 @@
 ////////////////////////
 
 typedef struct {
-    slice buffer;
+    uchar *buffer;
     size_t item_size;
+    size_t max_items;
     alignas(L1D_CACHE_LINESIZE) atomic_size_t read_idx;
     alignas(L1D_CACHE_LINESIZE) size_t cached_read_idx;
     alignas(L1D_CACHE_LINESIZE) atomic_size_t write_idx;
