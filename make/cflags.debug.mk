@@ -7,11 +7,11 @@ CFLAGS += \
 	-fprofile-arcs \
 	-ftest-coverage
 
-# To debug vectorization, add these CFLAGS.
+# To debug vectorization, uncomment these CFLAGS.
 # GCC:
-# 	CFLAGS += -fopt-info-vec-optimized -fopt-info-vec-missed -fopt-info-vec-all
+# CFLAGS += -fopt-info-vec-optimized -fopt-info-vec-missed -fopt-info-vec-all
 # Clang:
-# 	CFLAGS += -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize
+# CFLAGS += -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize
 
 # Uncomment to break on assert failure
 # CFLAGS += -DJP_DEBUG_BREAK_ON_ASSERT_FAIL

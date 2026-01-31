@@ -53,11 +53,11 @@ def dyn_target_str(config):
     return '\n'.join(line for line in (
         f'.PHONY: {target_name}',
         f'{target_name}:',
-        f'	make -j $(JOBS) \\',
+        f'	$(MAKE) -j $(JOBS) \\',
         f'		TEST_FILTERS=$(TEST_FILTERS) \\',
         f'		BUILD_DIR=build/{compile_target}-{lang_std}-{compiler} \\',
         f'		ENABLE_RELEASE=1 \\' if compile_target == 'release' else '',
-        f'		ENABLE_MT=1 \\' if mt else '',
+        f'		DISABLE_MT=1 \\' if not mt else '',
         f'		LANG_STD={lang_std} CC={compiler}',
     ) if line) + '\n'
 
