@@ -47,7 +47,9 @@ bool ringbuf_spsc_push(ringbuf_spsc *rbuf, slice s) {
         }
     }
     size_t byte_index = rbuf->item_size * write_idx;
-    bytes_copy(rbuf->buffer.buffer + byte_index, s.buffer, s.len);
+    bytes_copy(
+        rbuf->buffer + byte_index, s.buffer, min(s.len, rbuf->item_size)
+    );
     atomic_store_explicit(
         &rbuf->write_idx, next_write_idx, memory_order_release
     );
