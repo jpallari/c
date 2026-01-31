@@ -1,4 +1,5 @@
 #include "mt.h"
+#include "std.h"
 
 //////////////////////////////////////////////
 // Ring buffer (SPSC)
@@ -6,17 +7,23 @@
 // Based on https://rigtorp.se/ringbuffer/
 /////////////////////////////////////////////
 
-void ringbuf_spsc_init(ringbuf_spsc *rbuf, slice buffer, size_t item_size) {
+bool ringbuf_spsc_init(ringbuf_spsc *rbuf, slice buffer, size_t item_size) {
     assert(rbuf && "ringbuf must not be null");
     assert(buffer.buffer && "ringbuf buffer must not be null");
     assert(buffer.len > 0 && "ringbuff buffer len must be >0");
     assert(item_size > 0 && "item size must be >0");
     assert(item_size < buffer.len && "item size must be smaller than len");
 
+    if (buffer.buffer == NULL || item_size == 0 || buffer.len == 0) {
+        return 0; // funky parameters
+    }
+
     bytes_set(rbuf, 0, sizeof(*rbuf));
     rbuf->buffer = buffer.buffer;
     rbuf->item_size = item_size;
     rbuf->max_items = buffer.len / rbuf->item_size;
+
+    return 1;
 }
 
 bool ringbuf_spsc_push(ringbuf_spsc *rbuf, slice s) {

@@ -25,7 +25,7 @@ typedef struct {
     alignas(L1D_CACHE_LINESIZE) size_t cached_write_idx;
 } ringbuf_spsc;
 
-void ringbuf_spsc_init(ringbuf_spsc *rbuf, slice buffer, size_t item_size);
+bool ringbuf_spsc_init(ringbuf_spsc *rbuf, slice buffer, size_t item_size);
 
 bool ringbuf_spsc_push(ringbuf_spsc *rbuf, slice s);
 

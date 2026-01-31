@@ -4,9 +4,9 @@
 #include <pthread.h>
 
 #define nums_per_item 128UL
-#define item_count (nums_per_item * 10000UL)
+#define item_count (nums_per_item * 100000UL)
 #define expected_sum (item_count * (item_count + 1) / 2)
-#define ringbuf_buffer_size (512UL * 1028UL)
+#define ringbuf_buffer_size (1 << 20)
 
 struct producer_ctx {
     ringbuf_spsc *rbuf;
@@ -68,7 +68,11 @@ void *consume_nums(void *ctx_) {
 void test_ringbuf_spsc_concurrent(test *t) {
     allocation a = alloc_new(&mmap_allocator, uchar, ringbuf_buffer_size);
     ringbuf_spsc rbuf;
-    ringbuf_spsc_init(&rbuf, slice_new(a.ptr, a.len), sizeof(ullong) * nums_per_item);
+    assert_true(
+        t,
+        ringbuf_spsc_init(&rbuf, slice_new(a.ptr, a.len), sizeof(ullong) * nums_per_item),
+        "init must succeed"
+    );
 
     ullong sum = 0;
     ullong count = 0;
@@ -104,7 +108,11 @@ void test_ringbuf_spsc_concurrent(test *t) {
 void test_ringbuf_spsc_sequential(test *t) {
     allocation a = alloc_new(&mmap_allocator, uchar, ringbuf_buffer_size);
     ringbuf_spsc rbuf;
-    ringbuf_spsc_init(&rbuf, slice_new(a.ptr, a.len), sizeof(ullong) * nums_per_item);
+    assert_true(
+        t,
+        ringbuf_spsc_init(&rbuf, slice_new(a.ptr, a.len), sizeof(ullong) * nums_per_item),
+        "init must succeed"
+    );
 
     ullong nums[nums_per_item];
     slice s = slice_arr(nums);
