@@ -1649,14 +1649,12 @@ void bytebuf_init(bytebuf *bbuf, size_t capacity, allocator *allocator) {
     }
 }
 
-void bytebuf_init_fixed(
-    bytebuf *bbuf, uchar *buffer, size_t len, size_t capacity
-) {
+void bytebuf_init_fixed(bytebuf *bbuf, slice buffer, size_t offset) {
     assert(bbuf && "bytebuf must not be null");
     bytes_set(bbuf, 0, sizeof(*bbuf));
-    bbuf->buffer = buffer;
-    bbuf->len = len;
-    bbuf->cap = capacity;
+    bbuf->buffer = buffer.buffer;
+    bbuf->len = offset;
+    bbuf->cap = buffer.len;
 }
 
 void bytebuf_free(bytebuf *bbuf) {

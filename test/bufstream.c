@@ -24,7 +24,8 @@ bytebuf_collect(void *context, const uchar *src, size_t len) {
     // chunked write is used for simulating partially completing writes
     while (res.len < len) {
         size_t chunk_size = min(ctx->chunk_size, len - res.len);
-        bytebuf_result bbuf_res = bytebuf_write(&ctx->bbuf, src + res.len, chunk_size);
+        bytebuf_result bbuf_res =
+            bytebuf_write(&ctx->bbuf, src + res.len, chunk_size);
         if (!bbuf_res.ok) {
             res.err_code = 1;
             return res;
@@ -40,7 +41,7 @@ void test_buffered_stream_short_writes(test *t) {
     uchar bstream_buf[10];
 
     struct bytesink_ctx_bytebuf context = {0};
-    bytebuf_init_fixed(&context.bbuf, bytebuf_buf, 0, sizeof(bytebuf_buf));
+    bytebuf_init_fixed(&context.bbuf, slice_arr(bytebuf_buf), 0);
     bufstream bstream = {
         .buffer = bstream_buf,
         .cap = sizeof(bstream_buf),
@@ -66,14 +67,22 @@ void test_buffered_stream_short_writes(test *t) {
     assert_eq_sint(t, res.err_code, 0, "no error");
     assert_eq_uint(t, res.len, lengthof("world!"), "len = lengthof('world!')");
     assert_eq_bytes(
-        t, context.bbuf.buffer, (const uchar *)"hello worl", 10, "sink content partial"
+        t,
+        context.bbuf.buffer,
+        (const uchar *)"hello worl",
+        10,
+        "sink content partial"
     );
 
     bytesink_result sink_res = bufstream_flush(&bstream);
     assert_eq_sint(t, sink_res.err_code, 0, "no error");
     assert_eq_uint(t, sink_res.len, 2, "len = lengthof('d!')");
     assert_eq_bytes(
-        t, context.bbuf.buffer, (const uchar *)"hello world!", 12, "sink content full"
+        t,
+        context.bbuf.buffer,
+        (const uchar *)"hello world!",
+        12,
+        "sink content full"
     );
 }
 
@@ -82,7 +91,7 @@ void test_buffered_stream_long_writes(test *t) {
     uchar bstream_buf[10];
 
     struct bytesink_ctx_bytebuf context = {0};
-    bytebuf_init_fixed(&context.bbuf, bytebuf_buf, 0, sizeof(bytebuf_buf));
+    bytebuf_init_fixed(&context.bbuf, slice_arr(bytebuf_buf), 0);
     bufstream bstream = {
         .buffer = bstream_buf,
         .cap = sizeof(bstream_buf),
@@ -113,7 +122,7 @@ void test_buffered_stream_failing_writes(test *t) {
     uchar bstream_buf[10];
 
     struct bytesink_ctx_bytebuf context = {.chunk_size = 4};
-    bytebuf_init_fixed(&context.bbuf, bytebuf_buf, 0, sizeof(bytebuf_buf));
+    bytebuf_init_fixed(&context.bbuf, slice_arr(bytebuf_buf), 0);
     bufstream bstream = {
         .buffer = bstream_buf,
         .cap = sizeof(bstream_buf),

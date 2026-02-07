@@ -1414,9 +1414,7 @@ typedef struct {
 
 void bytebuf_init(bytebuf *bbuf, size_t capacity, allocator *allocator);
 
-void bytebuf_init_fixed(
-    bytebuf *bbuf, uchar *buffer, size_t len, size_t capacity
-);
+void bytebuf_init_fixed(bytebuf *bbuf, slice buffer, size_t offset);
 
 ignore_unused static inline bytebuf
 bytebuf_new(size_t capacity, allocator *allocator) {
@@ -1426,9 +1424,9 @@ bytebuf_new(size_t capacity, allocator *allocator) {
 }
 
 ignore_unused static inline bytebuf
-bytebuf_new_fixed(uchar *buffer, size_t len, size_t capacity) {
+bytebuf_new_fixed(slice buffer, size_t offset) {
     bytebuf bbuf;
-    bytebuf_init_fixed(&bbuf, buffer, len, capacity);
+    bytebuf_init_fixed(&bbuf, buffer, offset);
     return bbuf;
 }
 
