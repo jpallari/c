@@ -101,7 +101,7 @@ void mmap_free(allocation a, void *ctx) {
 // Slices
 ////////////////////////
 
-slice slice_span(uchar *start, uchar *end) {
+slice slice_span(void *start, void *end) {
     assert(start && "start must not be null");
     assert(end && "end must not be null");
 

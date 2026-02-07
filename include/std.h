@@ -573,7 +573,7 @@ typedef struct {
  */
 ignore_unused static inline slice slice_new(void *buffer, size_t len) {
     slice s = {
-        .ptr = (uchar *)buffer,
+        .ptr = buffer,
         .len = len,
     };
     return s;
@@ -589,7 +589,7 @@ ignore_unused static inline slice slice_new(void *buffer, size_t len) {
 ignore_unused static inline slice_const
 slice_const_new(const void *buffer, size_t len) {
     slice_const s = {
-        .ptr = (const uchar *)buffer,
+        .ptr = buffer,
         .len = len,
     };
     return s;
@@ -602,7 +602,7 @@ slice_const_new(const void *buffer, size_t len) {
  * @param end pointer where the data ends
  * @returns slice of data between the given pointers
  */
-slice slice_span(uchar *start, uchar *end);
+slice slice_span(void *start, void *end);
 
 /**
  * Check if two slices are equal
