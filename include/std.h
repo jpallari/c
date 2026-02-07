@@ -1441,10 +1441,12 @@ ignore_unused static inline bool bytebuf_is_growable(bytebuf *bbuf) {
 }
 
 ignore_unused static inline void bytebuf_clear(bytebuf *bbuf) {
+    assert(bbuf && "bytebuf must not be null");
     bbuf->len = 0;
 }
 
 ignore_unused static inline void bytebuf_clear_last(bytebuf *bbuf, size_t len) {
+    assert(bbuf && "bytebuf must not be null");
     if (bbuf->len > len) {
         bbuf->len -= len;
     }
@@ -1452,6 +1454,7 @@ ignore_unused static inline void bytebuf_clear_last(bytebuf *bbuf, size_t len) {
 }
 
 ignore_unused static inline size_t bytebuf_bytes_available(bytebuf *bbuf) {
+    assert(bbuf && "bytebuf must not be null");
     return bbuf->cap - bbuf->len;
 }
 
@@ -1460,6 +1463,9 @@ void bytebuf_free(bytebuf *bbuf);
 bool bytebuf_grow(bytebuf *bbuf, size_t capacity_increase);
 
 bytebuf bytebuf_clone(bytebuf *bbuf, size_t capacity_increase);
+
+bytebuf_result bytebuf_skip(bytebuf *bbuf, size_t len);
+bytebuf_result bytebuf_fill(bytebuf *bbuf, uchar pattern, size_t len);
 
 bytebuf_result bytebuf_write(bytebuf *bbuf, const void *src, size_t len);
 

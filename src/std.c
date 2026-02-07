@@ -2,6 +2,7 @@
 #include <float.h>
 #include <limits.h>
 #include <stdarg.h>
+#include <stdint.h>
 
 ////////////////////////
 // Bytes
@@ -1674,7 +1675,11 @@ void bytebuf_free(bytebuf *bbuf) {
 bool bytebuf_grow(bytebuf *bbuf, size_t capacity_increase) {
     assert(bbuf && "bytebuf must not be null");
     assert(bbuf->allocator && "allocator must not be null");
-    assert(capacity_increase > 0 && "capacity increase must be larger than 0");
+    assert(capacity_increase > 0 && "capacity increase must be >0");
+    assert(
+        SIZE_MAX - bbuf->cap > capacity_increase
+        && "capacity increase must not exceed SIZE_MAX"
+    );
     if (capacity_increase == 0) {
         return 1;
     }
@@ -1711,6 +1716,10 @@ bytebuf bytebuf_clone(bytebuf *bbuf, size_t capacity_increase) {
     assert(bbuf && "bytebuf must not be null");
     assert(bbuf->buffer && "bytebuf's buffer must not be null");
     assert(bbuf->allocator && "allocator must not be null");
+    assert(
+        SIZE_MAX - bbuf->cap > capacity_increase
+        && "capacity increase must not exceed SIZE_MAX"
+    );
 
     bytebuf newbbuf =
         bytebuf_new(bbuf->cap + capacity_increase, bbuf->allocator);
@@ -1720,6 +1729,66 @@ bytebuf bytebuf_clone(bytebuf *bbuf, size_t capacity_increase) {
     bytes_copy(newbbuf.buffer, bbuf->buffer, bbuf->len);
     newbbuf.len = bbuf->len;
     return newbbuf;
+}
+
+static bool bytebuf_ensure_space_available(
+    bytebuf *bbuf, size_t len, size_t cap_increase_coeff
+) {
+    if (len <= bytebuf_bytes_available(bbuf)) {
+        return 1; // enough space is available
+    }
+    if (!bytebuf_is_growable(bbuf)) {
+        return 0; // static buffer: no space available
+    }
+
+    assert(cap_increase_coeff > 0 && "capacity increase coefficient must be >0");
+    assert(
+        (SIZE_MAX - bbuf->cap) / cap_increase_coeff > len
+        && "capacity increase must not exceed SIZE_MAX"
+    );
+    size_t capacity_increase = bbuf->cap + len * cap_increase_coeff;
+    return bytebuf_grow(bbuf, capacity_increase);
+}
+
+bytebuf_result bytebuf_skip(bytebuf *bbuf, size_t len) {
+    assert(bbuf && "bytebuf must not be null");
+
+    bytebuf_result res = {0};
+    res.offset = bbuf->len;
+
+    if (len == 0) {
+        res.ok = 1;
+        return res;
+    }
+
+    if (!bytebuf_ensure_space_available(bbuf, len, 1)) {
+        return res;
+    }
+    bbuf->len += len;
+    res.len = len;
+    res.ok = 1;
+    return res;
+}
+
+bytebuf_result bytebuf_fill(bytebuf *bbuf, uchar pattern, size_t len) {
+    assert(bbuf && "bytebuf must not be null");
+    assert(bbuf->buffer && "bytebuf's buffer must not be null");
+
+    bytebuf_result res = {0};
+    res.offset = bbuf->len;
+
+    if (len == 0) {
+        res.ok = 1; // nothing to write
+        return res;
+    }
+    if (!bytebuf_ensure_space_available(bbuf, len, 1)) {
+        return res;
+    }
+    bytes_set(bbuf->buffer + bbuf->len, (int)pattern, len);
+    bbuf->len += len;
+    res.len = len;
+    res.ok = 1;
+    return res;
 }
 
 bytebuf_result bytebuf_write(bytebuf *bbuf, const void *src, size_t len) {
@@ -1735,16 +1804,8 @@ bytebuf_result bytebuf_write(bytebuf *bbuf, const void *src, size_t len) {
         res.ok = 1; // nothing to write
         return res;
     }
-    if (len > bytebuf_bytes_available(bbuf)) {
-        if (bytebuf_is_growable(bbuf)) {
-            size_t capacity_increase = bbuf->cap + len;
-            bool ok = bytebuf_grow(bbuf, capacity_increase);
-            if (!ok) {
-                return res; // grow failed
-            }
-        } else {
-            return res; // no capacity left
-        }
+    if (!bytebuf_ensure_space_available(bbuf, len, 1)) {
+        return res;
     }
     bytes_copy(bbuf->buffer + bbuf->len, src, len);
     bbuf->len += len;
@@ -1808,16 +1869,8 @@ bytebuf_result bytebuf_write_float(bytebuf *bbuf, float src, uint decimals) {
     cstr_from_float_parts(&parts, src, decimals);
     size_t bytes_to_write = cstr_from_real_parts_len(&parts);
 
-    if (bytes_to_write > bytebuf_bytes_available(bbuf)) {
-        if (bytebuf_is_growable(bbuf)) {
-            size_t capacity_increase = bbuf->cap + bytes_to_write * 2;
-            bool ok = bytebuf_grow(bbuf, capacity_increase);
-            if (!ok) {
-                return res; // grow failed
-            }
-        } else {
-            return res; // no capacity left
-        }
+    if (!bytebuf_ensure_space_available(bbuf, bytes_to_write, 2)) {
+        return res;
     }
 
     cstr_from_real_parts_to_buf(&parts, (char *)bbuf->buffer + bbuf->len);
@@ -1842,16 +1895,8 @@ bytebuf_result bytebuf_write_double(bytebuf *bbuf, double src, uint decimals) {
     cstr_from_double_parts(&parts, src, decimals);
     size_t bytes_to_write = cstr_from_real_parts_len(&parts);
 
-    if (bytes_to_write > bytebuf_bytes_available(bbuf)) {
-        if (bytebuf_is_growable(bbuf)) {
-            size_t capacity_increase = bbuf->cap + bytes_to_write * 2;
-            bool ok = bytebuf_grow(bbuf, capacity_increase);
-            if (!ok) {
-                return res; // grow failed
-            }
-        } else {
-            return res; // no capacity left
-        }
+    if (!bytebuf_ensure_space_available(bbuf, bytes_to_write, 2)) {
+        return res;
     }
 
     cstr_from_real_parts_to_buf(&parts, (char *)bbuf->buffer + bbuf->len);
@@ -1868,16 +1913,8 @@ static bytebuf_result bytebuf_write_hex(bytebuf *bbuf, slice_const hex) {
     bytebuf_result res = {0};
     res.offset = bbuf->len;
 
-    if (bytebuf_bytes_available(bbuf) < hex.len * 2) {
-        if (bytebuf_is_growable(bbuf)) {
-            size_t capacity_increase = bbuf->cap + hex.len * 4;
-            bool ok = bytebuf_grow(bbuf, capacity_increase);
-            if (!ok) {
-                return res; // grow failed
-            }
-        } else {
-            return res; // no capacity left
-        }
+    if (!bytebuf_ensure_space_available(bbuf, hex.len, 4)) {
+        return res;
     }
 
     size_t len = bytes_to_hex(
