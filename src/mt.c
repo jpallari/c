@@ -63,6 +63,42 @@ bool ringbuf_spsc_push(ringbuf_spsc *rbuf, slice s) {
     return 1;
 }
 
+bool ringbuf_spsc_acquire_write(ringbuf_spsc *rbuf, ringbuf_spsc_h *handle) {
+    assert(rbuf && "ringbuf must not be null");
+    assert(rbuf->buffer && "ringbuf buffer must not be null");
+    assert(rbuf->item_size > 0 && "item size must be >0");
+    assert(rbuf->max_items > 0 && "max items must be >0");
+
+    size_t write_idx =
+        atomic_load_explicit(&rbuf->write_idx, memory_order_relaxed);
+    size_t next_write_idx = (write_idx + 1) % rbuf->max_items;
+
+    if (next_write_idx == rbuf->cached_read_idx) {
+        rbuf->cached_read_idx =
+            atomic_load_explicit(&rbuf->read_idx, memory_order_acquire);
+        if (next_write_idx == rbuf->cached_read_idx) {
+            // full
+            return 0;
+        }
+    }
+
+    size_t byte_index = rbuf->item_size * write_idx;
+    handle->item = rbuf->buffer + byte_index;
+    handle->idx = write_idx;
+    return 1;
+}
+
+void ringbuf_spsc_release_write(ringbuf_spsc *rbuf, ringbuf_spsc_h handle) {
+    assert(rbuf && "ringbuf must not be null");
+    assert(rbuf->max_items > 0 && "max items must be >0");
+    assert(handle.item && "item must not be null");
+
+    size_t next_write_idx = (handle.idx + 1) % rbuf->max_items;
+    atomic_store_explicit(
+        &rbuf->write_idx, next_write_idx, memory_order_release
+    );
+}
+
 bool ringbuf_spsc_pop(ringbuf_spsc *rbuf, uchar *buffer, size_t len) {
     assert(buffer && "buffer must not be null");
     assert(len && "len must not be null");
@@ -89,4 +125,37 @@ bool ringbuf_spsc_pop(ringbuf_spsc *rbuf, uchar *buffer, size_t len) {
     atomic_store_explicit(&rbuf->read_idx, next_read_idx, memory_order_release);
 
     return 1;
+}
+
+bool ringbuf_spsc_acquire_read(ringbuf_spsc *rbuf, ringbuf_spsc_h *handle) {
+    assert(rbuf && "ringbuf must not be null");
+    assert(rbuf->buffer && "ringbuf buffer must not be null");
+    assert(rbuf->item_size > 0 && "item size must be >0");
+    assert(rbuf->max_items > 0 && "max items must be >0");
+
+    size_t read_idx =
+        atomic_load_explicit(&rbuf->read_idx, memory_order_relaxed);
+
+    if (read_idx == rbuf->cached_write_idx) {
+        rbuf->cached_write_idx =
+            atomic_load_explicit(&rbuf->write_idx, memory_order_acquire);
+        if (read_idx == rbuf->cached_write_idx) {
+            // empty
+            return 0;
+        }
+    }
+
+    size_t byte_index = rbuf->item_size * read_idx;
+    handle->item = rbuf->buffer + byte_index;
+    handle->idx = read_idx;
+    return 1;
+}
+
+void ringbuf_spsc_release_read(ringbuf_spsc *rbuf, ringbuf_spsc_h handle) {
+    assert(rbuf && "ringbuf must not be null");
+    assert(rbuf->max_items > 0 && "max items must be >0");
+    assert(handle.item && "item must not be null");
+
+    size_t next_read_idx = (handle.idx + 1) % rbuf->max_items;
+    atomic_store_explicit(&rbuf->read_idx, next_read_idx, memory_order_release);
 }

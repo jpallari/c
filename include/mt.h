@@ -31,4 +31,17 @@ bool ringbuf_spsc_push(ringbuf_spsc *rbuf, slice s);
 
 bool ringbuf_spsc_pop(ringbuf_spsc *rbuf, uchar *buffer, size_t len);
 
+typedef struct {
+    void *item;
+    size_t idx;
+} ringbuf_spsc_h;
+
+bool ringbuf_spsc_acquire_write(ringbuf_spsc *rbuf, ringbuf_spsc_h *handle);
+
+void ringbuf_spsc_release_write(ringbuf_spsc *rbuf, ringbuf_spsc_h handle);
+
+bool ringbuf_spsc_acquire_read(ringbuf_spsc *rbuf, ringbuf_spsc_h *handle);
+
+void ringbuf_spsc_release_read(ringbuf_spsc *rbuf, ringbuf_spsc_h handle);
+
 #endif
