@@ -1199,10 +1199,10 @@ static void cstr_from_float_parts(
 ) {
     assert(parts->integer_cursor && "integer cursor must not be null");
     assert(parts->fractional_cursor && "integer cursor must not be null");
-    assert(decimals <= 19 && "decimals up to 18 are supported");
+    assert(decimals <= 9 && "decimals up to 9 are supported");
 
-    if (decimals > 19) {
-        return;
+    if (decimals > 9) {
+        decimals = 9;
     }
 
     if (src < 0) {
@@ -1260,10 +1260,10 @@ static void cstr_from_double_parts(
 ) {
     assert(parts->integer_cursor && "integer cursor must not be null");
     assert(parts->fractional_cursor && "integer cursor must not be null");
-    assert(decimals <= 19 && "decimals up to 18 are supported");
+    assert(decimals <= 18 && "decimals up to 18 are supported");
 
-    if (decimals > 19) {
-        return;
+    if (decimals > 18) {
+        decimals = 18;
     }
 
     if (src < 0) {
