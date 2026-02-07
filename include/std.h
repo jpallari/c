@@ -4,6 +4,7 @@
 #ifndef JP_STD_H
 #define JP_STD_H
 
+#include <limits.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -152,7 +153,11 @@ static inline void breakpoint(void) {
 ignore_unused static inline ullong
 round_up_multiple_ullong(ullong n, ullong multiple) {
     assert(multiple > 0 && "multiple must be >0");
-    if (multiple == 0) {
+    assert(
+        ULLONG_MAX - n > multiple && "n + multiple must not exceed ullong max"
+    );
+
+    if (multiple < 2) {
         return n;
     }
 
@@ -161,7 +166,7 @@ round_up_multiple_ullong(ullong n, ullong multiple) {
         return n;
     }
 
-    return n + multiple - remainder;
+    return n - remainder + multiple;
 }
 
 /**
@@ -248,6 +253,10 @@ ignore_unused static inline size_t
 align_to_nearest(size_t size, size_t alignment) {
     assert(is_power_of_two(alignment) && "alignment must be power of two");
     size_t mask = alignment - 1;
+    assert(
+        SIZE_MAX - mask > size
+        && "size + alignment - 1 must not exceed size max"
+    );
     return (size + mask) & ~mask;
 }
 
@@ -934,6 +943,12 @@ typedef struct {
  */
 ignore_unused static inline size_t
 dynarr_count_to_bytes(ullong n, size_t item_size) {
+    assert(item_size > 0 && "item size must be >0");
+    assert(n > 0 && "n must be >0");
+    assert(
+        (SIZE_MAX - sizeof(dynarr_header)) / item_size > n
+        && "n * item size + header size must not exceed size max"
+    );
     return (size_t)n * item_size + sizeof(dynarr_header);
 }
 

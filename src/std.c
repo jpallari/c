@@ -162,7 +162,14 @@ arena arena_new(void *buffer, size_t size) {
 }
 
 void *arena_alloc_bytes(arena *arena, size_t size, size_t alignment) {
+    assert(arena && "arena must not be null");
+
     size_t aligned_used = align_to_nearest(arena->used, alignment);
+    assert(
+        SIZE_MAX - aligned_used > size
+        && "size + aligned_used must not exceed size max"
+    );
+
     if (arena->size < size + aligned_used) {
         return NULL;
     }
@@ -242,6 +249,10 @@ void *dynarr_grow_ut(
     dynarr_header *header = dynarr_get_header(array);
     assert(header && "Header must not be null");
 
+    assert(
+        ULLONG_MAX - header->capacity > capacity_increase
+        && "new capacity must not exceed ullong max"
+    );
     ullong capacity = capacity_increase + header->capacity;
     alignment = max(alignment, alignof(dynarr_header));
     allocation new_array_data = alloc_malloc(
@@ -271,6 +282,10 @@ void *dynarr_clone_ut(
     dynarr_header *header = dynarr_get_header(array);
     assert(header && "Header must not be null");
 
+    assert(
+        ULLONG_MAX - header->capacity > capacity_increase
+        && "new capacity must not exceed ullong max"
+    );
     ullong capacity = capacity_increase + header->capacity;
     void *new_array =
         dynarr_new_sized(capacity, item_size, alignment, header->allocator);
@@ -299,6 +314,10 @@ bool dynarr_push_ut(
     dynarr_header *header = dynarr_get_header(array);
     assert(header && "Header must not be null");
 
+    assert(
+        ULLONG_MAX - header->len > count
+        && "len + count must not exceed ullong max"
+    );
     if (header->len + count > header->capacity) {
         // out of capacity
         return 0;
@@ -329,6 +348,10 @@ void *dynarr_push_grow_ut(
     dynarr_header *header = dynarr_get_header(array);
     assert(header && "header must not be null");
 
+    assert(
+        ULLONG_MAX - header->len > count + 8
+        && "len + count + 8 must not exceed ullong max"
+    );
     if (header->len + count > header->capacity) {
         ullong capacity_increase = header->capacity + count + 8;
         void *new_array =
@@ -1551,11 +1574,18 @@ cstr_fmt_result cstr_fmt_va(
             field_bytes = 1;
             break;
         }
+        assert(
+            SIZE_MAX - field_bytes > bytes_written
+            && "bytes written must not exceed size max"
+        );
         bytes_written += field_bytes;
         format += 1;
     }
 
     // null termination
+    assert(
+        SIZE_MAX - 1 > bytes_written && "bytes written must not exceed size max"
+    );
     if (bytes_written + 1 < len) {
         // null termination is not included in length
         dest[bytes_written] = '\0';
@@ -1678,7 +1708,7 @@ bool bytebuf_grow(bytebuf *bbuf, size_t capacity_increase) {
     assert(capacity_increase > 0 && "capacity increase must be >0");
     assert(
         SIZE_MAX - bbuf->cap > capacity_increase
-        && "capacity increase must not exceed SIZE_MAX"
+        && "capacity increase must not exceed size max"
     );
     if (capacity_increase == 0) {
         return 1;
@@ -1718,7 +1748,7 @@ bytebuf bytebuf_clone(bytebuf *bbuf, size_t capacity_increase) {
     assert(bbuf->allocator && "allocator must not be null");
     assert(
         SIZE_MAX - bbuf->cap > capacity_increase
-        && "capacity increase must not exceed SIZE_MAX"
+        && "capacity increase must not exceed size max"
     );
 
     bytebuf newbbuf =
@@ -1741,10 +1771,12 @@ static bool bytebuf_ensure_space_available(
         return 0; // static buffer: no space available
     }
 
-    assert(cap_increase_coeff > 0 && "capacity increase coefficient must be >0");
+    assert(
+        cap_increase_coeff > 0 && "capacity increase coefficient must be >0"
+    );
     assert(
         (SIZE_MAX - bbuf->cap) / cap_increase_coeff > len
-        && "capacity increase must not exceed SIZE_MAX"
+        && "capacity increase must not exceed size max"
     );
     size_t capacity_increase = bbuf->cap + len * cap_increase_coeff;
     return bytebuf_grow(bbuf, capacity_increase);
@@ -1752,6 +1784,9 @@ static bool bytebuf_ensure_space_available(
 
 bytebuf_result bytebuf_skip(bytebuf *bbuf, size_t len) {
     assert(bbuf && "bytebuf must not be null");
+    assert(
+        SIZE_MAX - bbuf->len > len && "len increase must not exceed size max"
+    );
 
     bytebuf_result res = {0};
     res.offset = bbuf->len;
@@ -1773,6 +1808,9 @@ bytebuf_result bytebuf_skip(bytebuf *bbuf, size_t len) {
 bytebuf_result bytebuf_fill(bytebuf *bbuf, uchar pattern, size_t len) {
     assert(bbuf && "bytebuf must not be null");
     assert(bbuf->buffer && "bytebuf's buffer must not be null");
+    assert(
+        SIZE_MAX - bbuf->len > len && "len increase must not exceed size max"
+    );
 
     bytebuf_result res = {0};
     res.offset = bbuf->len;
@@ -1796,6 +1834,9 @@ bytebuf_result bytebuf_write(bytebuf *bbuf, const void *src, size_t len) {
     assert(bbuf->buffer && "bytebuf's buffer must not be null");
     assert(src && "source must not be null");
     assert(len > 0 && "length must be more than 0");
+    assert(
+        SIZE_MAX - bbuf->len > len && "len increase must not exceed size max"
+    );
 
     bytebuf_result res = {0};
     res.offset = bbuf->len;
@@ -1873,6 +1914,10 @@ bytebuf_result bytebuf_write_float(bytebuf *bbuf, float src, uint decimals) {
         return res;
     }
 
+    assert(
+        SIZE_MAX - bbuf->len > bytes_to_write
+        && "len increase must not exceed size max"
+    );
     cstr_from_real_parts_to_buf(&parts, (char *)bbuf->buffer + bbuf->len);
     bbuf->len += bytes_to_write;
     res.len = bytes_to_write;
@@ -1899,6 +1944,10 @@ bytebuf_result bytebuf_write_double(bytebuf *bbuf, double src, uint decimals) {
         return res;
     }
 
+    assert(
+        SIZE_MAX - bbuf->len > bytes_to_write
+        && "len increase must not exceed size max"
+    );
     cstr_from_real_parts_to_buf(&parts, (char *)bbuf->buffer + bbuf->len);
     bbuf->len += bytes_to_write;
     res.len = bytes_to_write;
@@ -1922,6 +1971,9 @@ static bytebuf_result bytebuf_write_hex(bytebuf *bbuf, slice_const hex) {
         bytebuf_bytes_available(bbuf),
         (const char *)hex.ptr,
         hex.len
+    );
+    assert(
+        SIZE_MAX - bbuf->len > len && "len increase must not exceed size max"
     );
     bbuf->len += len;
     res.len = len;
@@ -1996,6 +2048,10 @@ bytebuf_fmt_va(bytebuf *bbuf, const char *restrict format, va_list va_args) {
             partial_res = bytebuf_write(bbuf, (const uchar *)format, 1);
             break;
         }
+        assert(
+            SIZE_MAX - res.len > partial_res.len
+            && "len increase must not exceed size max"
+        );
         res.len += partial_res.len;
         format += 1;
     }
