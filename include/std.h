@@ -861,7 +861,7 @@ typedef struct {
 /**
  * Create a new arena for a backing buffer.
  */
-arena arena_new(uchar *buffer, size_t size);
+arena arena_new(void *buffer, size_t size);
 
 /**
  * Allocate bytes from the given arena.
@@ -1461,7 +1461,7 @@ bool bytebuf_grow(bytebuf *bbuf, size_t capacity_increase);
 
 bytebuf bytebuf_clone(bytebuf *bbuf, size_t capacity_increase);
 
-bytebuf_result bytebuf_write(bytebuf *bbuf, const uchar *src, size_t len);
+bytebuf_result bytebuf_write(bytebuf *bbuf, const void *src, size_t len);
 
 bytebuf_result bytebuf_write_int(bytebuf *bbuf, int src);
 bytebuf_result bytebuf_write_uint(bytebuf *bbuf, uint src);
@@ -1472,7 +1472,7 @@ bytebuf_result bytebuf_write_double(bytebuf *bbuf, double src, uint decimals);
 
 ignore_unused static inline bytebuf_result
 bytebuf_write_str(bytebuf *bbuf, const char *str, size_t len) {
-    return bytebuf_write(bbuf, (const uchar *)str, len);
+    return bytebuf_write(bbuf, str, len);
 }
 
 #define bytebuf_write_sstr(bbuf, str) \
@@ -1519,11 +1519,11 @@ typedef struct {
 bytesink_result bufstream_flush(bufstream *bstream);
 
 bufstream_write_result
-bufstream_write(bufstream *bstream, const uchar *src, size_t len);
+bufstream_write(bufstream *bstream, const void *src, size_t len);
 
 ignore_unused static inline bufstream_write_result
 bufstream_write_str(bufstream *bstream, const char *src, size_t len) {
-    return bufstream_write(bstream, (const uchar *)src, len);
+    return bufstream_write(bstream, src, len);
 }
 
 #define bufstream_write_sstr(bstream, str) \

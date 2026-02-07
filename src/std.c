@@ -160,8 +160,8 @@ slice slice_from_cstr_unsafe(char *str) {
 // Arena allocator
 ////////////////////////
 
-arena arena_new(uchar *buffer, size_t size) {
-    arena arena = {.buffer = buffer, .size = size, .used = 0};
+arena arena_new(void *buffer, size_t size) {
+    arena arena = {.buffer = (uchar *)buffer, .size = size, .used = 0};
     return arena;
 }
 
@@ -1727,7 +1727,7 @@ bytebuf bytebuf_clone(bytebuf *bbuf, size_t capacity_increase) {
     return newbbuf;
 }
 
-bytebuf_result bytebuf_write(bytebuf *bbuf, const uchar *src, size_t len) {
+bytebuf_result bytebuf_write(bytebuf *bbuf, const void *src, size_t len) {
     assert(bbuf && "bytebuf must not be null");
     assert(bbuf->buffer && "bytebuf's buffer must not be null");
     assert(src && "source must not be null");
@@ -2016,7 +2016,7 @@ bytesink_result bufstream_flush(bufstream *bstream) {
 }
 
 bufstream_write_result
-bufstream_write(bufstream *bstream, const uchar *src, size_t len) {
+bufstream_write(bufstream *bstream, const void *src, size_t len) {
     assert(bstream && "bstream must not be null");
     assert(bstream->buffer && "bstream's buffer must not be null");
     assert(src && "source must not be null");
@@ -2036,7 +2036,7 @@ bufstream_write(bufstream *bstream, const uchar *src, size_t len) {
         // --> pipe to sink directly
         if (bstream->len == 0 && bytes_available > bstream->cap) {
             bytesink_result bs_res = bstream->sink.fn(
-                bstream->sink.context, src + res.len, bytes_available
+                bstream->sink.context, (const uchar *)src + res.len, bytes_available
             );
             res.err_code = bs_res.err_code;
             res.len += bs_res.len;
@@ -2047,7 +2047,7 @@ bufstream_write(bufstream *bstream, const uchar *src, size_t len) {
         size_t bytes_to_copy =
             min(bytes_available, bstream->cap - bstream->len);
         bytes_copy(
-            bstream->buffer + bstream->len, src + res.len, bytes_to_copy
+            bstream->buffer + bstream->len, (const uchar *)src + res.len, bytes_to_copy
         );
         bstream->len += bytes_to_copy;
         res.len += bytes_to_copy;
