@@ -35,25 +35,20 @@ bool bytes_eq(const void *a, const void *b, size_t len) {
     return 1;
 }
 
-uchar byte_to_hex_char(uchar b) {
+static inline char byte_to_hex_char(char b) {
     assert(b < 16 && "byte must be between 0..=15");
-
-    if (b < 10) {
-        return (uchar)('0' + b);
-    }
-    return (uchar)('a' + b - 10);
-}
-
-void byte_to_hex_chars(uchar b, uchar *high, uchar *low) {
-    *high = byte_to_hex_char(b / 16);
-    *low = byte_to_hex_char(b % 16);
+    return (char)('0' + b
+                  + ( // promote numbers >9 to ascii a-f range
+                      (b > 9) * ('a' - '0' - 10)
+                  ));
 }
 
 size_t
-bytes_to_hex(uchar *dest, size_t dest_len, const uchar *src, size_t src_len) {
+bytes_to_hex(char *dest, size_t dest_len, const char *src, size_t src_len) {
     size_t j = 0;
     for (size_t i = 0; i < src_len && j < dest_len; i += 1, j += 2) {
-        byte_to_hex_chars(src[i], &dest[j], &dest[j + 1]);
+        dest[j] = byte_to_hex_char(src[i] >> 4); // high bit
+        dest[j + 1] = byte_to_hex_char(src[i] & 15); // low bit
     }
 
     if (j < dest_len) {
@@ -1472,9 +1467,9 @@ cstr_fmt_result cstr_fmt_va(
         case 'h':
             s = va_arg(va_args, slice_const);
             field_bytes = bytes_to_hex(
-                (uchar *)dest + bytes_written,
+                dest + bytes_written,
                 len - bytes_written,
-                s.ptr,
+                (const char *)s.ptr,
                 s.len
             );
             res.ok = s.len <= len - bytes_written;
@@ -1482,9 +1477,9 @@ cstr_fmt_result cstr_fmt_va(
         case 'H':
             s = slice_const_from_cstr_unsafe(va_arg(va_args, char *));
             field_bytes = bytes_to_hex(
-                (uchar *)dest + bytes_written,
+                dest + bytes_written,
                 len - bytes_written,
-                s.ptr,
+                (const char *)s.ptr,
                 s.len
             );
             res.ok = s.len <= len - bytes_written;
@@ -1886,9 +1881,9 @@ static bytebuf_result bytebuf_write_hex(bytebuf *bbuf, slice_const hex) {
     }
 
     size_t len = bytes_to_hex(
-        bbuf->buffer + bbuf->len,
+        (char *)bbuf->buffer + bbuf->len,
         bytebuf_bytes_available(bbuf),
-        hex.ptr,
+        (const char *)hex.ptr,
         hex.len
     );
     bbuf->len += len;
@@ -2036,7 +2031,9 @@ bufstream_write(bufstream *bstream, const void *src, size_t len) {
         // --> pipe to sink directly
         if (bstream->len == 0 && bytes_available > bstream->cap) {
             bytesink_result bs_res = bstream->sink.fn(
-                bstream->sink.context, (const uchar *)src + res.len, bytes_available
+                bstream->sink.context,
+                (const uchar *)src + res.len,
+                bytes_available
             );
             res.err_code = bs_res.err_code;
             res.len += bs_res.len;
@@ -2047,7 +2044,9 @@ bufstream_write(bufstream *bstream, const void *src, size_t len) {
         size_t bytes_to_copy =
             min(bytes_available, bstream->cap - bstream->len);
         bytes_copy(
-            bstream->buffer + bstream->len, (const uchar *)src + res.len, bytes_to_copy
+            bstream->buffer + bstream->len,
+            (const uchar *)src + res.len,
+            bytes_to_copy
         );
         bstream->len += bytes_to_copy;
         res.len += bytes_to_copy;
@@ -2205,9 +2204,9 @@ bufstream_write_hex(bufstream *bstream, slice_const hex) {
 
     while (bytes_processed < hex.len) {
         size_t len = bytes_to_hex(
-            buffer,
+            (char *)buffer,
             sizeof(buffer),
-            hex.ptr + bytes_processed,
+            (const char *)hex.ptr + bytes_processed,
             hex.len - bytes_processed
         );
         bytes_processed += len / 2;

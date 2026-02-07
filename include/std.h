@@ -456,7 +456,7 @@ bool bytes_eq(const void *a, const void *b, size_t len);
  * @returns number of bytes written
  */
 size_t
-bytes_to_hex(uchar *dest, size_t dest_len, const uchar *src, size_t src_len);
+bytes_to_hex(char *dest, size_t dest_len, const char *src, size_t src_len);
 
 /**
  * Result type for any index search.
