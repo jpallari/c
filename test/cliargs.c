@@ -7,7 +7,7 @@ split_args(char *argv_str, size_t argv_str_len, char **argv, size_t argv_len) {
     cstr_split_iter split;
     cstr_split_init(
         &split,
-        (slice) {.buffer = (uchar *)argv_str, .len = argv_str_len},
+        (slice) {.ptr = (uchar *)argv_str, .len = argv_str_len},
         slice_sstr(" "),
         cstr_split_flag_null_terminate
     );

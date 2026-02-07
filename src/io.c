@@ -108,13 +108,13 @@ file_read_result file_read_sync(const char *filename, allocator *allocator) {
         goto end;
     }
     res.data = (slice) {
-        .buffer = a.ptr,
+        .ptr = a.ptr,
         .len = a.len,
     };
     res.cap = a.len;
 
     io_result io_read_res =
-        os_read_all(fd, res.data.buffer, file_size, block_size);
+        os_read_all(fd, res.data.ptr, file_size, block_size);
     res.data.len = io_read_res.len;
     res.err_code = io_read_res.err_code;
 

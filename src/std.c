@@ -113,7 +113,7 @@ slice slice_span(uchar *start, uchar *end) {
     }
 
     slice s = {0};
-    s.buffer = start;
+    s.ptr = start;
     s.len = (size_t)((uintptr_t)end - (uintptr_t)start);
     return s;
 }
@@ -122,36 +122,36 @@ bool slice_const_eq(const slice_const a, const slice_const b) {
     if (a.len != b.len) {
         return 0;
     }
-    return bytes_eq(a.buffer, b.buffer, a.len);
+    return bytes_eq(a.ptr, b.ptr, a.len);
 }
 
 bool slice_eq(const slice a, const slice b) {
     if (a.len != b.len) {
         return 0;
     }
-    return bytes_eq(a.buffer, b.buffer, a.len);
+    return bytes_eq(a.ptr, b.ptr, a.len);
 }
 
 void slice_copy(slice dest, const slice src) {
     size_t amount = min(src.len, dest.len);
-    bytes_copy(dest.buffer, src.buffer, amount);
+    bytes_copy(dest.ptr, src.ptr, amount);
 }
 
 void slice_move(slice dest, const slice src) {
     size_t amount = min(src.len, dest.len);
-    bytes_move(dest.buffer, src.buffer, amount);
+    bytes_move(dest.ptr, src.ptr, amount);
 }
 
 slice_const slice_const_from_cstr_unsafe(const char *str) {
     slice_const slice = {0};
-    slice.buffer = (const uchar *)str;
+    slice.ptr = (const uchar *)str;
     slice.len = cstr_len_unsafe(str);
     return slice;
 }
 
 slice slice_from_cstr_unsafe(char *str) {
     slice slice = {0};
-    slice.buffer = (uchar *)str;
+    slice.ptr = (uchar *)str;
     slice.len = cstr_len_unsafe(str);
     return slice;
 }
@@ -483,31 +483,31 @@ void cstr_split_init(
 
 slice cstr_split_next(cstr_split_iter *split) {
     assert(split && "split struct must not be null");
-    assert(split->str.buffer && "string must not be null");
-    assert(split->split_chars.buffer && "split chars must not be null");
+    assert(split->str.ptr && "string must not be null");
+    assert(split->split_chars.ptr && "split chars must not be null");
 
     slice slice = {0};
 
     if (!slice_is_set(split->str) || !slice_const_is_set(split->split_chars)
-        || split->index >= split->str.len || !split->str.buffer[split->index]) {
+        || split->index >= split->str.len || !split->str.ptr[split->index]) {
         return slice;
     }
 
     size_t start_index = split->index;
-    slice.buffer = split->str.buffer + start_index;
+    slice.ptr = split->str.ptr + start_index;
     bool len_set = 0;
 
     while (split->index < split->str.len && !len_set) {
-        uchar ch = split->str.buffer[split->index];
+        uchar ch = split->str.ptr[split->index];
         if (ch) {
             index_result res = bytes_index_of(
-                split->split_chars.buffer, split->split_chars.len, ch
+                split->split_chars.ptr, split->split_chars.len, ch
             );
             if (res.ok) {
                 if (bitset_is_set(
                         split->flags, cstr_split_flag_null_terminate
                     )) {
-                    split->str.buffer[split->index] = '\0';
+                    split->str.ptr[split->index] = '\0';
                 }
                 slice.len = split->index - start_index;
                 len_set = 1;
@@ -534,7 +534,7 @@ size_t cstr_split_collect(slice *arr, size_t len, cstr_split_iter *split) {
     size_t i = 0;
     for (; i < len; i += 1) {
         slice slice = cstr_split_next(split);
-        if (!slice.buffer) {
+        if (!slice.ptr) {
             break;
         }
         arr[i] = slice;
@@ -553,10 +553,10 @@ cstr_split_collect_strings(char **strings, size_t len, cstr_split_iter *split) {
     size_t i = 0;
     for (; i < len; i += 1) {
         slice slice = cstr_split_next(split);
-        if (!slice.buffer) {
+        if (!slice.ptr) {
             break;
         }
-        strings[i] = (char *)slice.buffer;
+        strings[i] = (char *)slice.ptr;
     }
 
     split->flags = flags;
@@ -1460,13 +1460,13 @@ cstr_fmt_result cstr_fmt_va(
         case 's':
             s = va_arg(va_args, slice_const);
             field_bytes = min(s.len, len - bytes_written);
-            bytes_copy(dest + bytes_written, s.buffer, field_bytes);
+            bytes_copy(dest + bytes_written, s.ptr, field_bytes);
             res.ok = s.len <= len - bytes_written;
             break;
         case 'S':
             s = slice_const_from_cstr_unsafe(va_arg(va_args, char *));
             field_bytes = min(s.len, len - bytes_written);
-            bytes_copy(dest + bytes_written, s.buffer, field_bytes);
+            bytes_copy(dest + bytes_written, s.ptr, field_bytes);
             res.ok = s.len <= len - bytes_written;
             break;
         case 'h':
@@ -1474,7 +1474,7 @@ cstr_fmt_result cstr_fmt_va(
             field_bytes = bytes_to_hex(
                 (uchar *)dest + bytes_written,
                 len - bytes_written,
-                s.buffer,
+                s.ptr,
                 s.len
             );
             res.ok = s.len <= len - bytes_written;
@@ -1484,7 +1484,7 @@ cstr_fmt_result cstr_fmt_va(
             field_bytes = bytes_to_hex(
                 (uchar *)dest + bytes_written,
                 len - bytes_written,
-                s.buffer,
+                s.ptr,
                 s.len
             );
             res.ok = s.len <= len - bytes_written;
@@ -1652,7 +1652,7 @@ void bytebuf_init(bytebuf *bbuf, size_t capacity, allocator *allocator) {
 void bytebuf_init_fixed(bytebuf *bbuf, slice buffer, size_t offset) {
     assert(bbuf && "bytebuf must not be null");
     bytes_set(bbuf, 0, sizeof(*bbuf));
-    bbuf->buffer = buffer.buffer;
+    bbuf->buffer = buffer.ptr;
     bbuf->len = offset;
     bbuf->cap = buffer.len;
 }
@@ -1888,7 +1888,7 @@ static bytebuf_result bytebuf_write_hex(bytebuf *bbuf, slice_const hex) {
     size_t len = bytes_to_hex(
         bbuf->buffer + bbuf->len,
         bytebuf_bytes_available(bbuf),
-        hex.buffer,
+        hex.ptr,
         hex.len
     );
     bbuf->len += len;
@@ -1923,11 +1923,11 @@ bytebuf_fmt_va(bytebuf *bbuf, const char *restrict format, va_list va_args) {
             break;
         case 's':
             s = va_arg(va_args, slice_const);
-            partial_res = bytebuf_write(bbuf, s.buffer, s.len);
+            partial_res = bytebuf_write(bbuf, s.ptr, s.len);
             break;
         case 'S':
             s = slice_const_from_cstr_unsafe(va_arg(va_args, char *));
-            partial_res = bytebuf_write(bbuf, s.buffer, s.len);
+            partial_res = bytebuf_write(bbuf, s.ptr, s.len);
             break;
         case 'h':
             s = va_arg(va_args, slice_const);
@@ -2207,7 +2207,7 @@ bufstream_write_hex(bufstream *bstream, slice_const hex) {
         size_t len = bytes_to_hex(
             buffer,
             sizeof(buffer),
-            hex.buffer + bytes_processed,
+            hex.ptr + bytes_processed,
             hex.len - bytes_processed
         );
         bytes_processed += len / 2;
@@ -2250,11 +2250,11 @@ bufstream_write_result bufstream_fmt_va(
             break;
         case 's':
             s = va_arg(va_args, slice_const);
-            temp_res = bufstream_write(bstream, s.buffer, s.len);
+            temp_res = bufstream_write(bstream, s.ptr, s.len);
             break;
         case 'S':
             s = slice_const_from_cstr_unsafe(va_arg(va_args, char *));
-            temp_res = bufstream_write(bstream, s.buffer, s.len);
+            temp_res = bufstream_write(bstream, s.ptr, s.len);
             break;
         case 'h':
             s = va_arg(va_args, slice_const);

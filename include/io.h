@@ -30,7 +30,7 @@ typedef struct {
 ignore_unused static inline void
 file_read_result_free(file_read_result res, allocator *allocator) {
     allocation a = {
-        .ptr = res.data.buffer,
+        .ptr = res.data.ptr,
         .len = res.cap,
     };
     alloc_free(allocator, a);

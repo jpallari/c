@@ -8,14 +8,14 @@ void test_slice_span(test *t) {
 
     assert_eq_uint(t, s1.len, 4L, "slice 1 length 4");
     assert_eq_uint(t, s2.len, 4L, "slice 2 length 4");
-    assert_eq_uint(t, s1.buffer[0], 12, "slice 1 index 0");
-    assert_eq_uint(t, s1.buffer[1], 13, "slice 1 index 1");
-    assert_eq_uint(t, s1.buffer[2], 14, "slice 1 index 2");
-    assert_eq_uint(t, s1.buffer[3], 15, "slice 1 index 3");
-    assert_eq_uint(t, s2.buffer[0], 12, "slice 2 index 0");
-    assert_eq_uint(t, s2.buffer[1], 13, "slice 2 index 1");
-    assert_eq_uint(t, s2.buffer[2], 14, "slice 2 index 2");
-    assert_eq_uint(t, s2.buffer[3], 15, "slice 2 index 3");
+    assert_eq_uint(t, s1.ptr[0], 12, "slice 1 index 0");
+    assert_eq_uint(t, s1.ptr[1], 13, "slice 1 index 1");
+    assert_eq_uint(t, s1.ptr[2], 14, "slice 1 index 2");
+    assert_eq_uint(t, s1.ptr[3], 15, "slice 1 index 3");
+    assert_eq_uint(t, s2.ptr[0], 12, "slice 2 index 0");
+    assert_eq_uint(t, s2.ptr[1], 13, "slice 2 index 1");
+    assert_eq_uint(t, s2.ptr[2], 14, "slice 2 index 2");
+    assert_eq_uint(t, s2.ptr[3], 15, "slice 2 index 3");
 }
 
 void test_slice_equal(test *t) {
@@ -41,10 +41,10 @@ void test_slice_from_arr(test *t) {
     assert_eq_uint(t, s1.len, 13L, "s1 len must be size of string");
     assert_eq_uint(t, s2.len, sizeof(int) * 4, "s2 len must be size of array");
     assert_eq_cstr(
-        t, (char *)s1.buffer, "hello world!", "s1 contents must be the same"
+        t, (char *)s1.ptr, "hello world!", "s1 contents must be the same"
     );
     assert_eq_bytes(
-        t, s2.buffer, (uchar *)arr, s2.len, "s2 contents must be the same"
+        t, s2.ptr, (uchar *)arr, s2.len, "s2 contents must be the same"
     );
 }
 
@@ -54,7 +54,7 @@ void test_slice_from_static_cstr(test *t) {
     assert_eq_uint(t, s1.len, 12L, "s1 len must be length of string");
     assert_eq_cstr(
         t,
-        (const char *)s1.buffer,
+        (const char *)s1.ptr,
         "hello world!",
         "s1 contents must be the same"
     );
@@ -68,8 +68,8 @@ void test_slice_const_conversion(test *t) {
     assert_eq_uint(t, s_mut.len, s_const->len, "same length");
     assert_eq_cstr(
         t,
-        (const char *)s_mut.buffer,
-        (const char *)s_const->buffer,
+        (const char *)s_mut.ptr,
+        (const char *)s_const->ptr,
         "same text"
     );
 }
@@ -86,13 +86,13 @@ void test_slice_copy_larger(test *t) {
 
     assert_eq_bytes(t, arr1, expected_arr1, sizeof(arr1), "arr1 should change");
     assert_eq_bytes(
-        t, s1.buffer, &expected_arr1[2], s1.len, "s1 should change"
+        t, s1.ptr, &expected_arr1[2], s1.len, "s1 should change"
     );
     assert_eq_bytes(
         t, arr2, expected_arr2, sizeof(arr2), "arr2 should not change"
     );
     assert_eq_bytes(
-        t, s2.buffer, &expected_arr2[1], s2.len, "s2 should not change"
+        t, s2.ptr, &expected_arr2[1], s2.len, "s2 should not change"
     );
 }
 
@@ -108,13 +108,13 @@ void test_slice_copy_smaller(test *t) {
 
     assert_eq_bytes(t, arr1, expected_arr1, sizeof(arr1), "arr1 should change");
     assert_eq_bytes(
-        t, s1.buffer, &expected_arr1[2], s1.len, "s1 should change"
+        t, s1.ptr, &expected_arr1[2], s1.len, "s1 should change"
     );
     assert_eq_bytes(
         t, arr2, expected_arr2, sizeof(arr2), "arr2 should not change"
     );
     assert_eq_bytes(
-        t, s2.buffer, &expected_arr2[1], s2.len, "s2 should not change"
+        t, s2.ptr, &expected_arr2[1], s2.len, "s2 should not change"
     );
 }
 
@@ -127,7 +127,7 @@ void test_slice_move_overlapping(test *t) {
     slice_move(s1, s2);
 
     assert_eq_bytes(t, arr, expected_arr, sizeof(arr), "arr should change");
-    assert_eq_bytes(t, s1.buffer, &expected_arr[2], s1.len, "s1 should change");
+    assert_eq_bytes(t, s1.ptr, &expected_arr[2], s1.len, "s1 should change");
 }
 
 void test_slice_from_cstr_unsafe(test *t) {
@@ -137,7 +137,7 @@ void test_slice_from_cstr_unsafe(test *t) {
     assert_eq_uint(t, slice.len, 12L, "slice len must match string length");
     assert_eq_uint(
         t,
-        (uintptr_t)slice.buffer,
+        (uintptr_t)slice.ptr,
         (uintptr_t)str,
         "slice and str pointers must match"
     );

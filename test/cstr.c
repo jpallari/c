@@ -53,35 +53,35 @@ void test_cstr_split(test *t) {
     {
         slice slice = cstr_split_next(&split);
         assert_eq_uint(t, slice.len, 4L, "1 - length");
-        assert_eq_bytes(t, slice.buffer, "this", slice.len, "1 - contents");
+        assert_eq_bytes(t, slice.ptr, "this", slice.len, "1 - contents");
     }
 
     // second word
     {
         slice slice = cstr_split_next(&split);
         assert_eq_uint(t, slice.len, 2L, "2 - length");
-        assert_eq_bytes(t, slice.buffer, "is", slice.len, "2 - contents");
+        assert_eq_bytes(t, slice.ptr, "is", slice.len, "2 - contents");
     }
 
     // third word
     {
         slice slice = cstr_split_next(&split);
         assert_eq_uint(t, slice.len, 1L, "3 - length");
-        assert_eq_bytes(t, slice.buffer, "a", slice.len, "3 - contents");
+        assert_eq_bytes(t, slice.ptr, "a", slice.len, "3 - contents");
     }
 
     // fourth word
     {
         slice slice = cstr_split_next(&split);
         assert_eq_uint(t, slice.len, 6L, "4 - length");
-        assert_eq_bytes(t, slice.buffer, "string", slice.len, "4 - contents");
+        assert_eq_bytes(t, slice.ptr, "string", slice.len, "4 - contents");
     }
 
     // fifth iteration
     {
         slice slice = cstr_split_next(&split);
         assert_false(t, slice.len, "5 - length");
-        assert_false(t, slice.buffer, "4 - contents");
+        assert_false(t, slice.ptr, "4 - contents");
     }
 }
 
@@ -98,22 +98,22 @@ void test_cstr_split_collect(test *t) {
         size_t len = cstr_split_collect(arr, countof(arr), &split);
         assert_eq_uint(t, len, 6L, "1 - length");
         assert_eq_bytes(
-            t, arr[0].buffer, "collecting", arr[0].len, "1 index 0 - contents"
+            t, arr[0].ptr, "collecting", arr[0].len, "1 index 0 - contents"
         );
         assert_eq_bytes(
-            t, arr[1].buffer, "all", arr[1].len, "1 index 1 - contents"
+            t, arr[1].ptr, "all", arr[1].len, "1 index 1 - contents"
         );
         assert_eq_bytes(
-            t, arr[2].buffer, "words", arr[2].len, "1 index 2 - contents"
+            t, arr[2].ptr, "words", arr[2].len, "1 index 2 - contents"
         );
         assert_eq_bytes(
-            t, arr[3].buffer, "to", arr[3].len, "1 index 3 - contents"
+            t, arr[3].ptr, "to", arr[3].len, "1 index 3 - contents"
         );
         assert_eq_bytes(
-            t, arr[4].buffer, "an", arr[4].len, "1 index 4 - contents"
+            t, arr[4].ptr, "an", arr[4].len, "1 index 4 - contents"
         );
         assert_eq_bytes(
-            t, arr[5].buffer, "array", arr[5].len, "1 index 5 - contents"
+            t, arr[5].ptr, "array", arr[5].len, "1 index 5 - contents"
         );
     }
 
@@ -125,13 +125,13 @@ void test_cstr_split_collect(test *t) {
         size_t len = cstr_split_collect(arr, 3, &split);
         assert_eq_uint(t, len, 3L, "2 - length");
         assert_eq_bytes(
-            t, arr[0].buffer, "collecting", arr[0].len, "2 index 0 - contents"
+            t, arr[0].ptr, "collecting", arr[0].len, "2 index 0 - contents"
         );
         assert_eq_bytes(
-            t, arr[1].buffer, "all", arr[1].len, "2 index 1 - contents"
+            t, arr[1].ptr, "all", arr[1].len, "2 index 1 - contents"
         );
         assert_eq_bytes(
-            t, arr[2].buffer, "words", arr[2].len, "2 index 2 - contents"
+            t, arr[2].ptr, "words", arr[2].len, "2 index 2 - contents"
         );
     }
 }
@@ -146,32 +146,32 @@ void test_cstr_split_null_terminate(test *t) {
     // first word
     {
         slice slice = cstr_split_next(&split);
-        assert_eq_cstr(t, (char *)slice.buffer, "null", "1 - contents");
+        assert_eq_cstr(t, (char *)slice.ptr, "null", "1 - contents");
     }
 
     // second word
     {
         slice slice = cstr_split_next(&split);
-        assert_eq_cstr(t, (char *)slice.buffer, "terminate", "2 - contents");
+        assert_eq_cstr(t, (char *)slice.ptr, "terminate", "2 - contents");
     }
 
     // third word
     {
         slice slice = cstr_split_next(&split);
-        assert_eq_cstr(t, (char *)slice.buffer, "these", "3 - contents");
+        assert_eq_cstr(t, (char *)slice.ptr, "these", "3 - contents");
     }
 
     // fourth word
     {
         slice slice = cstr_split_next(&split);
-        assert_eq_cstr(t, (char *)slice.buffer, "words", "4 - contents");
+        assert_eq_cstr(t, (char *)slice.ptr, "words", "4 - contents");
     }
 
     // fifth iteration
     {
         slice slice = cstr_split_next(&split);
         assert_false(t, slice.len, "5 - length");
-        assert_false(t, slice.buffer, "4 - contents");
+        assert_false(t, slice.ptr, "4 - contents");
     }
 }
 

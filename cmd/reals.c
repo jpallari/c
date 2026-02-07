@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
     slice s = {0};
     do {
         s = cstr_split_next(&split);
-        if (!s.buffer) {
+        if (!s.ptr) {
             break;
         }
 
@@ -43,29 +43,29 @@ int main(int argc, char **argv) {
         bool ok = 0;
 
         if (mode == 2) {
-            ok = cstr_to_float((char *)s.buffer, s.len, &f) > 0;
+            ok = cstr_to_float((char *)s.ptr, s.len, &f) > 0;
         } else {
-            ok = cstr_to_double((char *)s.buffer, s.len, &d) > 0;
+            ok = cstr_to_double((char *)s.ptr, s.len, &d) > 0;
         }
 
         if (ok && mode == 2) {
             size_t len = cstr_from_float(buf, sizeof(buf), f, 6);
             if (len) {
-                printf("%s %g %s\n", s.buffer, f, buf);
+                printf("%s %g %s\n", s.ptr, f, buf);
             } else {
-                printf("%s %g ERR\n", s.buffer, f);
+                printf("%s %g ERR\n", s.ptr, f);
             }
         } else if (ok) {
             size_t len = cstr_from_double(buf, sizeof(buf), d, 18);
             if (len) {
-                printf("%s %g %s\n", s.buffer, d, buf);
+                printf("%s %g %s\n", s.ptr, d, buf);
             } else {
-                printf("%s %g ERR\n", s.buffer, f);
+                printf("%s %g ERR\n", s.ptr, f);
             }
         } else {
-            printf("fail: %s\n", s.buffer);
+            printf("fail: %s\n", s.ptr);
         }
-    } while (s.buffer);
+    } while (s.ptr);
 
     file_read_result_free(res, &std_allocator);
     io_stderr_flush();

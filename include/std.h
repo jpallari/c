@@ -504,9 +504,9 @@ bytes_index_of(const uchar *buffer, size_t len, uchar byte) {
  */
 typedef struct {
     /**
-     * Buffer containing the data
+     * Pointer containing the data
      */
-    const uchar *buffer;
+    const uchar *ptr;
 
     /**
      * Length of the slice in bytes
@@ -521,9 +521,9 @@ typedef struct {
  */
 typedef struct {
     /**
-     * Buffer containing the data
+     * Pointer containing the data
      */
-    uchar *buffer;
+    uchar *ptr;
 
     /**
      * Length of the slice in bytes
@@ -539,7 +539,7 @@ typedef struct {
  */
 #define slice_arr(arr) \
     (slice) { \
-        .buffer = (uchar *)(arr), .len = sizeof(arr), \
+        .ptr = (uchar *)(arr), .len = sizeof(arr), \
     }
 
 /**
@@ -550,7 +550,7 @@ typedef struct {
  */
 #define slice_str(str) \
     (slice) { \
-        .buffer = (uchar *)(str), .len = lengthof(str), \
+        .ptr = (uchar *)(str), .len = lengthof(str), \
     }
 
 /**
@@ -561,7 +561,7 @@ typedef struct {
  */
 #define slice_sstr(str) \
     (slice_const) { \
-        .buffer = (const uchar *)(str), .len = lengthof(str), \
+        .ptr = (const uchar *)(str), .len = lengthof(str), \
     }
 
 /**
@@ -573,7 +573,7 @@ typedef struct {
  */
 ignore_unused static inline slice slice_new(void *buffer, size_t len) {
     slice s = {
-        .buffer = (uchar *)buffer,
+        .ptr = (uchar *)buffer,
         .len = len,
     };
     return s;
@@ -589,7 +589,7 @@ ignore_unused static inline slice slice_new(void *buffer, size_t len) {
 ignore_unused static inline slice_const
 slice_const_new(const void *buffer, size_t len) {
     slice_const s = {
-        .buffer = (const uchar *)buffer,
+        .ptr = (const uchar *)buffer,
         .len = len,
     };
     return s;
@@ -662,7 +662,7 @@ slice slice_from_cstr_unsafe(char *str);
  * @returns true if the slice is set
  */
 ignore_unused static inline bool slice_is_set(slice s) {
-    return s.buffer != NULL && s.len != 0;
+    return s.ptr != NULL && s.len != 0;
 }
 
 /**
@@ -675,7 +675,7 @@ ignore_unused static inline bool slice_is_set(slice s) {
  * @returns true if the slice is set
  */
 ignore_unused static inline bool slice_const_is_set(slice_const s) {
-    return s.buffer != NULL && s.len != 0;
+    return s.ptr != NULL && s.len != 0;
 }
 
 ////////////////////////

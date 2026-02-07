@@ -9,17 +9,17 @@
 
 bool ringbuf_spsc_init(ringbuf_spsc *rbuf, slice buffer, size_t item_size) {
     assert(rbuf && "ringbuf must not be null");
-    assert(buffer.buffer && "ringbuf buffer must not be null");
+    assert(buffer.ptr && "ringbuf buffer must not be null");
     assert(buffer.len > 0 && "ringbuff buffer len must be >0");
     assert(item_size > 0 && "item size must be >0");
     assert(item_size < buffer.len && "item size must be smaller than len");
 
-    if (buffer.buffer == NULL || item_size == 0 || buffer.len == 0) {
+    if (buffer.ptr == NULL || item_size == 0 || buffer.len == 0) {
         return 0; // funky parameters
     }
 
     bytes_set(rbuf, 0, sizeof(*rbuf));
-    rbuf->buffer = buffer.buffer;
+    rbuf->buffer = buffer.ptr;
     rbuf->item_size = item_size;
     rbuf->max_items = buffer.len / rbuf->item_size;
 
@@ -27,7 +27,7 @@ bool ringbuf_spsc_init(ringbuf_spsc *rbuf, slice buffer, size_t item_size) {
 }
 
 bool ringbuf_spsc_push(ringbuf_spsc *rbuf, slice s) {
-    assert(s.buffer && "buffer must not be null");
+    assert(s.ptr && "buffer must not be null");
     assert(rbuf && "ringbuf must not be null");
     assert(rbuf->buffer && "ringbuf buffer must not be null");
     assert(rbuf->item_size > 0 && "item size must be >0");
@@ -54,7 +54,7 @@ bool ringbuf_spsc_push(ringbuf_spsc *rbuf, slice s) {
 
     size_t byte_index = rbuf->item_size * write_idx;
     bytes_copy(
-        rbuf->buffer + byte_index, s.buffer, min(s.len, rbuf->item_size)
+        rbuf->buffer + byte_index, s.ptr, min(s.len, rbuf->item_size)
     );
     atomic_store_explicit(
         &rbuf->write_idx, next_write_idx, memory_order_release
