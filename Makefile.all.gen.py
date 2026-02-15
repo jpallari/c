@@ -7,11 +7,11 @@ configs = [
     {
         'target': target,
         'lang_std': lang_std,
-        'compiler': compiler,
+        'cc': cc,
         'mt': lang_std == 'c11',
     }
-    for compiler in ['gcc', 'clang']
-    for lang_std in ['c11', 'c99']
+    for cc in ['gcc', 'clang']
+    for lang_std in ['c11', 'c99', 'c23']
     for target in ['debug', 'release']
 ]
 
@@ -34,7 +34,7 @@ clean:
 
 def all_target(configs):
     all = ' '.join(
-        f'build-{c['target']}-{c['lang_std']}-{c['compiler']}'
+        f'build-{c['target']}-{c['lang_std']}-{c['cc']}'
         for c in configs
     )
     return '\n'.join((
@@ -46,19 +46,19 @@ def all_target(configs):
 def dyn_target_str(config):
     compile_target = config['target']
     lang_std = config['lang_std']
-    compiler = config['compiler']
+    cc = config['cc']
     mt = config['mt']
 
-    target_name = f'build-{compile_target}-{lang_std}-{compiler}'
+    target_name = f'build-{compile_target}-{lang_std}-{cc}'
     return '\n'.join(line for line in (
         f'.PHONY: {target_name}',
         f'{target_name}:',
         f'	$(MAKE) -j $(JOBS) \\',
         f'		TEST_FILTERS=$(TEST_FILTERS) \\',
-        f'		BUILD_DIR=build/{compile_target}-{lang_std}-{compiler} \\',
+        f'		BUILD_DIR=build/{compile_target}-{lang_std}-{cc} \\',
         f'		ENABLE_RELEASE=1 \\' if compile_target == 'release' else '',
         f'		DISABLE_MT=1 \\' if not mt else '',
-        f'		LANG_STD={lang_std} CC={compiler}',
+        f'		LANG_STD={lang_std} CC={cc}',
     ) if line) + '\n'
 
 if __name__ == '__main__':

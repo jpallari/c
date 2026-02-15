@@ -8,7 +8,7 @@ TEST_FILTERS =
 JOBS = 1
 
 .PHONY: all
-all: build-debug-c11-gcc build-release-c11-gcc build-debug-c99-gcc build-release-c99-gcc build-debug-c11-clang build-release-c11-clang build-debug-c99-clang build-release-c99-clang
+all: build-debug-c11-gcc build-release-c11-gcc build-debug-c99-gcc build-release-c99-gcc build-debug-c23-gcc build-release-c23-gcc build-debug-c11-clang build-release-c11-clang build-debug-c99-clang build-release-c99-clang build-debug-c23-clang build-release-c23-clang
 
 .PHONY: build-debug-c11-gcc
 build-debug-c11-gcc:
@@ -42,6 +42,23 @@ build-release-c99-gcc:
 		DISABLE_MT=1 \
 		LANG_STD=c99 CC=gcc
 
+.PHONY: build-debug-c23-gcc
+build-debug-c23-gcc:
+	$(MAKE) -j $(JOBS) \
+		TEST_FILTERS=$(TEST_FILTERS) \
+		BUILD_DIR=build/debug-c23-gcc \
+		DISABLE_MT=1 \
+		LANG_STD=c23 CC=gcc
+
+.PHONY: build-release-c23-gcc
+build-release-c23-gcc:
+	$(MAKE) -j $(JOBS) \
+		TEST_FILTERS=$(TEST_FILTERS) \
+		BUILD_DIR=build/release-c23-gcc \
+		ENABLE_RELEASE=1 \
+		DISABLE_MT=1 \
+		LANG_STD=c23 CC=gcc
+
 .PHONY: build-debug-c11-clang
 build-debug-c11-clang:
 	$(MAKE) -j $(JOBS) \
@@ -73,6 +90,23 @@ build-release-c99-clang:
 		ENABLE_RELEASE=1 \
 		DISABLE_MT=1 \
 		LANG_STD=c99 CC=clang
+
+.PHONY: build-debug-c23-clang
+build-debug-c23-clang:
+	$(MAKE) -j $(JOBS) \
+		TEST_FILTERS=$(TEST_FILTERS) \
+		BUILD_DIR=build/debug-c23-clang \
+		DISABLE_MT=1 \
+		LANG_STD=c23 CC=clang
+
+.PHONY: build-release-c23-clang
+build-release-c23-clang:
+	$(MAKE) -j $(JOBS) \
+		TEST_FILTERS=$(TEST_FILTERS) \
+		BUILD_DIR=build/release-c23-clang \
+		ENABLE_RELEASE=1 \
+		DISABLE_MT=1 \
+		LANG_STD=c23 CC=clang
 
 .PHONY: clean
 clean:

@@ -25,7 +25,18 @@ typedef unsigned short ushort;
 typedef unsigned int uint;
 typedef long long llong;
 typedef unsigned long long ullong;
+
+// Boolean
+
+#if __STDC_VERSION__ < 202311L
+#if __STDC_VERSION__ >= 199901L
+#include <stdbool.h>
+#else
 typedef int bool;
+#define true 1
+#define false 0
+#endif
+#endif
 
 ////////////////////////
 // Debugging
