@@ -292,6 +292,16 @@ ignore_unused static inline uint bits_most_significant(ullong n) {
     return i ? i - 1 : 0;
 }
 
+/**
+ * Get the number of bits set on left for an unsigned char.
+ *
+ * @param n number to check the number of bits for
+ * @returns count of bits set on left
+ */
+ignore_unused static inline uint bits_set_on_left_uchar(uchar n) {
+    return bits_most_significant(n) ^ (CHAR_BIT - 1);
+}
+
 ////////////////////////
 // Bytes
 ////////////////////////
@@ -1183,6 +1193,35 @@ bool dynarr_remove_uo_ut(void *array, ullong index, size_t item_size);
  */
 #define dynarr_remove_uo(array, index) \
     dynarr_remove_uo_ut((array), (index), sizeof(*(array)))
+
+////////////////////////
+// UTF-8
+////////////////////////
+
+typedef struct {
+    uchar b1;
+    uchar b2;
+    uchar b3;
+    uchar b4;
+} utf8_rune;
+
+ignore_unused static inline int utf8_char_byte_len(uchar c) {
+    uint bits = bits_set_on_left_uchar(c);
+    switch (bits) {
+    case 0:
+        return 1; // ASCII range
+    case 1:
+        return -2; // Continuation byte
+    case 2:
+        return 2;
+    case 3:
+        return 3;
+    case 4:
+        return 4;
+    default:
+        return -1; // Not valid UTF-8
+    }
+}
 
 ////////////////////////
 // C strings
