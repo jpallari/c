@@ -180,29 +180,6 @@ round_up_multiple_ullong(ullong n, ullong multiple) {
     return n - remainder + multiple;
 }
 
-/**
- * Get the position of the most significant bit from the given number.
- *
- * This can be useful for rounding up or down a number to nearest
- * power-of-two number.
- *
- * Since zero does not have a significant bit, the result for it will be
- * undefined.
- *
- * @param n number to check for the most significant bit
- * @returns position of the most significant bit
- */
-ignore_unused static inline uint most_significant_bit(ullong n) {
-    assert(n > 0 && "n must be >0");
-
-    uint i = 0;
-    while (n > 0) {
-        i += 1;
-        n >>= 1;
-    }
-    return i ? i - 1 : 0;
-}
-
 ////////////////////////
 // Arrays
 ////////////////////////
@@ -272,7 +249,7 @@ align_to_nearest(size_t size, size_t alignment) {
 }
 
 ////////////////////////
-// Bitset
+// Bits
 ////////////////////////
 
 #define bitset_is_set(bitset, bit) ((bitset) & (bit))
@@ -280,6 +257,30 @@ align_to_nearest(size_t size, size_t alignment) {
 #define bitset_set_mut(bitset, bit) ((bitset) |= (bit))
 #define bitset_unset(bitset, bit) ((bitset) & ~(bit))
 #define bitset_unset_mut(bitset, bit) ((bitset) &= ~(bit))
+
+/**
+ * Get the position of the most significant bit from the given number.
+ *
+ * This can be useful for rounding up or down a number to nearest
+ * power-of-two number.
+ *
+ * Since zero does not have a significant bit, the result for it will be
+ * undefined.
+ *
+ * @param n number to check for the most significant bit
+ * @returns position of the most significant bit
+ */
+ignore_unused static inline uint bits_most_significant(ullong n) {
+    assert(n > 0 && "n must be >0");
+
+    // On x86, this can get converted to a BSR
+    uint i = 0;
+    while (n > 0) {
+        i += 1;
+        n >>= 1;
+    }
+    return i ? i - 1 : 0;
+}
 
 ////////////////////////
 // Bytes

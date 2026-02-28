@@ -42,6 +42,7 @@ $(BIN_DIR)/reals: $(CMD_OBJ_DIR)/reals.o $(OBJ_DIR)/io.o $(OBJ_DIR)/std.o
 
 TEST_NAMES += \
 	arena \
+	bits \
 	bufstream \
 	bytes \
 	cliargs \
@@ -59,6 +60,17 @@ $(TEST_OBJ_DIR)/arena: $(TEST_OBJ_DIR)/arena.o $(OBJ_DIR)/testr.o $(OBJ_DIR)/std
 	@mkdir -p $(TEST_OBJ_DIR)
 	$(CC) $(LDFLAGS) $^ -o $@
 $(TEST_REPORT_DIR)/arena.txt: $(TEST_OBJ_DIR)/arena
+	@mkdir -p $(TEST_REPORT_DIR)
+	./$< $(TEST_FILTERS) > $@
+
+# Bits
+$(TEST_OBJ_DIR)/bits.o: test/bits.c include/testr.h include/std.h
+	@mkdir -p $(TEST_OBJ_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+$(TEST_OBJ_DIR)/bits: $(TEST_OBJ_DIR)/bits.o $(OBJ_DIR)/testr.o $(OBJ_DIR)/std.o $(OBJ_DIR)/io.o
+	@mkdir -p $(TEST_OBJ_DIR)
+	$(CC) $(LDFLAGS) $^ -o $@
+$(TEST_REPORT_DIR)/bits.txt: $(TEST_OBJ_DIR)/bits
 	@mkdir -p $(TEST_REPORT_DIR)
 	./$< $(TEST_FILTERS) > $@
 
