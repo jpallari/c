@@ -4,14 +4,15 @@
 
 size_t
 split_args(char *argv_str, size_t argv_str_len, char **argv, size_t argv_len) {
-    cstr_split_iter split;
-    cstr_split_init(
+    slice_const split_chars = slice_sstr(" ");
+    cstr_split split;
+    cstr_split_init_chars(
         &split,
-        (slice) {.ptr = (uchar *)argv_str, .len = argv_str_len},
-        slice_sstr(" "),
+        slice_new(argv_str, argv_str_len),
+        &split_chars,
         cstr_split_flag_null_terminate
     );
-    return cstr_split_collect_strings(argv, argv_len, &split);
+    return cstr_split_collect_strings(&split, argv, argv_len);
 }
 
 void test_parse_all_args(test *t) {
@@ -102,7 +103,7 @@ void test_parse_all_args(test *t) {
         "--help -g hello -c 2 -p=0.2 pos1 --greeting world --count=5 -diff=-4 "
         "pos2 pos3";
     char *argv[20] = {0};
-    size_t argc = split_args(argv_str, countof(argv_str), argv, countof(argv));
+    size_t argc = split_args(argv_str, lengthof(argv_str), argv, countof(argv));
     if (!assert_eq_uint(t, argc, 13, "must parse enough args")) {
         return;
     }
@@ -171,7 +172,7 @@ void test_parse_rest(test *t) {
     char argv_str[] =
         "-g hello pos1 --greeting world pos2 pos3 -- --greeting hi";
     char *argv[20] = {0};
-    size_t argc = split_args(argv_str, countof(argv_str), argv, countof(argv));
+    size_t argc = split_args(argv_str, lengthof(argv_str), argv, countof(argv));
     if (!assert_eq_uint(t, argc, 10, "must parse enough args")) {
         return;
     }
@@ -233,7 +234,7 @@ void test_parse_fail_on_parse(test *t) {
 
     char argv_str[] = "-c fail";
     char *argv[20] = {0};
-    split_args(argv_str, countof(argv_str), argv, countof(argv));
+    split_args(argv_str, lengthof(argv_str), argv, countof(argv));
     cliargs_error err = cliargs_parse(&args, countof(argv), argv);
 
     assert_true(t, err, "cli args must contain errors");
@@ -280,7 +281,7 @@ void test_parse_fail_on_unknown_flag(test *t) {
 
     char argv_str[] = "--not-count 3";
     char *argv[20] = {0};
-    split_args(argv_str, countof(argv_str), argv, countof(argv));
+    split_args(argv_str, lengthof(argv_str), argv, countof(argv));
     cliargs_error err = cliargs_parse(&args, countof(argv), argv);
 
     assert_true(t, err, "cli args must contain errors");
@@ -343,7 +344,7 @@ void test_parse_fail_on_expecting_value(test *t) {
 
     char argv_str[] = "--count 3 --diff --count 1";
     char *argv[20] = {0};
-    split_args(argv_str, countof(argv_str), argv, countof(argv));
+    split_args(argv_str, lengthof(argv_str), argv, countof(argv));
     cliargs_error err = cliargs_parse(&args, countof(argv), argv);
 
     assert_true(t, err, "cli args must contain errors");

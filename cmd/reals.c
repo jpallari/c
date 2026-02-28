@@ -25,9 +25,9 @@ int main(int argc, char **argv) {
     }
 
     slice_const split_chars = slice_sstr("\n");
-    cstr_split_iter split;
-    cstr_split_init(
-        &split, res.data, split_chars, cstr_split_flag_null_terminate
+    cstr_split split;
+    cstr_split_init_chars(
+        &split, res.data, &split_chars, cstr_split_flag_null_terminate
     );
 
     slice s = {0};

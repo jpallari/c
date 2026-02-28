@@ -44,76 +44,156 @@ void test_cstr_len_unsafe(test *t) {
     );
 }
 
+void test_cstr_split_edge_cases(test *t) {
+    char str[] = ",comma,separated,,text,";
+    cstr_split split;
+    slice_const split_chars = slice_sstr(",");
+    cstr_split_init_chars(&split, slice_str(str), &split_chars, 0);
+
+    // first part
+    {
+        slice slice = cstr_split_next(&split);
+        assert_eq_uint(t, slice.len, 0L, "1 - length");
+        assert_eq_cstrl(
+            t, (const char *)slice.ptr, "", slice.len, "1 - contents"
+        );
+    }
+
+    // second part
+    {
+        slice slice = cstr_split_next(&split);
+        assert_eq_uint(t, slice.len, 5L, "2 - length");
+        assert_eq_cstrl(
+            t, (const char *)slice.ptr, "comma", slice.len, "2 - contents"
+        );
+    }
+
+    // third part
+    {
+        slice slice = cstr_split_next(&split);
+        assert_eq_uint(t, slice.len, 9L, "3 - length");
+        assert_eq_cstrl(
+            t, (const char *)slice.ptr, "separated", slice.len, "3 - contents"
+        );
+    }
+
+    // fourth part
+    {
+        slice slice = cstr_split_next(&split);
+        assert_eq_uint(t, slice.len, 0L, "4 - length");
+        assert_eq_cstrl(
+            t, (const char *)slice.ptr, "", slice.len, "4 - contents"
+        );
+    }
+
+    // fifth part
+    {
+        slice slice = cstr_split_next(&split);
+        assert_eq_uint(t, slice.len, 4L, "5 - length");
+        assert_eq_cstrl(
+            t, (const char *)slice.ptr, "text", slice.len, "5 - contents"
+        );
+    }
+
+    // sixth part
+    {
+        slice slice = cstr_split_next(&split);
+        assert_false(t, slice.len, "6 - length");
+        assert_false(t, slice.ptr, "6 - contents");
+    }
+
+    // seventh part
+    {
+        slice slice = cstr_split_next(&split);
+        assert_false(t, slice.len, "7 - length");
+        assert_false(t, slice.ptr, "7 - contents");
+    }
+}
+
 void test_cstr_split(test *t) {
     char str[] = "this is a string";
-    cstr_split_iter split;
-    cstr_split_init(&split, slice_str(str), slice_sstr(" "), 0);
+    cstr_split split;
+    slice_const split_chars = slice_sstr(" ");
+    cstr_split_init_chars(&split, slice_str(str), &split_chars, 0);
 
     // first word
     {
         slice slice = cstr_split_next(&split);
         assert_eq_uint(t, slice.len, 4L, "1 - length");
-        assert_eq_bytes(t, slice.ptr, "this", slice.len, "1 - contents");
+        assert_eq_cstrl(
+            t, (const char *)slice.ptr, "this", slice.len, "1 - contents"
+        );
     }
 
     // second word
     {
         slice slice = cstr_split_next(&split);
         assert_eq_uint(t, slice.len, 2L, "2 - length");
-        assert_eq_bytes(t, slice.ptr, "is", slice.len, "2 - contents");
+        assert_eq_cstrl(
+            t, (const char *)slice.ptr, "is", slice.len, "2 - contents"
+        );
     }
 
     // third word
     {
         slice slice = cstr_split_next(&split);
         assert_eq_uint(t, slice.len, 1L, "3 - length");
-        assert_eq_bytes(t, slice.ptr, "a", slice.len, "3 - contents");
+        assert_eq_cstrl(
+            t, (const char *)slice.ptr, "a", slice.len, "3 - contents"
+        );
     }
 
     // fourth word
     {
         slice slice = cstr_split_next(&split);
         assert_eq_uint(t, slice.len, 6L, "4 - length");
-        assert_eq_bytes(t, slice.ptr, "string", slice.len, "4 - contents");
+        assert_eq_cstrl(
+            t, (const char *)slice.ptr, "string", slice.len, "4 - contents"
+        );
     }
 
     // fifth iteration
     {
         slice slice = cstr_split_next(&split);
         assert_false(t, slice.len, "5 - length");
-        assert_false(t, slice.ptr, "4 - contents");
+        assert_false(t, slice.ptr, "5 - contents");
     }
 }
 
 void test_cstr_split_collect(test *t) {
     char str[] = "collecting all words to an array";
 
-    cstr_split_iter split;
-    cstr_split_init(&split, slice_str(str), slice_sstr(" "), 0);
+    cstr_split split;
+    slice_const split_chars = slice_sstr(" ");
+    cstr_split_init_chars(&split, slice_str(str), &split_chars, 0);
 
     slice arr[10] = {0};
 
     // collect all sub-strings
     {
-        size_t len = cstr_split_collect(arr, countof(arr), &split);
+        size_t len = cstr_split_collect(&split, arr, countof(arr));
         assert_eq_uint(t, len, 6L, "1 - length");
-        assert_eq_bytes(
-            t, arr[0].ptr, "collecting", arr[0].len, "1 index 0 - contents"
+        assert_eq_cstrl(
+            t,
+            (char *)arr[0].ptr,
+            "collecting",
+            arr[0].len,
+            "1 index 0 - contents"
         );
-        assert_eq_bytes(
-            t, arr[1].ptr, "all", arr[1].len, "1 index 1 - contents"
+        assert_eq_cstrl(
+            t, (char *)arr[1].ptr, "all", arr[1].len, "1 index 1 - contents"
         );
-        assert_eq_bytes(
-            t, arr[2].ptr, "words", arr[2].len, "1 index 2 - contents"
+        assert_eq_cstrl(
+            t, (char *)arr[2].ptr, "words", arr[2].len, "1 index 2 - contents"
         );
-        assert_eq_bytes(
-            t, arr[3].ptr, "to", arr[3].len, "1 index 3 - contents"
+        assert_eq_cstrl(
+            t, (char *)arr[3].ptr, "to", arr[3].len, "1 index 3 - contents"
         );
-        assert_eq_bytes(
-            t, arr[4].ptr, "an", arr[4].len, "1 index 4 - contents"
+        assert_eq_cstrl(
+            t, (char *)arr[4].ptr, "an", arr[4].len, "1 index 4 - contents"
         );
-        assert_eq_bytes(
-            t, arr[5].ptr, "array", arr[5].len, "1 index 5 - contents"
+        assert_eq_cstrl(
+            t, (char *)arr[5].ptr, "array", arr[5].len, "1 index 5 - contents"
         );
     }
 
@@ -122,7 +202,7 @@ void test_cstr_split_collect(test *t) {
 
     // collect some sub-strings
     {
-        size_t len = cstr_split_collect(arr, 3, &split);
+        size_t len = cstr_split_collect(&split, arr, 3);
         assert_eq_uint(t, len, 3L, "2 - length");
         assert_eq_bytes(
             t, arr[0].ptr, "collecting", arr[0].len, "2 index 0 - contents"
@@ -138,9 +218,10 @@ void test_cstr_split_collect(test *t) {
 
 void test_cstr_split_null_terminate(test *t) {
     char str[] = "null terminate these words";
-    cstr_split_iter split;
-    cstr_split_init(
-        &split, slice_str(str), slice_sstr(" "), cstr_split_flag_null_terminate
+    cstr_split split;
+    slice_const split_chars = slice_sstr(" ");
+    cstr_split_init_chars(
+        &split, slice_str(str), &split_chars, cstr_split_flag_null_terminate
     );
 
     // first word
@@ -178,14 +259,15 @@ void test_cstr_split_null_terminate(test *t) {
 void test_cstr_split_collect_strings(test *t) {
     char str[] = "collecting all words to an array";
 
-    cstr_split_iter split;
-    cstr_split_init(&split, slice_str(str), slice_sstr(" "), 0);
+    cstr_split split;
+    slice_const split_chars = slice_sstr("\0 ");
+    cstr_split_init_chars(&split, slice_str(str), &split_chars, 0);
 
     char *arr[10] = {0};
 
     // collect all sub-strings
     {
-        size_t len = cstr_split_collect_strings(arr, countof(arr), &split);
+        size_t len = cstr_split_collect_strings(&split, arr, countof(arr));
         assert_eq_uint(t, len, 6L, "1 - length");
         assert_eq_cstr(t, arr[0], "collecting", "1 index 0 - contents");
         assert_eq_cstr(t, arr[1], "all", "1 index 1 - contents");
@@ -198,14 +280,14 @@ void test_cstr_split_collect_strings(test *t) {
     assert_false(
         t,
         bitset_is_set(split.flags, cstr_split_flag_null_terminate),
-        "null termination flag is toggled back"
+        "null termination flag is disabled"
     );
     bytes_set(arr, 0, sizeof(arr));
     split.index = 0;
 
     // collect some sub-strings
     {
-        size_t len = cstr_split_collect_strings(arr, 3, &split);
+        size_t len = cstr_split_collect_strings(&split, arr, 3);
         assert_eq_uint(t, len, 3L, "2 - length");
         assert_eq_cstr(t, arr[0], "collecting", "2 index 0 - contents");
         assert_eq_cstr(t, arr[1], "all", "2 index 1 - contents");
@@ -215,7 +297,7 @@ void test_cstr_split_collect_strings(test *t) {
     assert_false(
         t,
         bitset_is_set(split.flags, cstr_split_flag_null_terminate),
-        "null termination flag is toggled back"
+        "null termination flag is disabled"
     );
 }
 
@@ -443,10 +525,11 @@ static test_case tests[] = {
     {"C string equals (unsafe)", test_cstr_eq_unsafe},
     {"C string length", test_cstr_len},
     {"C string length (unsafe)", test_cstr_len_unsafe},
-    {"C string split", test_cstr_split},
-    {"C string split collect", test_cstr_split_collect},
-    {"C string split null-terminate", test_cstr_split_null_terminate},
-    {"C string split collect strings", test_cstr_split_collect_strings},
+    {"C string split (ASCII)", test_cstr_split},
+    {"C string split edge cases (ASCII)", test_cstr_split_edge_cases},
+    {"C string split collect (ASCII)", test_cstr_split_collect},
+    {"C string split null-terminate (ASCII)", test_cstr_split_null_terminate},
+    {"C string split collect strings (ASCII)", test_cstr_split_collect_strings},
     {"C string to int", test_cstr_to_int},
     {"C string to uint", test_cstr_to_uint},
     {"C string from int", test_cstr_from_int},

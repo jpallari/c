@@ -1261,21 +1261,45 @@ size_t cstr_byte_len_unsafe(const char *str);
  */
 size_t cstr_byte_len(const char *str, size_t capacity);
 
+/**
+ * Predicate function for splitting strings
+ *
+ * @param c character to match on
+ * @param len length of the character (>1 for non-ascii)
+ * @param state state for the predicate (optional)
+ */
+typedef bool (*cstr_split_predicate)(const uchar *c, size_t len, void *state);
+
+/**
+ * C string split flag: null terminate
+ *
+ * When enabled, every found split character is replaced with a zero byte,
+ * so that found sub-strings are terminated.
+ *
+ * When disabled, split characters are left as is.
+ *
+ * Never enable this for read-only strings.
+ */
 #define cstr_split_flag_null_terminate (uint)(1)
 
 /**
- * String split iterator
+ * C string splitting iterator
  */
 typedef struct {
+    /**
+     * Predicate function for splitting strings
+     */
+    cstr_split_predicate predicate;
+
+    /**
+     * Predicate implementation specific data
+     */
+    void *predicate_data;
+
     /**
      * String to split
      */
     slice str;
-
-    /**
-     * Characters based on which string should be split.
-     */
-    slice_const split_chars;
 
     /**
      * The next character index to check for string split.
@@ -1286,18 +1310,35 @@ typedef struct {
      * Flag options for splitting
      */
     uint flags;
-} cstr_split_iter;
+} cstr_split;
 
 /**
- * Initialise a split iterator
+ * Initialise a split iterator with split characters.
  *
  * @param[out] split iterator to initialise
  * @param[in] str string to split
  * @param[in] split_chars characters based on which string should be split
  * @param[in] flags flag options for splitting
  */
+void cstr_split_init_chars(
+    cstr_split *s, slice str, slice_const *split_chars, uint flags
+);
+
+/**
+ * Initialise a split iterator with a split predicate function.
+ *
+ * @param[out] split iterator to initialise
+ * @param[in] str string to split
+ * @param[in] fn a predicate function to use for splitting the string
+ * @param[in] fn_state a state object to pass to the predicate function
+ * @param[in] flags flag options for splitting
+ */
 void cstr_split_init(
-    cstr_split_iter *split, slice str, slice_const split_chars, uint flags
+    cstr_split *s,
+    slice str,
+    cstr_split_predicate fn,
+    void *fn_state,
+    uint flags
 );
 
 /**
@@ -1307,17 +1348,17 @@ void cstr_split_init(
  * @returns slice to the next sub-string or empty slice when there are no
  * sub-strings left
  */
-slice cstr_split_next(cstr_split_iter *split);
+slice cstr_split_next(cstr_split *s);
 
 /**
  * Collect all sub-strings from a split iterator to an array of slices.
  *
+ * @param split the split iterator to advance
  * @param arr an array of slices to collect sub-strings to
  * @param len length of the array
- * @param split the split iterator to advance
  * @returns number of sub-strings captured from the split iterator
  */
-size_t cstr_split_collect(slice *arr, size_t len, cstr_split_iter *split);
+size_t cstr_split_collect(cstr_split *s, slice *arr, size_t len);
 
 /**
  * Collect all sub-strings from a split iterator to an array of C strings.
@@ -1325,13 +1366,31 @@ size_t cstr_split_collect(slice *arr, size_t len, cstr_split_iter *split);
  * Null-termination will be automatically enabled for the split iterator for the
  * duration of the function.
  *
+ * @param split the split iterator to advance
  * @param arr an array of C-strings to collect sub-strings to
  * @param len length of the array
- * @param split the split iterator to advance
  * @returns number of sub-strings captured from the split iterator
  */
-size_t
-cstr_split_collect_strings(char **strings, size_t len, cstr_split_iter *split);
+size_t cstr_split_collect_strings(cstr_split *s, char **strings, size_t len);
+
+/**
+ * Split predicate for using predetermined ASCII characters
+ */
+bool cstr_split_predicate_chars_ascii(const uchar *s, size_t len, void *state);
+
+/**
+ * Split predicate for testing ASCII whitespace
+ */
+bool cstr_split_predicate_ascii_whitespace(
+    const uchar *s, size_t len, void *state
+);
+
+/**
+ * Split predicate for testing ASCII punctuation
+ */
+bool cstr_split_predicate_ascii_punctuation(
+    const uchar *s, size_t len, void *state
+);
 
 /**
  * Wildcard match for ASCII C strings.

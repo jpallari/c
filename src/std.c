@@ -487,70 +487,80 @@ size_t cstr_byte_len(const char *str, size_t capacity) {
     return len;
 }
 
+void cstr_split_init_chars(
+    cstr_split *s, slice str, slice_const *split_chars, uint flags
+) {
+    assert(s && "split struct must not be null");
+
+    bytes_set(s, 0, sizeof(*s));
+    s->str = str;
+    s->predicate = cstr_split_predicate_chars_ascii;
+    s->predicate_data = split_chars;
+    s->flags = flags;
+}
+
 void cstr_split_init(
-    cstr_split_iter *split, slice str, slice_const split_chars, uint flags
+    cstr_split *split,
+    slice str,
+    cstr_split_predicate fn,
+    void *fn_state,
+    uint flags
 ) {
     assert(split && "split struct must not be null");
 
     bytes_set(split, 0, sizeof(*split));
     split->str = str;
-    split->split_chars = split_chars;
+    split->predicate = fn;
+    split->predicate_data = fn_state;
     split->flags = flags;
 }
 
-slice cstr_split_next(cstr_split_iter *split) {
-    assert(split && "split struct must not be null");
-    assert(split->str.ptr && "string must not be null");
-    assert(split->split_chars.ptr && "split chars must not be null");
+slice cstr_split_next(cstr_split *s) {
+    assert(s && "split struct must not be null");
+    assert(s->str.ptr && "string must not be null");
+    assert(s->predicate && "predicate must not be null");
 
     slice slice = {0};
 
-    if (!slice_is_set(split->str) || !slice_const_is_set(split->split_chars)
-        || split->index >= split->str.len || !split->str.ptr[split->index]) {
+    if (!slice_is_set(s->str) || s->predicate == NULL
+        || s->index >= s->str.len) {
         return slice;
     }
 
-    size_t start_index = split->index;
-    slice.ptr = split->str.ptr + start_index;
-    bool len_set = 0;
+    size_t start_index = s->index;
+    slice.ptr = s->str.ptr + start_index;
 
-    while (split->index < split->str.len && !len_set) {
-        uchar ch = split->str.ptr[split->index];
-        if (ch) {
-            index_result res = bytes_index_of(
-                split->split_chars.ptr, split->split_chars.len, ch
-            );
-            if (res.ok) {
-                if (bitset_is_set(
-                        split->flags, cstr_split_flag_null_terminate
-                    )) {
-                    split->str.ptr[split->index] = '\0';
-                }
-                slice.len = split->index - start_index;
-                len_set = 1;
-            }
-        } else {
-            // null character
-            slice.len = split->index - start_index;
-            len_set = 1;
+    size_t split_at = 0;
+    while (s->index < s->str.len) {
+        uchar ch = s->str.ptr[s->index];
+        bool ok = s->predicate(&ch, sizeof(ch), s->predicate_data);
+        if (ok) {
+            split_at = s->index;
+            s->index += 1;
+            break;
         }
-        split->index += 1;
+        s->index += 1;
     }
 
-    if (!len_set) {
-        slice.len = split->str.len - start_index;
+    if (split_at == 0 && s->index >= s->str.len) {
+        slice.len = s->str.len - start_index;
+    } else {
+        slice.len = split_at - start_index;
+        if (bitset_is_set(s->flags, cstr_split_flag_null_terminate)) {
+            s->str.ptr[split_at] = '\0';
+        }
     }
 
     return slice;
 }
 
-size_t cstr_split_collect(slice *arr, size_t len, cstr_split_iter *split) {
+size_t cstr_split_collect(cstr_split *s, slice *arr, size_t len) {
     assert(arr && "array must not be null");
-    assert(split && "split must not be null");
+    assert(s && "split must not be null");
 
     size_t i = 0;
     for (; i < len; i += 1) {
-        slice slice = cstr_split_next(split);
+        slice slice = cstr_split_next(s);
         if (!slice.ptr) {
             break;
         }
@@ -559,25 +569,78 @@ size_t cstr_split_collect(slice *arr, size_t len, cstr_split_iter *split) {
     return i;
 }
 
-size_t
-cstr_split_collect_strings(char **strings, size_t len, cstr_split_iter *split) {
+size_t cstr_split_collect_strings(cstr_split *s, char **strings, size_t len) {
     assert(strings && "strings must not be null");
-    assert(split && "split must not be null");
+    assert(s && "split must not be null");
 
-    uint flags = split->flags;
-    bitset_set_mut(split->flags, cstr_split_flag_null_terminate);
+    uint flags = s->flags;
+    bitset_set_mut(s->flags, cstr_split_flag_null_terminate);
 
     size_t i = 0;
     for (; i < len; i += 1) {
-        slice slice = cstr_split_next(split);
+        slice slice = cstr_split_next(s);
         if (!slice.ptr) {
             break;
         }
         strings[i] = (char *)slice.ptr;
     }
 
-    split->flags = flags;
+    s->flags = flags;
     return i;
+}
+
+bool cstr_split_predicate_chars_ascii(const uchar *c, size_t len, void *state) {
+    assert(c && "character must not be null");
+    assert(state && "state must not be null (expected split chars)");
+    if (len == 0 || len > 1) {
+        return false;
+    }
+    slice_const *split_chars = state;
+    index_result res = bytes_index_of(split_chars->ptr, split_chars->len, *c);
+    return res.ok;
+}
+
+bool cstr_split_predicate_ascii_whitespace(
+    const uchar *c, size_t len, void *state
+) {
+    assert(c && "string must not be null");
+    (void)state;
+
+    if (len > sizeof(char)) {
+        return false;
+    }
+    switch (*c) {
+    case ' ':
+    case '\n':
+    case '\t':
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool cstr_split_predicate_ascii_punctuation(
+    const uchar *c, size_t len, void *state
+) {
+    assert(c && "string must not be null");
+    (void)state;
+
+    if (len > sizeof(char)) {
+        return false;
+    }
+    if (*c >= ' ' && *c <= '/') {
+        return true;
+    }
+    if (*c >= ':' && *c <= '@') {
+        return true;
+    }
+    if (*c >= '[' && *c <= '`') {
+        return true;
+    }
+    if (*c >= '{' && *c <= '~') {
+        return true;
+    }
+    return false;
 }
 
 bool cstr_match_wild_ascii(
@@ -1824,8 +1887,6 @@ bytebuf_result bytebuf_fill(bytebuf *bbuf, uchar pattern, size_t len) {
 bytebuf_result bytebuf_write(bytebuf *bbuf, const void *src, size_t len) {
     assert(bbuf && "bytebuf must not be null");
     assert(bbuf->buffer && "bytebuf's buffer must not be null");
-    assert(src && "source must not be null");
-    assert(len > 0 && "length must be more than 0");
     assert(
         SIZE_MAX - bbuf->len > len && "len increase must not exceed size max"
     );
