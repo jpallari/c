@@ -139,14 +139,14 @@ void slice_move(slice dest, const slice src) {
 slice_const slice_const_from_cstr_unsafe(const char *str) {
     slice_const slice = {0};
     slice.ptr = (const uchar *)str;
-    slice.len = cstr_len_unsafe(str);
+    slice.len = (str == NULL) ? 0 : cstr_byte_len_unsafe(str);
     return slice;
 }
 
 slice slice_from_cstr_unsafe(char *str) {
     slice slice = {0};
     slice.ptr = (uchar *)str;
-    slice.len = cstr_len_unsafe(str);
+    slice.len = cstr_byte_len_unsafe(str);
     return slice;
 }
 
@@ -466,7 +466,7 @@ bool cstr_eq(const char *s1, const char *s2, size_t len) {
     return 1;
 }
 
-size_t cstr_len_unsafe(const char *str) {
+size_t cstr_byte_len_unsafe(const char *str) {
     if (!str) {
         return 0;
     }
@@ -475,7 +475,7 @@ size_t cstr_len_unsafe(const char *str) {
     return len;
 }
 
-size_t cstr_len(const char *str, size_t capacity) {
+size_t cstr_byte_len(const char *str, size_t capacity) {
     if (!str) {
         return 0;
     }
@@ -607,12 +607,6 @@ bool cstr_match_wild_ascii(
     while (j < pat_len && pat[j] == '*') { j += 1; }
 
     return j == pat_len;
-}
-
-bool cstr_match_wild_ascii_unsafe(const char *txt, const char *pat) {
-    size_t txt_len = cstr_len_unsafe(txt);
-    size_t pat_len = cstr_len_unsafe(pat);
-    return cstr_match_wild_ascii(txt, txt_len, pat, pat_len);
 }
 
 bool char_is_digit(char c) {

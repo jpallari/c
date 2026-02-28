@@ -26,19 +26,19 @@ void test_cstr_eq_unsafe(test *t) {
 void test_cstr_len(test *t) {
     assert_eq_uint(
         t,
-        cstr_len("hello", 6),
+        cstr_byte_len("hello", 6),
         5L,
         "length should be counted until null terminator"
     );
     assert_eq_uint(
-        t, cstr_len("hello", 3), 3L, "length should be up to the capacity"
+        t, cstr_byte_len("hello", 3), 3L, "length should be up to the capacity"
     );
 }
 
 void test_cstr_len_unsafe(test *t) {
     assert_eq_uint(
         t,
-        cstr_len_unsafe("hello"),
+        cstr_byte_len_unsafe("hello"),
         5L,
         "length should be counted until null terminator"
     );

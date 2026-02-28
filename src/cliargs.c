@@ -204,8 +204,8 @@ cliargs_find_by_name(cliargs_state state, const char *name, size_t name_len) {
 
     for (size_t i = 0; i < state.args->named.len; i += 1) {
         cliargs_opt *opt = &state.args->named.opts[i];
-        size_t opt_short_name_len = cstr_len_unsafe(opt->short_name);
-        size_t opt_long_name_len = cstr_len_unsafe(opt->long_name);
+        size_t opt_short_name_len = cstr_byte_len_unsafe(opt->short_name);
+        size_t opt_long_name_len = cstr_byte_len_unsafe(opt->long_name);
         bool found =
             cstr_eq(opt->short_name, name, min(opt_short_name_len, name_len))
             || cstr_eq(opt->long_name, name, min(opt_long_name_len, name_len));

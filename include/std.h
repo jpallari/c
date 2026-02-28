@@ -1250,7 +1250,7 @@ bool cstr_eq(const char *s1, const char *s2, size_t len);
  * @param str string to get length for
  * @returns the length of the string
  */
-size_t cstr_len_unsafe(const char *str);
+size_t cstr_byte_len_unsafe(const char *str);
 
 /**
  * Get length of string with a bound check.
@@ -1259,7 +1259,7 @@ size_t cstr_len_unsafe(const char *str);
  * @param capacity the capacity of the string
  * @returns the length of the string
  */
-size_t cstr_len(const char *str, size_t capacity);
+size_t cstr_byte_len(const char *str, size_t capacity);
 
 #define cstr_split_flag_null_terminate (uint)(1)
 
@@ -1351,7 +1351,12 @@ bool cstr_match_wild_ascii(
  * @param txt text to match
  * @param pat pattern to match against
  */
-bool cstr_match_wild_ascii_unsafe(const char *txt, const char *pat);
+ignore_unused static inline bool
+cstr_match_wild_ascii_unsafe(const char *txt, const char *pat) {
+    size_t txt_len = cstr_byte_len_unsafe(txt);
+    size_t pat_len = cstr_byte_len_unsafe(pat);
+    return cstr_match_wild_ascii(txt, txt_len, pat, pat_len);
+}
 
 size_t cstr_to_int(const char *s, size_t len, int *v);
 size_t cstr_to_uint(const char *s, size_t len, uint *v);

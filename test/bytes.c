@@ -133,7 +133,7 @@ void test_bytes_to_hex(test *t) {
     const char *expected_str = "68656c6c6f20776f726c6421";
     char dest[25] = {0};
 
-    size_t len = bytes_to_hex(dest, sizeof(dest), str, cstr_len_unsafe(str));
+    size_t len = bytes_to_hex(dest, sizeof(dest), str, cstr_byte_len_unsafe(str));
 
     assert_eq_cstr(t, dest, expected_str, "string conversion to hex string");
     assert_eq_uint(t, len, 24, "length of the converted string");

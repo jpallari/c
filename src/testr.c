@@ -376,7 +376,7 @@ int test_main(
             if (run_test) {
                 break;
             }
-            if (cstr_len_unsafe(argv[i])) {
+            if (cstr_byte_len_unsafe(argv[i])) {
                 run_test |=
                     cstr_match_wild_ascii_unsafe(test_case.name, argv[i]);
             }
