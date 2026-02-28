@@ -135,6 +135,16 @@ static inline void breakpoint(void) {
 #define max(a, b) ((a) > (b) ? (a) : (b))
 
 /**
+ * Limit a number between two numbers.
+ *
+ * @param n number to limit
+ * @param low lower end to limit between
+ * @param high high end to limit between
+ * @returns a number limited between low and high end
+ */
+#define clamp(n, low, high) min(max(n, low), high)
+
+/**
  * Convert given number to an absolute value i.e. -N --> N
  *
  * @param a number to convert
