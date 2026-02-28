@@ -8,25 +8,23 @@
 // Bytes
 ////////////////////////
 
-int bytes_diff_index(const void *a, const void *b, size_t start, size_t len) {
-    assert(len > 0 && "len must be >0");
-    assert(start < len && "start must be lower than length");
-
+llong bytes_diff_index(const void *a, const void *b, size_t start, size_t len) {
     const uchar *a_ = a, *b_ = b;
     if (len == 0 || (uintptr_t)a_ == (uintptr_t)b_) {
-        return -1;
+        return -1LL;
     }
     if (!a || !b) {
-        return 0;
+        return 0LL;
     }
 
+    assert(start < len && "start must be lower than or equal to length");
     for (size_t i = start; i < len; i += 1) {
         if (a_[i] != b_[i]) {
-            return (int)i;
+            return (long)i;
         }
     }
 
-    return -1;
+    return -1LL;
 }
 
 bool bytes_eq(const void *a, const void *b, size_t len) {

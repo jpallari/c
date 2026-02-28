@@ -473,7 +473,7 @@ ignore_unused static inline void *bytes_set(void *dest, int c, size_t n) {
  * @returns -1 when the buffers contain the same bytes, and the index of the
  * differing byte otherwise
  */
-int bytes_diff_index(const void *a, const void *b, size_t start, size_t len);
+llong bytes_diff_index(const void *a, const void *b, size_t start, size_t len);
 
 /**
  * Check whether both buffers contain the same bytes up to the given capacity.
