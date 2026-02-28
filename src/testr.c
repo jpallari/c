@@ -77,6 +77,36 @@ bool test_report_append_formatted_cstr(
     return passed;
 }
 
+bool test_report_append_formatted_cstrl(
+    test *t,
+    bool passed,
+    const char *log_message,
+    const char *file,
+    const int line,
+    const char *cmp,
+    const char *left,
+    const char *right,
+    size_t len
+) {
+    assert(t->logs && "logs must not be null");
+
+    size_t left_len = cstr_byte_len_unsafe(left);
+    size_t right_len = cstr_byte_len_unsafe(right);
+    bytebuf_result res = bytebuf_fmt(
+        t->logs,
+        "s S s // S",
+        slice_const_new(left, min(left_len, len)),
+        cmp,
+        slice_const_new(right, min(right_len, len)),
+        log_message
+    );
+    if (!res.ok) {
+        panic();
+    }
+    test_report_append_no_log(t, passed, res.offset, res.len, file, line);
+    return passed;
+}
+
 bool test_report_append_formatted_hex(
     test *t,
     bool passed,

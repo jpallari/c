@@ -72,6 +72,18 @@ bool test_report_append_formatted_cstr(
     const char *right
 );
 
+bool test_report_append_formatted_cstrl(
+    test *t,
+    bool passed,
+    const char *log_message,
+    const char *file,
+    const int line,
+    const char *cmp,
+    const char *left,
+    const char *right,
+    size_t len
+);
+
 bool test_report_append_formatted_hex(
     test *t,
     bool passed,
@@ -197,6 +209,19 @@ int test_main(
 #define assert_eq_float(t, l, r, eps, msg) \
     test_report_append_formatted_float( \
         (t), abs((l) - (r)) < (eps), (msg), __FILE__, __LINE__, "==", (l), (r) \
+    )
+
+#define assert_eq_cstrl(t, l, r, len, msg) \
+    test_report_append_formatted_cstrl( \
+        (t), \
+        cstr_eq((l), (r), (len)), \
+        (msg), \
+        __FILE__, \
+        __LINE__, \
+        "==", \
+        (l), \
+        (r), \
+        (len) \
     )
 
 #define assert_eq_cstr(t, l, r, msg) \
