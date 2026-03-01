@@ -303,7 +303,14 @@ ignore_unused static inline uint bits_most_significant(ullong n) {
  * @returns count of bits set on left
  */
 ignore_unused static inline uint bits_set_on_left_uchar(uchar n) {
-    return bits_most_significant(n) ^ (CHAR_BIT - 1);
+    // Shift the given byte to the last byte in a ullong value.
+    // This is done so that preceding 1's from negated N are not counted by MSB.
+    // The result of MSB will need to be adjusted back accordingly.
+    const uint last_byte = sizeof(ullong) * CHAR_BIT - CHAR_BIT;
+    ullong n_ullong = (ullong)n << last_byte;
+    uint bs = bits_most_significant(~n_ullong);
+    uint r = (bs - last_byte) ^ (CHAR_BIT - 1);
+    return r ? r : 1;
 }
 
 ////////////////////////
