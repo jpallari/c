@@ -2,6 +2,18 @@
 #include "testr.h"
 #include <limits.h>
 
+void test_utf8_codepoint_byte_len(test *t) {
+    const char *s1 = "x";
+    const char *s2 = "ä";
+    const char *s3 = "€";
+    const char *s4 = "😄";
+
+    assert_eq_uint(t, 1, utf8_codepoint_byte_len(*(const uchar *)s1), "s1");
+    assert_eq_uint(t, 2, utf8_codepoint_byte_len(*(const uchar *)s2), "s2");
+    assert_eq_uint(t, 3, utf8_codepoint_byte_len(*(const uchar *)s3), "s3");
+    assert_eq_uint(t, 4, utf8_codepoint_byte_len(*(const uchar *)s4), "s4");
+}
+
 void test_cstr_eq(test *t) {
     assert_true(t, cstr_eq("hello", "hello", 5), "same C strings are equal");
     assert_false(

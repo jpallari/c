@@ -1209,30 +1209,20 @@ bool dynarr_remove_uo_ut(void *array, ullong index, size_t item_size);
 // UTF-8
 ////////////////////////
 
-typedef struct {
-    uchar b1;
-    uchar b2;
-    uchar b3;
-    uchar b4;
-} utf8_rune;
-
-ignore_unused static inline int utf8_char_byte_len(uchar c) {
-    uint bits = bits_set_on_left_uchar(c);
-    switch (bits) {
-    case 0:
-        return 1; // ASCII range
-    case 1:
-        return -2; // Continuation byte
-    case 2:
-        return 2;
-    case 3:
-        return 3;
-    case 4:
-        return 4;
-    default:
-        return -1; // Not valid UTF-8
-    }
+ignore_unused static inline uint utf8_codepoint_byte_len(uchar c) {
+    return bits_set_on_left_uchar(c);
 }
+
+#ifdef BYO_UTF8
+// This can be used for injecting grapheme based character splitters
+size_t utf8_next_char_break(uchar *str, size_t len);
+#else
+ignore_unused static inline size_t
+utf8_next_char_break(uchar *str, size_t len) {
+    assert(str && "str must not be null");
+    return len ? (size_t)utf8_codepoint_byte_len(*str) : 0;
+}
+#endif
 
 ////////////////////////
 // C strings
