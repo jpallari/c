@@ -282,14 +282,18 @@ align_to_nearest(size_t size, size_t alignment) {
  */
 ignore_unused static inline uint bits_most_significant(ullong n) {
     assert(n > 0 && "n must be >0");
-
-    // On x86, this can get converted to a BSR
+#if defined(__GNUC__) || defined(__clang__)
+    // CLZLL = BSR ^ 63
+    return (uint)__builtin_clzll(n) ^ (sizeof(ullong) * CHAR_BIT - 1);
+#else
+    // On x86, this can get converted to bit scan reverse (BSR)
     uint i = 0;
     while (n > 0) {
         i += 1;
         n >>= 1;
     }
     return i ? i - 1 : 0;
+#endif
 }
 
 /**
