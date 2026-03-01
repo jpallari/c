@@ -122,6 +122,47 @@ void test_cstr_split_edge_cases(test *t) {
     }
 }
 
+void test_cstr_split_utf8(test *t) {
+    char str[] = "😄😭 💖 ⚠️✨"; // grapheme clusters not chosen on purpose
+    cstr_split split;
+    slice_const split_chars = slice_sstr(" ");
+    cstr_split_init_chars(&split, slice_str(str), &split_chars, cstr_split_flag_utf8);
+
+    // first word
+    {
+        slice slice = cstr_split_next(&split);
+        assert_eq_uint(t, slice.len, 8L, "1 - length");
+        assert_eq_cstrl(
+            t, (const char *)slice.ptr, "😄😭", slice.len, "1 - contents"
+        );
+    }
+
+    // second word
+    {
+        slice slice = cstr_split_next(&split);
+        assert_eq_uint(t, slice.len, 4L, "2 - length");
+        assert_eq_cstrl(
+            t, (const char *)slice.ptr, "💖", slice.len, "2 - contents"
+        );
+    }
+
+    // third word
+    {
+        slice slice = cstr_split_next(&split);
+        assert_eq_uint(t, slice.len, 9L, "3 - length");
+        assert_eq_cstrl(
+            t, (const char *)slice.ptr, "⚠️✨", slice.len, "3 - contents"
+        );
+    }
+
+    // fourth word
+    {
+        slice slice = cstr_split_next(&split);
+        assert_false(t, slice.len, "4 - length");
+        assert_false(t, slice.ptr, "4 - contents");
+    }
+}
+
 void test_cstr_split(test *t) {
     char str[] = "this is a string";
     cstr_split split;
@@ -533,10 +574,12 @@ void test_cstr_fmt(test *t) {
 }
 
 static test_case tests[] = {
+    {"UTF-8 codepoint byte length", test_utf8_codepoint_byte_len},
     {"C string equals", test_cstr_eq},
     {"C string equals (unsafe)", test_cstr_eq_unsafe},
     {"C string length", test_cstr_len},
     {"C string length (unsafe)", test_cstr_len_unsafe},
+    {"C string split (UTF-8)", test_cstr_split_utf8},
     {"C string split (ASCII)", test_cstr_split},
     {"C string split edge cases (ASCII)", test_cstr_split_edge_cases},
     {"C string split collect (ASCII)", test_cstr_split_collect},

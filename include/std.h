@@ -1284,6 +1284,18 @@ typedef bool (*cstr_split_predicate)(const uchar *c, size_t len, void *state);
 #define cstr_split_flag_null_terminate (uint)(1)
 
 /**
+ * C string split flag: UTF-8 enabled
+ *
+ * When enabled, character splitting follows UTF-8 encoding.
+ *
+ * When disabled, character splitting is based on ASCII.
+ *
+ * Note that UTF-8 processing is based on codepoints by default unless
+ * a custom processor was supplied.
+ */
+#define cstr_split_flag_utf8 (uint)(2)
+
+/**
  * C string splitting iterator
  */
 typedef struct {

@@ -531,15 +531,32 @@ slice cstr_split_next(cstr_split *s) {
     slice.ptr = s->str.ptr + start_index;
 
     size_t split_at = 0;
-    while (s->index < s->str.len) {
-        uchar ch = s->str.ptr[s->index];
-        bool ok = s->predicate(&ch, sizeof(ch), s->predicate_data);
-        if (ok) {
-            split_at = s->index;
-            s->index += 1;
-            break;
+    if (bitset_is_set(s->flags, cstr_split_flag_utf8)) {
+        while (s->index < s->str.len) {
+            uchar *ch = s->str.ptr + s->index;
+            size_t ch_len = utf8_next_char_break(ch, s->str.len - s->index);
+            if (!ch_len) {
+                return slice;
+            }
+            bool ok = s->predicate(ch, ch_len, s->predicate_data);
+            if (ok) {
+                split_at = s->index;
+                s->index += ch_len;
+                break;
+            }
+            s->index += ch_len;
         }
-        s->index += 1;
+    } else {
+        while (s->index < s->str.len) {
+            uchar ch = s->str.ptr[s->index];
+            bool ok = s->predicate(&ch, sizeof(ch), s->predicate_data);
+            if (ok) {
+                split_at = s->index;
+                s->index += 1;
+                break;
+            }
+            s->index += 1;
+        }
     }
 
     if (split_at == 0 && s->index >= s->str.len) {
