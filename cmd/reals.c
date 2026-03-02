@@ -30,7 +30,7 @@ int main(int argc, char **argv) {
         &split, res.data, &split_chars, cstr_split_flag_null_terminate
     );
 
-    slice s = {0};
+    slice_const s = {0};
     do {
         s = cstr_split_next(&split);
         if (!s.ptr) {
@@ -43,9 +43,9 @@ int main(int argc, char **argv) {
         bool ok = 0;
 
         if (mode == 2) {
-            ok = cstr_to_float((char *)s.ptr, s.len, &f) > 0;
+            ok = cstr_to_float((const char *)s.ptr, s.len, &f) > 0;
         } else {
-            ok = cstr_to_double((char *)s.ptr, s.len, &d) > 0;
+            ok = cstr_to_double((const char *)s.ptr, s.len, &d) > 0;
         }
 
         if (ok && mode == 2) {

@@ -3,7 +3,7 @@
 #include "testr.h"
 
 size_t
-split_args(char *argv_str, size_t argv_str_len, char **argv, size_t argv_len) {
+split_args(char *argv_str, size_t argv_str_len, const char **argv, size_t argv_len) {
     slice_const split_chars = slice_sstr(" ");
     cstr_split split;
     cstr_split_init_chars(
@@ -102,7 +102,7 @@ void test_parse_all_args(test *t) {
     char argv_str[] =
         "--help -g hello -c 2 -p=0.2 pos1 --greeting world --count=5 -diff=-4 "
         "pos2 pos3";
-    char *argv[20] = {0};
+    const char *argv[20] = {0};
     size_t argc = split_args(argv_str, lengthof(argv_str), argv, countof(argv));
     if (!assert_eq_uint(t, argc, 13, "must parse enough args")) {
         return;
@@ -171,7 +171,7 @@ void test_parse_rest(test *t) {
 
     char argv_str[] =
         "-g hello pos1 --greeting world pos2 pos3 -- --greeting hi";
-    char *argv[20] = {0};
+    const char *argv[20] = {0};
     size_t argc = split_args(argv_str, lengthof(argv_str), argv, countof(argv));
     if (!assert_eq_uint(t, argc, 10, "must parse enough args")) {
         return;
@@ -233,7 +233,7 @@ void test_parse_fail_on_parse(test *t) {
     );
 
     char argv_str[] = "-c fail";
-    char *argv[20] = {0};
+    const char *argv[20] = {0};
     split_args(argv_str, lengthof(argv_str), argv, countof(argv));
     cliargs_error err = cliargs_parse(&args, countof(argv), argv);
 
@@ -280,7 +280,7 @@ void test_parse_fail_on_unknown_flag(test *t) {
     );
 
     char argv_str[] = "--not-count 3";
-    char *argv[20] = {0};
+    const char *argv[20] = {0};
     split_args(argv_str, lengthof(argv_str), argv, countof(argv));
     cliargs_error err = cliargs_parse(&args, countof(argv), argv);
 
@@ -343,7 +343,7 @@ void test_parse_fail_on_expecting_value(test *t) {
     );
 
     char argv_str[] = "--count 3 --diff --count 1";
-    char *argv[20] = {0};
+    const char *argv[20] = {0};
     split_args(argv_str, lengthof(argv_str), argv, countof(argv));
     cliargs_error err = cliargs_parse(&args, countof(argv), argv);
 

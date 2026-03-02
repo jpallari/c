@@ -515,20 +515,18 @@ void cstr_split_init(
     split->flags = flags;
 }
 
-slice cstr_split_next(cstr_split *s) {
+slice_const cstr_split_next(cstr_split *s) {
     assert(s && "split struct must not be null");
     assert(s->str.ptr && "string must not be null");
     assert(s->predicate && "predicate must not be null");
 
-    slice slice = {0};
-
     if (!slice_is_set(s->str) || s->predicate == NULL
         || s->index >= s->str.len) {
-        return slice;
+        return slice_null;
     }
 
     size_t start_index = s->index;
-    slice.ptr = s->str.ptr + start_index;
+    uchar *ptr = s->str.ptr + start_index;
 
     size_t split_at = 0;
     if (bitset_is_set(s->flags, cstr_split_flag_utf8)) {
@@ -536,7 +534,7 @@ slice cstr_split_next(cstr_split *s) {
             uchar *ch = s->str.ptr + s->index;
             size_t ch_len = utf8_next_char_break(ch, s->str.len - s->index);
             if (!ch_len) {
-                return slice;
+                return slice_null;
             }
             bool ok = s->predicate(ch, ch_len, s->predicate_data);
             if (ok) {
@@ -559,25 +557,26 @@ slice cstr_split_next(cstr_split *s) {
         }
     }
 
+    size_t len;
     if (split_at == 0 && s->index >= s->str.len) {
-        slice.len = s->str.len - start_index;
+        len = s->str.len - start_index;
     } else {
-        slice.len = split_at - start_index;
+        len = split_at - start_index;
         if (bitset_is_set(s->flags, cstr_split_flag_null_terminate)) {
             s->str.ptr[split_at] = '\0';
         }
     }
 
-    return slice;
+    return slice_const_new(ptr, len);
 }
 
-size_t cstr_split_collect(cstr_split *s, slice *arr, size_t len) {
+size_t cstr_split_collect(cstr_split *s, slice_const *arr, size_t len) {
     assert(arr && "array must not be null");
     assert(s && "split must not be null");
 
     size_t i = 0;
     for (; i < len; i += 1) {
-        slice slice = cstr_split_next(s);
+        slice_const slice = cstr_split_next(s);
         if (!slice.ptr) {
             break;
         }
@@ -586,7 +585,7 @@ size_t cstr_split_collect(cstr_split *s, slice *arr, size_t len) {
     return i;
 }
 
-size_t cstr_split_collect_strings(cstr_split *s, char **strings, size_t len) {
+size_t cstr_split_collect_strings(cstr_split *s, const char **strings, size_t len) {
     assert(strings && "strings must not be null");
     assert(s && "split must not be null");
 
@@ -595,11 +594,11 @@ size_t cstr_split_collect_strings(cstr_split *s, char **strings, size_t len) {
 
     size_t i = 0;
     for (; i < len; i += 1) {
-        slice slice = cstr_split_next(s);
+        slice_const slice = cstr_split_next(s);
         if (!slice.ptr) {
             break;
         }
-        strings[i] = (char *)slice.ptr;
+        strings[i] = (const char *)slice.ptr;
     }
 
     s->flags = flags;

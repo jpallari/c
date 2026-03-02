@@ -476,7 +476,7 @@ ignore_unused static inline void *bytes_set(void *dest, int c, size_t n) {
 #define set_nt(dest, c, n, type) bytes_set((dest), (c), (n) * sizeof(type))
 
 /**
- * Check which index the given two buffers differ starting from given index
+ * Check at which index the given two buffers differ starting from given index
  *
  * @param a,b byte buffers to compare
  * @param start index to start comparing from
@@ -646,6 +646,11 @@ slice_const_new(const void *buffer, size_t len) {
     };
     return s;
 }
+
+/**
+ * Create a const slice that points to null.
+ */
+ignore_unused static slice_const slice_null = {0};
 
 /**
  * Create a slice from a span between two pointers
@@ -1361,7 +1366,7 @@ void cstr_split_init(
  * @returns slice to the next sub-string or empty slice when there are no
  * sub-strings left
  */
-slice cstr_split_next(cstr_split *s);
+slice_const cstr_split_next(cstr_split *s);
 
 /**
  * Collect all sub-strings from a split iterator to an array of slices.
@@ -1371,7 +1376,7 @@ slice cstr_split_next(cstr_split *s);
  * @param len length of the array
  * @returns number of sub-strings captured from the split iterator
  */
-size_t cstr_split_collect(cstr_split *s, slice *arr, size_t len);
+size_t cstr_split_collect(cstr_split *s, slice_const *arr, size_t len);
 
 /**
  * Collect all sub-strings from a split iterator to an array of C strings.
@@ -1384,7 +1389,7 @@ size_t cstr_split_collect(cstr_split *s, slice *arr, size_t len);
  * @param len length of the array
  * @returns number of sub-strings captured from the split iterator
  */
-size_t cstr_split_collect_strings(cstr_split *s, char **strings, size_t len);
+size_t cstr_split_collect_strings(cstr_split *s, const char **strings, size_t len);
 
 /**
  * Split predicate for using predetermined ASCII characters

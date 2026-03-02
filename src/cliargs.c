@@ -4,7 +4,7 @@
 
 typedef struct {
     cliargs *args;
-    char **argv;
+    const char **argv;
     uint index;
 } cliargs_state;
 
@@ -307,7 +307,7 @@ cliargs_opt_add_value(cliargs_state state, cliargs_opt *opt, cliargs_val v) {
     return cliargs_error_none;
 }
 
-cliargs_error cliargs_parse(cliargs *args, int argc, char **argv) {
+cliargs_error cliargs_parse(cliargs *args, int argc, const char **argv) {
     assert(args && "args must not be null");
     assert(argv && "argv must not be null");
 

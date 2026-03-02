@@ -167,6 +167,6 @@ uint *cliargs_add_named(cliargs *args, cliargs_opt_spec opt_spec, void *vals);
  * @param argv list of CLI arguments
  * @returns error code when parse fails
  */
-cliargs_error cliargs_parse(cliargs *args, int argc, char **argv);
+cliargs_error cliargs_parse(cliargs *args, int argc, const char **argv);
 
 #endif
