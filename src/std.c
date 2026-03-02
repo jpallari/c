@@ -9,29 +9,46 @@
 ////////////////////////
 
 llong bytes_diff_index(const void *a, const void *b, size_t start, size_t len) {
-    const uchar *a_ = a, *b_ = b;
-    if (len == 0 || (uintptr_t)a_ == (uintptr_t)b_) {
+    if (len == 0 || (uintptr_t)a == (uintptr_t)b) {
         return -1LL;
     }
     if (!a || !b) {
         return 0LL;
     }
-
     assert(start < len && "start must be lower than or equal to length");
+    assert(len < LLONG_MAX && "len must be smaller than llong max");
+
+    const uchar *a_ = a, *b_ = b;
     for (size_t i = start; i < len; i += 1) {
         if (a_[i] != b_[i]) {
             return (long)i;
         }
     }
-
     return -1LL;
 }
 
 bool bytes_eq(const void *a, const void *b, size_t len) {
     if (bytes_diff_index(a, b, 0, len) >= 0) {
-        return 0;
+        return false;
     }
-    return 1;
+    return true;
+}
+
+llong bytes_index_of(const void *a, size_t a_len, const void *b, size_t b_len) {
+    assert(a_len < LLONG_MAX && "len must be smaller than llong max");
+
+    if (a_len == 0 || a_len < b_len || !a || !b) {
+        return -1LL;
+    }
+    if (b_len == 0 || (uintptr_t)a == (uintptr_t)b) {
+        return 0LL;
+    }
+    for (size_t i = 0; i < a_len; i += 1) {
+        if (bytes_eq((const uchar *)a + i, b, min(a_len - i, b_len))) {
+            return (llong)i;
+        }
+    }
+    return -1LL;
 }
 
 static inline char byte_to_hex_char(char b) {
@@ -55,6 +72,16 @@ bytes_to_hex(char *dest, size_t dest_len, const char *src, size_t src_len) {
         dest[j] = 0;
     }
     return j;
+}
+
+llong bytes_index_of_byte(const uchar *buffer, size_t len, uchar byte) {
+    assert(len < LLONG_MAX && "len must be less than llong max");
+    for (size_t i = 0; i < len; i += 1) {
+        if (buffer[i] == byte) {
+            return (llong)i;
+        }
+    }
+    return -1;
 }
 
 ////////////////////////
@@ -612,8 +639,7 @@ bool cstr_split_predicate_chars_ascii(const uchar *c, size_t len, void *state) {
         return false;
     }
     slice_const *split_chars = state;
-    index_result res = bytes_index_of(split_chars->ptr, split_chars->len, *c);
-    return res.ok;
+    return bytes_index_of_byte(split_chars->ptr, split_chars->len, *c) >= 0;
 }
 
 bool cstr_split_predicate_ascii_whitespace(

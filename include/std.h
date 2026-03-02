@@ -496,6 +496,18 @@ llong bytes_diff_index(const void *a, const void *b, size_t start, size_t len);
 bool bytes_eq(const void *a, const void *b, size_t len);
 
 /**
+ * Find the index of a byte string from another byte string
+ *
+ * @param a byte string to find a sub-string from
+ * @param b sub-string to search
+ * @param a_len the length of a buffer
+ * @param b_len the length of b buffer
+ * @returns -1 when b is not a sub-string of a, and otherwise the index of the b
+ * on a
+ */
+llong bytes_index_of(const void *a, size_t a_len, const void *b, size_t b_len);
+
+/**
  * Write bytes as a hex string.
  *
  * Note that the destination buffer must have at least twice + 1 the space as
@@ -511,21 +523,6 @@ size_t
 bytes_to_hex(char *dest, size_t dest_len, const char *src, size_t src_len);
 
 /**
- * Result type for any index search.
- */
-typedef struct {
-    /**
-     * Found index
-     */
-    size_t index;
-
-    /**
-     * Whether or not an index was found
-     */
-    bool ok;
-} index_result;
-
-/**
  * Find the index of a byte.
  *
  * @param buffer bytes to search for a byte
@@ -533,17 +530,7 @@ typedef struct {
  * @param byte byte to search for in the buffer
  * @returns index of the byte and whether or not the byte was found
  */
-ignore_unused static inline index_result
-bytes_index_of(const uchar *buffer, size_t len, uchar byte) {
-    index_result res = {0};
-    for (size_t i = 0; i < len; i += 1) {
-        if (buffer[i] == byte) {
-            res.index = i;
-            res.ok = 1;
-        }
-    }
-    return res;
-}
+llong bytes_index_of_byte(const uchar *buffer, size_t len, uchar byte);
 
 ////////////////////////
 // Slices
